@@ -1,7 +1,5 @@
 # Avito Hackathon 8
 
-Приложение для хакатона Avito.
-
 ## Стек
 
 - Frontend: React, TypeScript, Vite
@@ -30,7 +28,7 @@ make feature NAME=auth
 make down
 ```
 
-## Администратор
+## Назначение администратора
 
 ```sh
 make admin EMAIL=email@example.com PASS=password
