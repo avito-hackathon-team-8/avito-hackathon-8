@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down restart build logs ps lint lint-frontend lint-backend admin branch feature bugfix chore
+.PHONY: help up down restart build logs ps lint lint-frontend lint-backend branch feature bugfix chore
 
 help:
 	@printf '%s\n' \
@@ -13,7 +13,6 @@ help:
 		'make logs                 Follow service logs' \
 		'make ps                   Show service status' \
 		'make lint                 Run all checks' \
-		'make admin EMAIL=x PASS=y Create PocketBase admin' \
 		'make feature NAME=login   Create feature/login' \
 		'make bugfix NAME=api      Create bugfix/api' \
 		'make chore NAME=deps      Create chore/deps' \
@@ -44,11 +43,6 @@ lint-frontend:
 
 lint-backend:
 	docker run --rm -v "$(CURDIR):/app:ro" -w /app/backend golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
-
-admin:
-	@test -n "$(EMAIL)" || (printf '%s\n' 'EMAIL is required' && exit 1)
-	@test -n "$(PASS)" || (printf '%s\n' 'PASS is required' && exit 1)
-	docker compose exec backend ./backend superuser create "$(EMAIL)" "$(PASS)"
 
 branch:
 	@test -n "$(TYPE)" || (printf '%s\n' 'TYPE is required' && exit 1)

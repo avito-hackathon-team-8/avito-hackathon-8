@@ -3,28 +3,45 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/core"
+	"github.com/mister-cpp/avito-hackathon-8/backend/internal/auth"
+	"github.com/mister-cpp/avito-hackathon-8/backend/internal/config"
+	"github.com/mister-cpp/avito-hackathon-8/backend/internal/database"
+	"github.com/mister-cpp/avito-hackathon-8/backend/internal/email"
+	"github.com/mister-cpp/avito-hackathon-8/backend/internal/handlers"
 )
 
 func main() {
-	app := pocketbase.New()
+	cfg, err := config.Load()
 
-	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
-		event.Router.GET("/api/app/status", func(request *core.RequestEvent) error {
-			return request.JSON(http.StatusOK, map[string]string{
-				"service": "pocketbase-go",
-				"status":  "ready",
-				"time":    time.Now().UTC().Format(time.RFC3339),
-			})
-		})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		return event.Next()
-	})
+	db, err := database.Open(cfg.DatabaseURL)
 
-	if err := app.Start(); err != nil {
+	if err != nil {
+		log.Fatalf("connect to database: %v", err)
+	}
+
+	mailer, err := email.NewSender(cfg.Email)
+
+	if err != nil {
+		log.Fatalf("configure email: %v", err)
+	}
+
+	authService := auth.NewService(db, mailer, cfg.Auth)
+	router := handlers.NewRouter(authService)
+
+	server := &http.Server{
+		Addr:              cfg.HTTPAddress,
+		Handler:           router,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+	}
+
+	log.Printf("backend listening on %s", cfg.HTTPAddress)
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
