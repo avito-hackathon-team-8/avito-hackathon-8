@@ -186,7 +186,7 @@ paths:
       description: |
         Возвращает до 10 игроков из последнего успешно опубликованного снимка
         за текущий календарный месяц в UTC. Элементы упорядочены по техническому
-        полю `position`. По требованию продукта отображаемое поле `place` всегда равно `1`.
+        полю `position`.
       responses:
         '200':
           description: Текущий снимок рейтинга.
@@ -206,16 +206,10 @@ paths:
                     items:
                       - playerId: 8f123af2-24c5-4ff7-b114-111111111111
                         nickname: Капибосс
-                        earnedLeaves: 1280
-                        level: 9
                         position: 1
-                        place: 1
                       - playerId: 6ab41fc5-1a5f-4db4-9129-222222222222
                         nickname: Листик
-                        earnedLeaves: 1210
-                        level: 8
                         position: 2
-                        place: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
         '503':
@@ -250,10 +244,7 @@ paths:
                     player:
                       playerId: 72482c10-6976-4823-a835-333333333333
                       nickname: Коробыш
-                      earnedLeaves: 745
-                      level: 7
                       position: 148
-                      place: 1
                       isTop10: false
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -723,7 +714,7 @@ components:
 
     LeaderboardItem:
       type: object
-      required: [playerId, nickname, earnedLeaves, level, position, place]
+      required: [playerId, nickname, position]
       properties:
         playerId:
           type: string
@@ -731,24 +722,11 @@ components:
         nickname:
           type: string
           minLength: 1
-        earnedLeaves:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Сумма положительных начислений листьев за текущий месяц в UTC.
-        level:
-          type: integer
-          format: int32
-          minimum: 0
         position:
           type: integer
           format: int64
           minimum: 1
           description: Техническая позиция после стабильной сортировки.
-        place:
-          type: integer
-          enum: [1]
-          description: Отображаемое место. По требованию продукта всегда равно 1.
 
     MyLeaderboardItem:
       allOf:
