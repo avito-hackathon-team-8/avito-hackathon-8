@@ -1,4 +1,4 @@
-module github.com/mister-cpp/avito-hackathon-8/backend
+module github.com/avito-hackathon-team-8/avito-hackathon-8/backend
 
 go 1.25.0
 

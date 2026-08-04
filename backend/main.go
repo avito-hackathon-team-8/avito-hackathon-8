@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/auth"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/config"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/database"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/email"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/handlers"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
 )
 
 func main() {

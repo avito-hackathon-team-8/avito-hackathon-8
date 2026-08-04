@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/auth"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 )
 
 type authHandler struct {
@@ -34,7 +34,6 @@ func NewRouter(service *auth.Service) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
-	mux.HandleFunc("GET /api/app/status", health)
 	mux.HandleFunc("POST /api/app/auth/request-otp", handler.requestOTP)
 	mux.HandleFunc("POST /api/app/auth/verify-otp", handler.verifyOTP)
 	mux.HandleFunc("GET /api/app/auth/me", handler.me)
