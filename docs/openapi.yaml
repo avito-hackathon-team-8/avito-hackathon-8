@@ -28,6 +28,8 @@ tags:
     description: Состояние еженедельной награды за активность и операции её получения.
   - name: Ежедневные задания
     description: Задания текущего дня, прогресс их выполнения и получение наград.
+  - name: Ежедневная сводка
+    description: Итоги активности пользователя за текущий день и обновления в реальном времени.
   - name: Внешняя активность
     description: Контракт внешнего сервиса активности, который использует бэкенд.
 
@@ -344,6 +346,83 @@ paths:
                     message: Награда за это задание уже получена.
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /api/v1/daily-report:
+    get:
+      tags: [Ежедневная сводка]
+      operationId: getDailyReport
+      summary: Получить сводку активности за сегодня
+      description: |
+        Возвращает текущую сводку авторизованного пользователя за календарный день в UTC.
+        Количество заработанных листьев передаётся первым полем. В `tasks` входят только
+        выполненные сегодня задания, а в `rewards` — награды, полученные сегодня.
+      responses:
+        '200':
+          description: Текущая ежедневная сводка.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyReportResponse'
+              examples:
+                default:
+                  value:
+                    leavesEarnedToday: 150
+                    date: '2026-08-05'
+                    rewards:
+                      - rewardId: 96b41fc5-1a5f-4db4-9129-555555555555
+                        type: PROMOTION_DISCOUNT
+                        title: Скидка 20% на продвижение
+                        expiresAt: '2026-09-01'
+                        receivedAt: '2026-08-05T10:00:00Z'
+                    levelUp:
+                      fromLevel: 3
+                      toLevel: 4
+                      occurredAt: '2026-08-05T10:00:00Z'
+                    tasks:
+                      - taskId: 8f123af2-24c5-4ff7-b114-111111111111
+                        type: OPEN_NOTIFICATIONS
+                        description: Открыть 5 уведомлений
+                        rewardLeaves: 45
+                        rewardClaimed: true
+                        completedAt: '2026-08-05T09:15:00Z'
+                      - taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
+                        type: ADD_TO_FAVORITES
+                        description: Добавить 3 объявления в избранное
+                        rewardLeaves: 45
+                        rewardClaimed: false
+                        completedAt: '2026-08-05T11:20:00Z'
+                    visitedToday: true
+                    updatedAt: '2026-08-05T11:20:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/daily-report/ws:
+    get:
+      tags: [Ежедневная сводка]
+      operationId: subscribeDailyReport
+      summary: Подписаться на обновления ежедневной сводки
+      description: |
+        WebSocket-подключение для авторизованного пользователя. После успешного подключения
+        сервер сразу отправляет событие `DAILY_REPORT_UPDATED` с текущей сводкой, затем
+        повторяет его при изменении сводки: начислении листьев, выполнении или получении
+        награды за задание, получении другой награды, повышении уровня и смене дня в UTC.
+
+        Каждое сообщение содержит полный снимок `data`, а не только изменившиеся поля.
+        Это позволяет фронтенду заменить локальную сводку одним сообщением.
+      x-websocket:
+        serverMessages:
+          event: DAILY_REPORT_UPDATED
+          schema:
+            $ref: '#/components/schemas/DailyReportUpdatedEvent'
+      responses:
+        '101':
+          description: Соединение переключено на протокол WebSocket.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/leaderboard:
     get:
@@ -826,7 +905,17 @@ components:
 
     DailyTaskType:
       type: string
-      description: Действие, прогресс которого учитывается для задания.
+      description: |
+        Действие, прогресс которого учитывается для задания:
+        - `OPEN_NOTIFICATIONS` — открыть уведомления;
+        - `ADD_TO_FAVORITES` — добавить объявления в избранное;
+        - `PUBLISH_LISTING` — успешно опубликовать объявления;
+        - `BOOST_LISTING` — применить поднятие к своим объявлениям;
+        - `LEAVE_REVIEW` — успешно опубликовать отзывы;
+        - `COMPLETE_DEAL` — завершить покупки или продажи;
+        - `ORDER_WITH_DELIVERY` — оформить заказы с Авито Доставкой.
+
+        Требуемое количество действий задаётся полем `targetCount`, а не типом.
       enum:
         - OPEN_NOTIFICATIONS
         - ADD_TO_FAVORITES
@@ -949,6 +1038,141 @@ components:
         status:
           type: string
           enum: [CLAIMED]
+
+    DailyReportRewardType:
+      type: string
+      description: |
+        Тип награды из раздела «Награды»:
+        - `AVITO_BONUS` — фиксированное количество бонусов для оплаты поддерживаемых услуг Авито;
+        - `FREE_DELIVERY` — бесплатная доставка для указанного количества заказов;
+        - `FREE_PROMOTION` — бесплатное продвижение объявления;
+        - `PROMOTION_DISCOUNT` — процентная скидка на продвижение;
+        - `DELIVERY_DISCOUNT` — процентная скидка на Авито Доставку.
+
+        Номинал, процент, количество применений и ограничения задаются конкретной
+        наградой и отражаются в её `title`; поле `type` определяет только назначение.
+      enum:
+        - AVITO_BONUS
+        - FREE_DELIVERY
+        - FREE_PROMOTION
+        - PROMOTION_DISCOUNT
+        - DELIVERY_DISCOUNT
+
+    DailyReportReward:
+      type: object
+      required: [rewardId, type, title, expiresAt, receivedAt]
+      properties:
+        rewardId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор полученной награды.
+        type:
+          $ref: '#/components/schemas/DailyReportRewardType'
+        title:
+          type: string
+          minLength: 1
+          description: Название награды для отображения.
+        expiresAt:
+          type: string
+          format: date
+          description: Дата окончания действия награды в UTC.
+        receivedAt:
+          type: string
+          format: date-time
+          description: Время получения награды в UTC.
+
+    DailyReportTask:
+      type: object
+      required: [taskId, type, description, rewardLeaves, rewardClaimed, completedAt]
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Идентификатор выполненного задания.
+        type:
+          $ref: '#/components/schemas/DailyTaskType'
+        description:
+          type: string
+          minLength: 1
+          description: Текст выполненного задания.
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество листьев за получение награды задания.
+        rewardClaimed:
+          type: boolean
+          description: Были ли листья за это задание уже начислены.
+        completedAt:
+          type: string
+          format: date-time
+          description: Время выполнения условия задания в UTC.
+
+    DailyReportLevelUp:
+      type: object
+      required: [fromLevel, toLevel, occurredAt]
+      properties:
+        fromLevel:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Уровень питомца до повышения.
+        toLevel:
+          type: integer
+          format: int32
+          minimum: 2
+          description: Текущий уровень после повышения. Может быть больше `fromLevel + 1`.
+        occurredAt:
+          type: string
+          format: date-time
+          description: Время первого повышения уровня за день в UTC.
+
+    DailyReportResponse:
+      type: object
+      required: [leavesEarnedToday, date, rewards, levelUp, tasks, visitedToday, updatedAt]
+      properties:
+        leavesEarnedToday:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Общее количество листьев, фактически полученных пользователем сегодня.
+        date:
+          type: string
+          format: date
+          description: Календарная дата сводки в UTC.
+        rewards:
+          type: array
+          description: Награды, полученные пользователем сегодня, в порядке получения.
+          items:
+            $ref: '#/components/schemas/DailyReportReward'
+        levelUp:
+          allOf:
+            - $ref: '#/components/schemas/DailyReportLevelUp'
+          nullable: true
+          description: Повышение уровня за сегодня; `null`, если уровня не было.
+        tasks:
+          type: array
+          description: Выполненные сегодня задания в порядке выполнения.
+          items:
+            $ref: '#/components/schemas/DailyReportTask'
+        visitedToday:
+          type: boolean
+          description: Открывал ли пользователь приложение сегодня.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Время последнего изменения сводки в UTC.
+
+    DailyReportUpdatedEvent:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          enum: [DAILY_REPORT_UPDATED]
+          description: Тип серверного WebSocket-сообщения.
+        data:
+          $ref: '#/components/schemas/DailyReportResponse'
 
     LeaderboardPeriod:
       type: object
