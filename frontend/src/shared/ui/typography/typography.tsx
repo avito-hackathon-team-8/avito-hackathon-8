@@ -7,7 +7,7 @@ import {
 
 import clsx from "clsx";
 
-import styles from "./Typography.module.scss";
+import styles from "./typography.module.scss";
 
 export type TypographyTag =
   | "h1"
@@ -28,11 +28,10 @@ export type TypographyVariant =
   "inherit" | "display" | "heading" | "section" | "body" | "caption";
 
 export type TypographyColor =
-  | "inherit"
   | "white"
-  | "gray-100"
-  | "gray-200"
-  | "gray-500"
+  | "gray100"
+  | "gray200"
+  | "gray500"
   | "black"
   | "blue"
   | "green"
@@ -40,7 +39,7 @@ export type TypographyColor =
   | "purple";
 
 interface TypographyOwnProps<T extends TypographyTag> {
-  as: T;
+  as?: T;
   variant: TypographyVariant;
   color?: TypographyColor;
   className?: string;
@@ -51,28 +50,6 @@ interface TypographyOwnProps<T extends TypographyTag> {
 export type TypographyProps<T extends TypographyTag> = TypographyOwnProps<T> &
   Omit<ComponentPropsWithoutRef<T>, keyof TypographyOwnProps<T> | "color">;
 
-const variantClassNames: Record<TypographyVariant, string> = {
-  inherit: styles.inherit,
-  display: styles.display,
-  heading: styles.heading,
-  section: styles.section,
-  body: styles.body,
-  caption: styles.caption,
-};
-
-const colorClassNames: Record<TypographyColor, string> = {
-  inherit: styles.colorInherit,
-  white: styles.colorWhite,
-  "gray-100": styles.colorGray100,
-  "gray-200": styles.colorGray200,
-  "gray-500": styles.colorGray500,
-  black: styles.colorBlack,
-  blue: styles.colorBlue,
-  green: styles.colorGreen,
-  red: styles.colorRed,
-  purple: styles.colorPurple,
-};
-
 function Typography<T extends TypographyTag>({
   as,
   variant,
@@ -82,15 +59,15 @@ function Typography<T extends TypographyTag>({
   ref,
   ...props
 }: TypographyProps<T>) {
-  const Component = as as ElementType;
+  const Component = (as as ElementType) || "p";
 
   return (
     <Component
       ref={ref}
       className={clsx(
-        styles.root,
-        variantClassNames[variant],
-        colorClassNames[color],
+        styles.typography,
+        styles[`typography_${variant}`],
+        styles[`typography_color_${color}`],
         className,
       )}
       {...props}

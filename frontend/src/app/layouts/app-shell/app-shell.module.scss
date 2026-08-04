@@ -1,0 +1,62 @@
+.appShell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  padding: 24px;
+
+  background-color: var(--black);
+}
+
+.appShell__container {
+  position: relative;
+
+  width: 100%;
+  max-width: 390px;
+  height: calc(100dvh - 48px);
+  max-height: 900px;
+  padding: 12px 12px 28px;
+  overflow: hidden;
+
+  background-color: var(--white);
+  border-radius: 20px;
+
+  isolation: isolate;
+}
+
+.appShell__content {
+  height: 100%;
+  padding: 12px 12px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.appShell__overlayRoot {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+
+  overflow: hidden;
+
+  border-radius: inherit;
+
+  pointer-events: none;
+}
+
+@media (width < 600px) {
+  .appShell {
+    display: block;
+    min-height: 100dvh;
+    padding: 0;
+
+    background-color: var(--white);
+  }
+
+  .appShell__container {
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+
+    border-radius: 0;
+  }
+}

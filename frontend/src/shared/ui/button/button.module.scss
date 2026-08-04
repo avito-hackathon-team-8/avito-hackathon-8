@@ -1,10 +1,14 @@
 .button {
+  padding-inline: 0;
+
   background-color: transparent;
   border: none;
 
   transition:
     color 0.3s ease-in,
     background-color 0.3s ease-in;
+
+  cursor: pointer;
 
   &:has(:disabled) {
     .button__primary {

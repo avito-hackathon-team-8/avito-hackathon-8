@@ -1,76 +1,73 @@
-.root {
+.typography {
   margin: 0;
   padding: 0;
 
   font-style: normal;
   letter-spacing: 0;
   overflow-wrap: break-word;
+  color: inherit;
 }
 
 /* Typography variants */
 
-.inherit {
+.typography_inherit {
   font: inherit;
 }
 
-.display {
+.typography_display {
   font: var(--font-display);
 }
 
-.heading {
+.typography_heading {
   font: var(--font-heading);
 }
 
-.section {
+.typography_section {
   font: var(--font-section);
 }
 
-.body {
+.typography_body {
   font: var(--font-body);
 }
 
-.caption {
+.typography_caption {
   font: var(--font-caption);
 }
 
 /* Colors */
 
-.colorInherit {
-  color: inherit;
-}
-
-.color-white {
+.typography_color_white {
   color: var(--white);
 }
 
-.colorGray100 {
+.typography_color_gray100 {
   color: var(--gray-100);
 }
 
-.colorGray200 {
+.typography_color_gray200 {
   color: var(--gray-200);
 }
 
-.colorGray500 {
+.typography_color_gray500 {
   color: var(--gray-500);
 }
 
-.colorBlack {
+.typography_color_black {
   color: var(--black);
 }
 
-.colorBlue {
+.typography_color_blue {
   color: var(--blue);
 }
 
-.colorGreen {
+.typography_color_green {
   color: var(--green);
 }
 
-.colorRed {
+.typography_color_red {
   color: var(--red);
 }
 
-.colorPurple {
+.typography_color_purple {
   color: var(--purple);
 }

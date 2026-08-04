@@ -1,0 +1,20 @@
+.header {
+  display: grid;
+  grid-template-areas: "backButton name notificationButton";
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+
+  .header__backButton {
+    grid-area: backButton;
+  }
+
+  .header__name {
+    grid-area: name;
+
+    text-align: center;
+  }
+
+  .header__notificationButton {
+    grid-area: notificationButton;
+  }
+}

@@ -1,12 +1,13 @@
 import clsx from "clsx";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, JSX } from "react";
 
 import styles from "./button.module.scss";
 
-type TVariant = "primary";
+type TVariant = "primary" | "transparent";
 
 interface IButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant: TVariant;
+  variant?: TVariant;
+  icon?: JSX.Element;
 }
 
 export const Button = ({

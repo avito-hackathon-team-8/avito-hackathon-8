@@ -1,0 +1,15 @@
+.notificationButton {
+  position: relative;
+
+  .notification__count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+
+    width: 20px;
+    height: 20px;
+
+    background-color: var(--red);
+    border-radius: 50%;
+  }
+}
