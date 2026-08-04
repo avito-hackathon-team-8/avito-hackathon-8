@@ -13,7 +13,11 @@ func Open(databaseURL string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.OTP{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.OTP{},
+		&models.Reward{},
+	); err != nil {
 		return nil, err
 	}
 

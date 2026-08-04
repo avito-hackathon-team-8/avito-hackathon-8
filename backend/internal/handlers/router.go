@@ -8,6 +8,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 )
 
 type authHandler struct {
@@ -29,14 +30,18 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(service *auth.Service) http.Handler {
-	handler := &authHandler{service: service}
+func NewRouter(authService *auth.Service, rewardService *rewards.Service) http.Handler {
+	handler := &authHandler{service: authService}
+	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
 	mux.HandleFunc("POST /api/app/auth/request-otp", handler.requestOTP)
 	mux.HandleFunc("POST /api/app/auth/verify-otp", handler.verifyOTP)
 	mux.HandleFunc("GET /api/app/auth/me", handler.me)
+	mux.HandleFunc("GET /api/app/rewards", rewardHandler.list)
+	mux.HandleFunc("GET /api/app/rewards/{rewardId}", rewardHandler.get)
+	mux.HandleFunc("POST /api/app/rewards/{rewardId}/redeem", rewardHandler.redeem)
 
 	return mux
 }
