@@ -1,4 +1,5 @@
-# Avito Hackathon 8
+# Avito Hackathon Тамагочи - Коробыш 
+Разработано командой номер 8
 
 ## Стек
 
@@ -10,18 +11,13 @@
 
 ## Запуск
 
-Скопируйте пример настроек, при необходимости измените значения и запустите
-контейнеры:
+Скопируйте пример .env, при необходимости измените значения и запустите:
 
 ```sh
 cp .env.example .env
 make up
 ```
-
-- Приложение: `http://localhost:3000`
-- Backend health check: `http://localhost:8090/api/health`
-
-GORM автоматически создаёт таблицы `users` и `otps` при старте backend.
+Приложение доступно: `http://localhost:3000`
 
 ## Email
 
@@ -62,9 +58,9 @@ backend/
 ├── internal/
 │   ├── auth/       # OTP, JWT и сценарии авторизации
 │   ├── database/   # PostgreSQL/GORM
-│   ├── email/      # SMTP и локальный log sender
+│   ├── email/      # SMTP
 │   ├── handlers/   # HTTP routes и JSON handlers
-│   └── models/     # GORM-модели User и OTP
+│   └── models/     # GORM-модели
 └── main.go         # сборка зависимостей и запуск сервера
 ```
 

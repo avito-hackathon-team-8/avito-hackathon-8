@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/auth"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/email"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 )
 
 type Config struct {

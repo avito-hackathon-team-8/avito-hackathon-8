@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

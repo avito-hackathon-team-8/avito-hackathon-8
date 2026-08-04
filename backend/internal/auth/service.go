@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/email"
-	"github.com/mister-cpp/avito-hackathon-8/backend/internal/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

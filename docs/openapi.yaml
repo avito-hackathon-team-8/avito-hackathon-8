@@ -1,0 +1,1110 @@
+openapi: 3.0.3
+info:
+  title: Коробыш API
+  version: 1.0.0
+  description: |
+    Контракт API для механик ежемесячного рейтинга и еженедельных наград за вход.
+
+    Правила работы со временем:
+    - все временные метки передаются в формате RFC3339 и часовом поясе UTC;
+    - периоды рейтинга соответствуют календарным месяцам в UTC;
+    - циклы еженедельных входов соответствуют неделям ISO с понедельника по воскресенье в UTC;
+    - сервер является источником истины для идентификатора игрока, дат, размеров наград,
+      уровней, заработанных листьев, позиций и статуса проверки.
+
+servers:
+  - url: /
+    description: Бэкенд приложения
+
+tags:
+  - name: Состояние сервиса
+    description: Проверка доступности и готовности бэкенда.
+  - name: Авторизация
+    description: Вход по одноразовому коду из электронной почты и получение текущего пользователя.
+  - name: Рейтинг
+    description: Ежемесячный рейтинг игроков, рассчитанный по последнему опубликованному ежедневному снимку.
+  - name: Еженедельный вход
+    description: Состояние еженедельной награды за активность и операции её получения.
+  - name: Внешняя активность
+    description: Контракт внешнего сервиса активности, который использует бэкенд.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/health:
+    get:
+      tags: [Состояние сервиса]
+      operationId: getHealth
+      summary: Проверить готовность API
+      description: Возвращает текущее состояние бэкенда и время сервера в UTC.
+      security: []
+      responses:
+        '200':
+          description: Сервис работает и готов принимать запросы.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                default:
+                  value:
+                    service: go-api
+                    status: ready
+                    time: '2026-08-04T12:00:00Z'
+
+  /api/app/auth/request-otp:
+    post:
+      tags: [Авторизация]
+      operationId: requestOtp
+      summary: Запросить одноразовый код для входа
+      description: |
+        Нормализует адрес электронной почты, создаёт пользователя при первом обращении
+        и отправляет новый одноразовый код. Ранее выданный код для этого пользователя
+        становится недействительным.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+            examples:
+              default:
+                value:
+                  email: user@example.com
+      responses:
+        '200':
+          description: Одноразовый код успешно отправлен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSentResponse'
+              examples:
+                default:
+                  value:
+                    sent: true
+        '400':
+          description: Тело запроса некорректно или содержит недопустимый адрес электронной почты.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось создать или отправить одноразовый код.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/app/auth/verify-otp:
+    post:
+      tags: [Авторизация]
+      operationId: verifyOtp
+      summary: Подтвердить одноразовый код
+      description: |
+        Проверяет одноразовый код и возвращает JWT вместе с данными пользователя.
+        Код можно ввести неверно не более трёх раз; просроченный или успешно
+        использованный код становится недействительным.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerificationRequest'
+            examples:
+              default:
+                value:
+                  email: user@example.com
+                  code: '12345678'
+      responses:
+        '200':
+          description: Код подтверждён, JWT выпущен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                default:
+                  value:
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
+                    record:
+                      id: 72482c10-6976-4823-a835-333333333333
+                      email: user@example.com
+                      verified: true
+        '400':
+          description: Тело запроса некорректно либо код недействителен или просрочен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось проверить код или выпустить JWT.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/app/auth/me:
+    get:
+      tags: [Авторизация]
+      operationId: getCurrentUser
+      summary: Получить текущего пользователя
+      description: Определяет пользователя по JWT из заголовка `Authorization`.
+      responses:
+        '200':
+          description: Данные авторизованного пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                default:
+                  value:
+                    id: 72482c10-6976-4823-a835-333333333333
+                    email: user@example.com
+                    verified: true
+        '401':
+          description: JWT отсутствует, недействителен или принадлежит неизвестному пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось загрузить пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/v1/leaderboard:
+    get:
+      tags: [Рейтинг]
+      operationId: getLeaderboard
+      summary: Получить текущую десятку лидеров месяца
+      description: |
+        Возвращает до 10 игроков из последнего успешно опубликованного снимка
+        за текущий календарный месяц в UTC. Элементы упорядочены по техническому
+        полю `position`. По требованию продукта отображаемое поле `place` всегда равно `1`.
+      responses:
+        '200':
+          description: Текущий снимок рейтинга.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+              examples:
+                default:
+                  value:
+                    period:
+                      key: '2026-08'
+                      startAt: '2026-08-01T00:00:00Z'
+                      endAt: '2026-09-01T00:00:00Z'
+                    calculatedAt: '2026-08-12T00:00:00Z'
+                    nextCalculationAt: '2026-08-13T00:00:00Z'
+                    items:
+                      - playerId: 8f123af2-24c5-4ff7-b114-111111111111
+                        nickname: Капибосс
+                        earnedLeaves: 1280
+                        level: 9
+                        position: 1
+                        place: 1
+                      - playerId: 6ab41fc5-1a5f-4db4-9129-222222222222
+                        nickname: Листик
+                        earnedLeaves: 1210
+                        level: 8
+                        position: 2
+                        place: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/LeaderboardNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/leaderboard/me:
+    get:
+      tags: [Рейтинг]
+      operationId: getMyLeaderboardPosition
+      summary: Получить позицию авторизованного игрока в рейтинге за месяц
+      description: |
+        Определяет игрока по Bearer-токену и возвращает его строку из последнего
+        успешно опубликованного снимка. Клиент не может передать идентификатор игрока.
+      responses:
+        '200':
+          description: Данные авторизованного игрока в рейтинге.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyLeaderboardResponse'
+              examples:
+                default:
+                  value:
+                    period:
+                      key: '2026-08'
+                      startAt: '2026-08-01T00:00:00Z'
+                      endAt: '2026-09-01T00:00:00Z'
+                    calculatedAt: '2026-08-12T00:00:00Z'
+                    nextCalculationAt: '2026-08-13T00:00:00Z'
+                    player:
+                      playerId: 72482c10-6976-4823-a835-333333333333
+                      nickname: Коробыш
+                      earnedLeaves: 745
+                      level: 7
+                      position: 148
+                      place: 1
+                      isTop10: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '503':
+          $ref: '#/components/responses/LeaderboardNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/weekly-login:
+    get:
+      tags: [Еженедельный вход]
+      operationId: getWeeklyLogin
+      summary: Получить текущий цикл еженедельных входов
+      description: |
+        Возвращает текущий недельный цикл авторизованного пользователя с понедельника
+        по воскресенье в UTC, состояние получения награды за сегодня, все дни цикла,
+        настроенную на бэкенде шкалу наград и максимально достижимый этап.
+      responses:
+        '200':
+          description: Текущее состояние еженедельных входов.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyLoginResponse'
+              examples:
+                default:
+                  value:
+                    cycle:
+                      isoWeek: 2026-W32
+                      startDate: '2026-08-03'
+                      endDate: '2026-08-09'
+                      claimedDaysCount: 2
+                      version: 7
+                    today:
+                      date: '2026-08-05'
+                      status: AVAILABLE
+                      step: 3
+                      rewardLeaves: 30
+                    days:
+                      - date: '2026-08-03'
+                        weekday: 1
+                        status: CLAIMED
+                        step: 1
+                        rewardLeaves: 10
+                        projected: false
+                      - date: '2026-08-04'
+                        weekday: 2
+                        status: MISSED
+                        step: null
+                        rewardLeaves: null
+                        projected: false
+                      - date: '2026-08-05'
+                        weekday: 3
+                        status: AVAILABLE
+                        step: 3
+                        rewardLeaves: 30
+                        projected: false
+                      - date: '2026-08-06'
+                        weekday: 4
+                        status: FUTURE
+                        step: 4
+                        rewardLeaves: 40
+                        projected: true
+                    ladder: [10, 20, 30, 40, 50, 60, 70]
+                    maxReachableStep: 6
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/weekly-login/claim:
+    post:
+      tags: [Еженедельный вход]
+      operationId: claimWeeklyLogin
+      summary: Получить сегодняшнюю еженедельную награду за активность
+      description: |
+        Позволяет получить награду только за текущую дату в UTC. Дата из запроса
+        используется для проверки согласованности; фактические дату, этап, награду
+        и статус активности определяет сервер.
+
+        При внешнем статусе `INACTIVE` запрос отклоняется. Статус `UNKNOWN` или
+        недоступность внешнего сервиса обрабатываются по принципу fail-open: награда
+        выдаётся со статусом проверки `PENDING`. Уже выданная награда впоследствии не отзывается.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyLoginClaimRequest'
+            examples:
+              default:
+                value:
+                  date: '2026-08-05'
+      responses:
+        '200':
+          description: Награда выдана либо для повторного ключа идемпотентности возвращён сохранённый ответ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyLoginClaimResponse'
+              examples:
+                confirmed:
+                  value:
+                    claim:
+                      date: '2026-08-05'
+                      step: 3
+                      leaves: 30
+                      verification: CONFIRMED
+                      grantedAt: '2026-08-05T09:34:12Z'
+                    progression:
+                      level: 5
+                      lifetimeLeaves: 240
+                      walletLeaves: 0
+                      crossedLevels: [4, 5]
+                      version: 18
+                    next:
+                      step: 4
+                      rewardLeaves: 40
+                pending:
+                  value:
+                    claim:
+                      date: '2026-08-05'
+                      step: 3
+                      leaves: 30
+                      verification: PENDING
+                      grantedAt: '2026-08-05T09:34:12Z'
+                    progression:
+                      level: 5
+                      lifetimeLeaves: 240
+                      walletLeaves: 0
+                      crossedLevels: [4, 5]
+                      version: 18
+                    next:
+                      step: 4
+                      rewardLeaves: 40
+        '400':
+          description: Обязательный ключ идемпотентности отсутствует или запрос составлен неверно.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                idempotencyKeyRequired:
+                  value:
+                    code: IDEMPOTENCY_KEY_REQUIRED
+                    message: Требуется заголовок Idempotency-Key
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Внешний сервис активности подтвердил отсутствие подходящей активности за сегодня.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                activityNotConfirmed:
+                  value:
+                    code: ACTIVITY_NOT_CONFIRMED
+                    message: Активность за текущую дату в UTC не подтверждена
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '409':
+          description: Награда за текущую дату в UTC уже была получена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlreadyClaimedError'
+              examples:
+                alreadyClaimed:
+                  value:
+                    code: ALREADY_CLAIMED
+                    message: Награда за 2026-08-05 уже получена
+                    details:
+                      claim:
+                        date: '2026-08-05'
+                        step: 3
+                        leaves: 30
+        '422':
+          description: Дата в запросе не совпадает с текущей датой сервера в UTC.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notToday:
+                  value:
+                    code: NOT_TODAY
+                    message: Запрошенная дата должна совпадать с текущей датой в UTC
+                    details:
+                      serverDate: '2026-08-05'
+                      requestedDate: '2026-08-04'
+        '429':
+          description: Превышен лимит запросов на получение награды — 10 попыток в минуту на пользователя.
+          headers:
+            Retry-After:
+              description: Количество секунд до следующей разрешённой попытки.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rateLimited:
+                  value:
+                    code: RATE_LIMITED
+                    message: Слишком много попыток получить награду
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/external/v1/users/{userId}/activity:
+    get:
+      tags: [Внешняя активность]
+      operationId: getExternalUserActivity
+      summary: Получить внешнюю активность за диапазон дат в UTC
+      description: |
+        Контракт внешнего сервиса, используемого бэкендом. Для этой операции не
+        применяется Bearer-токен игрока из приложения; межсервисную аутентификацию
+        необходимо настроить отдельно.
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Идентификатор пользователя во внешней системе.
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: true
+          description: Начальная календарная дата в UTC, включительно.
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          required: true
+          description: Конечная календарная дата в UTC, включительно.
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Состояние активности для каждой запрошенной даты в UTC.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalActivityResponse'
+              examples:
+                default:
+                  value:
+                    userId: 8f123af2
+                    window:
+                      dateFrom: '2026-08-03'
+                      dateTo: '2026-08-09'
+                    generatedAt: '2026-08-05T12:00:00Z'
+                    completeUntil: '2026-08-04'
+                    days:
+                      - date: '2026-08-03'
+                        status: ACTIVE
+                        firstActivityAt: '2026-08-03T07:15:00Z'
+                        activityCount: 12
+                      - date: '2026-08-04'
+                        status: INACTIVE
+                        firstActivityAt: null
+                        activityCount: 0
+                      - date: '2026-08-05'
+                        status: UNKNOWN
+                        firstActivityAt: null
+                        activityCount: null
+        '400':
+          description: Некорректный диапазон дат или параметры.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка внешнего сервиса.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Уникальный ключ запроса. Бэкенд хранит результаты идемпотентных операций 24 часа.
+        При повторном использовании того же ключа возвращается сохранённый ответ
+        без повторной выдачи награды.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: 6f1c2a8e-2b19-4c77-9a41-0b3f5e7d1c22
+
+  responses:
+    Unauthorized:
+      description: Bearer-токен отсутствует или недействителен.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              value:
+                code: UNAUTHORIZED
+                message: Требуется аутентификация
+    PlayerNotFound:
+      description: Авторизованный игрок не существует.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            playerNotFound:
+              value:
+                code: PLAYER_NOT_FOUND
+                message: Авторизованный игрок не найден
+    LeaderboardNotReady:
+      description: Ни одного успешно рассчитанного снимка рейтинга ещё не опубликовано.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notReady:
+              value:
+                code: LEADERBOARD_NOT_READY
+                message: Рейтинг ещё не рассчитан
+                details:
+                  nextCalculationAt: '2026-08-05T00:00:00Z'
+    InternalError:
+      description: Непредвиденная ошибка сервера.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internalError:
+              value:
+                code: INTERNAL_ERROR
+                message: Внутренняя ошибка сервера
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [service, status, time]
+      properties:
+        service:
+          type: string
+          enum: [go-api]
+          description: Имя сервиса.
+        status:
+          type: string
+          enum: [ready]
+          description: Текущее состояние готовности сервиса.
+        time:
+          type: string
+          format: date-time
+          description: Текущее время сервера в UTC.
+
+    OtpRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Адрес электронной почты для получения одноразового кода.
+          example: user@example.com
+
+    OtpVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Адрес электронной почты, на который был отправлен код.
+          example: user@example.com
+        code:
+          type: string
+          pattern: '^\d{6,10}$'
+          minLength: 6
+          maxLength: 10
+          description: Цифровой одноразовый код. Длина задаётся конфигурацией сервера, по умолчанию — 8 цифр.
+          example: '12345678'
+
+    OtpSentResponse:
+      type: object
+      required: [sent]
+      properties:
+        sent:
+          type: boolean
+          enum: [true]
+          description: Подтверждает успешную отправку одноразового кода.
+
+    UserResponse:
+      type: object
+      required: [id, email, verified]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя.
+        email:
+          type: string
+          format: email
+          description: Нормализованный адрес электронной почты пользователя.
+        verified:
+          type: boolean
+          description: Подтверждён ли адрес электронной почты одноразовым кодом.
+
+    AuthResponse:
+      type: object
+      required: [token, record]
+      properties:
+        token:
+          type: string
+          description: JWT для передачи в заголовке `Authorization` последующих запросов.
+        record:
+          $ref: '#/components/schemas/UserResponse'
+
+    AuthErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Текст ошибки.
+
+    LeaderboardPeriod:
+      type: object
+      required: [key, startAt, endAt]
+      properties:
+        key:
+          type: string
+          pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+          example: '2026-08'
+        startAt:
+          type: string
+          format: date-time
+          description: Начало месяца в UTC, включительно.
+        endAt:
+          type: string
+          format: date-time
+          description: Начало следующего месяца в UTC, не включительно.
+
+    LeaderboardItem:
+      type: object
+      required: [playerId, nickname, earnedLeaves, level, position, place]
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+          minLength: 1
+        earnedLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Сумма положительных начислений листьев за текущий месяц в UTC.
+        level:
+          type: integer
+          format: int32
+          minimum: 0
+        position:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Техническая позиция после стабильной сортировки.
+        place:
+          type: integer
+          enum: [1]
+          description: Отображаемое место. По требованию продукта всегда равно 1.
+
+    MyLeaderboardItem:
+      allOf:
+        - $ref: '#/components/schemas/LeaderboardItem'
+        - type: object
+          required: [isTop10]
+          properties:
+            isTop10:
+              type: boolean
+              description: Равно true, если позиция не превышает 10.
+
+    LeaderboardResponse:
+      type: object
+      required: [period, calculatedAt, nextCalculationAt, items]
+      properties:
+        period:
+          $ref: '#/components/schemas/LeaderboardPeriod'
+        calculatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего успешно опубликованного снимка.
+        nextCalculationAt:
+          type: string
+          format: date-time
+          description: Время следующего запланированного ежедневного расчёта — 00:00 UTC.
+        items:
+          type: array
+          minItems: 0
+          maxItems: 10
+          description: Упорядочены по возрастанию технической позиции.
+          items:
+            $ref: '#/components/schemas/LeaderboardItem'
+
+    MyLeaderboardResponse:
+      type: object
+      required: [period, calculatedAt, nextCalculationAt, player]
+      properties:
+        period:
+          $ref: '#/components/schemas/LeaderboardPeriod'
+        calculatedAt:
+          type: string
+          format: date-time
+        nextCalculationAt:
+          type: string
+          format: date-time
+        player:
+          $ref: '#/components/schemas/MyLeaderboardItem'
+
+    WeeklyLoginCycle:
+      type: object
+      required: [isoWeek, startDate, endDate, claimedDaysCount, version]
+      properties:
+        isoWeek:
+          type: string
+          pattern: '^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$'
+          example: 2026-W32
+        startDate:
+          type: string
+          format: date
+          description: Понедельник, с которого начинается цикл в UTC.
+        endDate:
+          type: string
+          format: date
+          description: Воскресенье, которым заканчивается цикл в UTC.
+        claimedDaysCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 7
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+
+    WeeklyLoginDayStatus:
+      type: string
+      enum:
+        - CLAIMED
+        - AVAILABLE
+        - UNCONFIRMED
+        - MISSED
+        - FUTURE
+        - BEFORE_REGISTRATION
+
+    WeeklyLoginToday:
+      type: object
+      required: [date, status, step, rewardLeaves]
+      properties:
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/WeeklyLoginDayStatus'
+        step:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+          nullable: true
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+
+    WeeklyLoginDay:
+      type: object
+      required: [date, weekday, status, step, rewardLeaves, projected]
+      properties:
+        date:
+          type: string
+          format: date
+        weekday:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+          description: Понедельник обозначается числом 1, воскресенье — числом 7.
+        status:
+          $ref: '#/components/schemas/WeeklyLoginDayStatus'
+        step:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+          nullable: true
+          description: Равно null для дней со статусом MISSED или BEFORE_REGISTRATION.
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+          description: Равно null для дней со статусом MISSED или BEFORE_REGISTRATION.
+        projected:
+          type: boolean
+          description: Равно true для будущих значений, рассчитанных при условии получения награды за каждый предшествующий день.
+
+    WeeklyLoginResponse:
+      type: object
+      required: [cycle, today, days, ladder, maxReachableStep]
+      properties:
+        cycle:
+          $ref: '#/components/schemas/WeeklyLoginCycle'
+        today:
+          $ref: '#/components/schemas/WeeklyLoginToday'
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items:
+            $ref: '#/components/schemas/WeeklyLoginDay'
+        ladder:
+          type: array
+          minItems: 1
+          maxItems: 7
+          description: Размеры наград, заданные в конфигурации бэкенда.
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+        maxReachableStep:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 7
+
+    WeeklyLoginClaimRequest:
+      type: object
+      additionalProperties: false
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Должна совпадать с текущей датой сервера в UTC.
+
+    ClaimVerification:
+      type: string
+      enum: [CONFIRMED, PENDING, FAILED]
+
+    WeeklyLoginClaim:
+      type: object
+      required: [date, step, leaves, verification, grantedAt]
+      properties:
+        date:
+          type: string
+          format: date
+        step:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+        leaves:
+          type: integer
+          format: int32
+          minimum: 1
+        verification:
+          $ref: '#/components/schemas/ClaimVerification'
+        grantedAt:
+          type: string
+          format: date-time
+
+    Progression:
+      type: object
+      required: [level, lifetimeLeaves, walletLeaves, crossedLevels, version]
+      properties:
+        level:
+          type: integer
+          format: int32
+          minimum: 0
+        lifetimeLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+        walletLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+        crossedLevels:
+          type: array
+          items:
+            type: integer
+            format: int32
+            minimum: 1
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+
+    NextWeeklyLoginReward:
+      type: object
+      required: [step, rewardLeaves]
+      properties:
+        step:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+
+    WeeklyLoginClaimResponse:
+      type: object
+      required: [claim, progression, next]
+      properties:
+        claim:
+          $ref: '#/components/schemas/WeeklyLoginClaim'
+        progression:
+          $ref: '#/components/schemas/Progression'
+        next:
+          allOf:
+            - $ref: '#/components/schemas/NextWeeklyLoginReward'
+          nullable: true
+          description: Равно null после получения пользователем награды за этап 7.
+
+    ExistingClaimSummary:
+      type: object
+      required: [date, step, leaves]
+      properties:
+        date:
+          type: string
+          format: date
+        step:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 7
+        leaves:
+          type: integer
+          format: int32
+          minimum: 1
+
+    AlreadyClaimedDetails:
+      type: object
+      required: [claim]
+      properties:
+        claim:
+          $ref: '#/components/schemas/ExistingClaimSummary'
+
+    AlreadyClaimedError:
+      type: object
+      required: [code, message, details]
+      properties:
+        code:
+          type: string
+          enum: [ALREADY_CLAIMED]
+        message:
+          type: string
+        details:
+          $ref: '#/components/schemas/AlreadyClaimedDetails'
+
+    ExternalActivityStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, UNKNOWN, BEFORE_REGISTRATION]
+
+    ExternalActivityWindow:
+      type: object
+      required: [dateFrom, dateTo]
+      properties:
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+
+    ExternalActivityDay:
+      type: object
+      required: [date, status, firstActivityAt, activityCount]
+      properties:
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ExternalActivityStatus'
+        firstActivityAt:
+          type: string
+          format: date-time
+          nullable: true
+        activityCount:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+
+    ExternalActivityResponse:
+      type: object
+      required: [userId, window, generatedAt, completeUntil, days]
+      properties:
+        userId:
+          type: string
+        window:
+          $ref: '#/components/schemas/ExternalActivityWindow'
+        generatedAt:
+          type: string
+          format: date-time
+        completeUntil:
+          type: string
+          format: date
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalActivityDay'
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Стабильный машиночитаемый код ошибки.
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
