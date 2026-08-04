@@ -3,7 +3,8 @@ info:
   title: Коробыш API
   version: 1.0.0
   description: |
-    Контракт API для механик ежемесячного рейтинга и еженедельных наград за вход.
+    Контракт API для механик ежемесячного рейтинга, еженедельных наград за вход
+    и ежедневных заданий.
 
     Правила работы со временем:
     - все временные метки передаются в формате RFC3339 и часовом поясе UTC;
@@ -25,6 +26,8 @@ tags:
     description: Ежемесячный рейтинг игроков, рассчитанный по последнему опубликованному ежедневному снимку.
   - name: Еженедельный вход
     description: Состояние еженедельной награды за активность и операции её получения.
+  - name: Ежедневные задания
+    description: Задания текущего дня, прогресс их выполнения и получение наград.
   - name: Внешняя активность
     description: Контракт внешнего сервиса активности, который использует бэкенд.
 
@@ -177,6 +180,170 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/v1/tasks:
+    get:
+      tags: [Ежедневные задания]
+      operationId: getDailyTasks
+      summary: Получить задания на текущий день
+      description: |
+        Возвращает уровень питомца и полный список из четырёх заданий текущего дня.
+        Задания, недоступные на текущем уровне, также входят в список со статусом `LOCKED`.
+        Прогресс обновляется на основании подтверждённых действий пользователя.
+      responses:
+        '200':
+          description: Задания и их текущий прогресс.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyTasksResponse'
+              examples:
+                default:
+                  value:
+                    petLevel: 4
+                    tasks:
+                      - taskId: 8f123af2-24c5-4ff7-b114-111111111111
+                        slot: 1
+                        type: OPEN_NOTIFICATIONS
+                        description: Открыть 5 уведомлений
+                        currentCount: 5
+                        targetCount: 5
+                        rewardLeaves: 45
+                        requiredLevel: 1
+                        status: CLAIMED
+                      - taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
+                        slot: 2
+                        type: ADD_TO_FAVORITES
+                        description: Добавить 3 объявления в избранное
+                        currentCount: 3
+                        targetCount: 3
+                        rewardLeaves: 45
+                        requiredLevel: 1
+                        status: COMPLETED
+                      - taskId: 72482c10-6976-4823-a835-333333333333
+                        slot: 3
+                        type: PUBLISH_LISTING
+                        description: Опубликовать 1 объявление
+                        currentCount: 0
+                        targetCount: 1
+                        rewardLeaves: 50
+                        requiredLevel: 5
+                        status: LOCKED
+                      - taskId: b826c297-bc5f-4e1a-93d5-444444444444
+                        slot: 4
+                        type: COMPLETE_DEAL
+                        description: Совершить покупку или продажу
+                        currentCount: 0
+                        targetCount: 1
+                        rewardLeaves: 60
+                        requiredLevel: 10
+                        status: LOCKED
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/tasks/progress:
+    get:
+      tags: [Ежедневные задания]
+      operationId: getDailyTasksProgress
+      summary: Получить количество выполненных заданий за день
+      description: |
+        Возвращает компактный прогресс для отображения на страницах приложения.
+        `completedCount` учитывает задания со статусами `COMPLETED` и `CLAIMED`.
+        В `totalCount` входят все четыре задания, включая недоступные по уровню.
+      responses:
+        '200':
+          description: Количество выполненных заданий за текущий день.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyTasksProgressResponse'
+              examples:
+                default:
+                  value:
+                    completedCount: 2
+                    totalCount: 4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PlayerNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/tasks/{taskId}/claim:
+    post:
+      tags: [Ежедневные задания]
+      operationId: claimDailyTaskReward
+      summary: Получить награду за конкретное задание
+      description: |
+        Начисляет листья за выполненное задание текущего дня и меняет его статус
+        с `COMPLETED` на `CLAIMED`. Награду за одно задание можно получить только один раз.
+        Тело запроса и ключ идемпотентности для MVP не требуются.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Идентификатор задания из ответа `GET /api/v1/tasks`.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Награда начислена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyTaskClaimResponse'
+              examples:
+                default:
+                  value:
+                    taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
+                    rewardLeaves: 45
+                    status: CLAIMED
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Задание недоступно на текущем уровне питомца.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskLocked:
+                  value:
+                    code: TASK_LOCKED
+                    message: Задание недоступно на текущем уровне питомца.
+        '404':
+          description: Задание текущего дня или игрок не найдены.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskNotFound:
+                  value:
+                    code: TASK_NOT_FOUND
+                    message: Задание текущего дня не найдено.
+        '409':
+          description: Задание ещё не выполнено либо награда уже получена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskNotCompleted:
+                  value:
+                    code: TASK_NOT_COMPLETED
+                    message: Сначала выполните условие задания.
+                rewardAlreadyClaimed:
+                  value:
+                    code: TASK_REWARD_ALREADY_CLAIMED
+                    message: Награда за это задание уже получена.
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/leaderboard:
     get:
@@ -656,6 +823,132 @@ components:
         message:
           type: string
           description: Текст ошибки.
+
+    DailyTaskType:
+      type: string
+      description: Действие, прогресс которого учитывается для задания.
+      enum:
+        - OPEN_NOTIFICATIONS
+        - ADD_TO_FAVORITES
+        - PUBLISH_LISTING
+        - BOOST_LISTING
+        - LEAVE_REVIEW
+        - COMPLETE_DEAL
+        - ORDER_WITH_DELIVERY
+
+    DailyTaskStatus:
+      type: string
+      description: |
+        `LOCKED` — задание недоступно по уровню;
+        `IN_PROGRESS` — условие ещё не выполнено;
+        `COMPLETED` — условие выполнено, награду можно забрать;
+        `CLAIMED` — награда уже начислена.
+      enum:
+        - LOCKED
+        - IN_PROGRESS
+        - COMPLETED
+        - CLAIMED
+
+    DailyTask:
+      type: object
+      required:
+        - taskId
+        - slot
+        - type
+        - description
+        - currentCount
+        - targetCount
+        - rewardLeaves
+        - requiredLevel
+        - status
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Идентификатор задания текущего дня.
+        slot:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4
+          description: Позиция задания в списке.
+        type:
+          $ref: '#/components/schemas/DailyTaskType'
+        description:
+          type: string
+          minLength: 1
+          description: Готовый текст условия для отображения пользователю.
+        currentCount:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Подтверждённое количество выполненных действий.
+        targetCount:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество действий, необходимое для выполнения задания.
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество листьев за получение награды.
+        requiredLevel:
+          type: integer
+          format: int32
+          enum: [1, 5, 10]
+          description: Минимальный уровень питомца для доступа к заданию.
+        status:
+          $ref: '#/components/schemas/DailyTaskStatus'
+
+    DailyTasksResponse:
+      type: object
+      required: [petLevel, tasks]
+      properties:
+        petLevel:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Текущий уровень питомца, используемый для определения доступа.
+        tasks:
+          type: array
+          minItems: 4
+          maxItems: 4
+          description: Все четыре задания текущего дня в порядке слотов.
+          items:
+            $ref: '#/components/schemas/DailyTask'
+
+    DailyTasksProgressResponse:
+      type: object
+      required: [completedCount, totalCount]
+      properties:
+        completedCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 4
+          description: Количество заданий со статусом COMPLETED или CLAIMED.
+        totalCount:
+          type: integer
+          format: int32
+          enum: [4]
+          description: Общее количество заданий дня, включая заблокированные.
+
+    DailyTaskClaimResponse:
+      type: object
+      required: [taskId, rewardLeaves, status]
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        rewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Фактически начисленное количество листьев.
+        status:
+          type: string
+          enum: [CLAIMED]
 
     LeaderboardPeriod:
       type: object
