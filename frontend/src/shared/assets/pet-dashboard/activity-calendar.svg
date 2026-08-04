@@ -1,0 +1,15 @@
+<svg width="84" height="76" viewBox="0 0 84 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="0.5" y="0.5" width="83" height="75" rx="13.5" fill="white"/>
+<rect x="0.5" y="0.5" width="83" height="75" rx="13.5" stroke="#E5E5E5"/>
+<rect width="84" height="19" rx="9.5" fill="#68C34A"/>
+<rect x="11" y="28" width="15" height="12" rx="4" fill="#EFF9DD"/>
+<rect x="33" y="28" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<rect x="55" y="28" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<rect x="11" y="44" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<rect x="33" y="44" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<rect x="55" y="44" width="15" height="12" rx="4" fill="#EFF9DD"/>
+<rect x="11" y="60" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<rect x="33" y="60" width="15" height="12" rx="4" fill="#EFF9DD"/>
+<rect x="55" y="60" width="15" height="12" rx="4" fill="#F2F2F2"/>
+<path d="M57.8318 55.4244L59.3339 53.9169L61.8002 56.3406L67.2707 50.8913L68.7835 52.3988L61.8002 59.3448L57.8318 55.4244Z" fill="#4D8E00"/>
+</svg>

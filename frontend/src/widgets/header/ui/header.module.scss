@@ -1,11 +1,18 @@
 .header {
   display: grid;
   grid-template-areas: "backButton name notificationButton";
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 44px 1fr 44px;
   align-items: center;
+  padding: 20px 20px 12px;
 
   .header__backButton {
+    display: grid;
     grid-area: backButton;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+
+    border-radius: 50%;
   }
 
   .header__name {
@@ -15,6 +22,18 @@
   }
 
   .header__notificationButton {
+    display: grid;
     grid-area: notificationButton;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+
+    border-radius: 50%;
+  }
+}
+
+@media (width < 600px) {
+  .header {
+    padding: max(12px, env(safe-area-inset-top)) 16px 8px;
   }
 }
