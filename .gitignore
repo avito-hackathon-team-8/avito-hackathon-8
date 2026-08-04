@@ -5,3 +5,7 @@ frontend/dist
 .pnpm-store
 backend/pb_data
 backend/pocketbase
+node_modules
+dist
+.git
+

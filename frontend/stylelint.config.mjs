@@ -20,6 +20,7 @@ export default {
 
   rules: {
     'declaration-empty-line-before': null,
+    'selector-class-pattern': null,
 
     'order/properties-order': [
       [
