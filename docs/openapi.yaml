@@ -3,7 +3,8 @@ info:
   title: Коробыш API
   version: 1.0.0
   description: |
-    Контракт API для механик ежемесячного рейтинга и еженедельных наград за вход.
+    Контракт API приложения «Коробыш»: авторизация, персональные награды,
+    ежемесячный рейтинг и еженедельные награды за вход.
 
     Правила работы со временем:
     - все временные метки передаются в формате RFC3339 и часовом поясе UTC;
@@ -21,6 +22,8 @@ tags:
     description: Проверка доступности и готовности бэкенда.
   - name: Авторизация
     description: Вход по одноразовому коду из электронной почты и получение текущего пользователя.
+  - name: Награды
+    description: Активные персональные бонусы пользователя и их использование.
   - name: Рейтинг
     description: Ежемесячный рейтинг игроков, рассчитанный по последнему опубликованному ежедневному снимку.
   - name: Еженедельный вход
@@ -173,6 +176,181 @@ paths:
                 $ref: '#/components/schemas/AuthErrorResponse'
         '500':
           description: Не удалось загрузить пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/app/rewards:
+    get:
+      tags: [Награды]
+      operationId: getRewards
+      summary: Получить все награды
+      description: |
+        Возвращает полную историю персональных наград пользователя, включая
+        активные, использованные и просроченные. Награды сгруппированы по категориям,
+        внутри группы сначала отображаются выданные позднее.
+      responses:
+        '200':
+          description: Все награды пользователя, сгруппированные по категориям.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardsResponse'
+              examples:
+                default:
+                  value:
+                    groups:
+                      - category: AVITO_BONUS
+                        categoryName: Бонусы Авито
+                        items:
+                          - id: 49a70fa1-4a2a-4cc7-b09d-444444444444
+                            title: 100 бонусов
+                            category: AVITO_BONUS
+                            categoryName: Бонусы Авито
+                            source: LEVEL
+                            active: true
+                            status: ACTIVE
+                            expiresAt: '2026-09-04T12:00:00Z'
+                            awardedAt: '2026-08-05T12:00:00Z'
+                            redeemedAt: null
+                      - category: FREE_DELIVERY
+                        categoryName: Бесплатная доставка
+                        items:
+                          - id: 2c9f7f9f-a958-4e77-b17c-555555555555
+                            title: Бесплатная доставка (1 заказ)
+                            category: FREE_DELIVERY
+                            categoryName: Бесплатная доставка
+                            source: CHEST
+                            active: false
+                            status: REDEEMED
+                            expiresAt: '2026-08-20T12:00:00Z'
+                            awardedAt: '2026-08-05T12:00:00Z'
+                            redeemedAt: '2026-08-05T13:30:00Z'
+        '401':
+          description: JWT отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось загрузить награды.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/app/rewards/{rewardId}/redeem:
+    post:
+      tags: [Награды]
+      operationId: redeemReward
+      summary: Использовать награду
+      description: |
+        Помечает активную награду текущего пользователя как использованную.
+        После успешной операции награда остаётся в общем списке со статусом `REDEEMED`
+        и значением `active: false`.
+      parameters:
+        - name: rewardId
+          in: path
+          required: true
+          description: Идентификатор награды.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Награда успешно использована.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeemRewardResponse'
+              examples:
+                default:
+                  value:
+                    id: 49a70fa1-4a2a-4cc7-b09d-444444444444
+                    redeemedAt: '2026-08-05T13:30:00Z'
+        '400':
+          description: Передан некорректный идентификатор награды.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '401':
+          description: JWT отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '404':
+          description: Активная награда не найдена, уже использована или просрочена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось использовать награду.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/app/rewards/{rewardId}:
+    get:
+      tags: [Награды]
+      operationId: getReward
+      summary: Открыть награду
+      description: |
+        Возвращает награду текущего пользователя по идентификатору. В отличие
+        от общего списка метод возвращает также уже использованные и просроченные
+        награды, чтобы пользователь мог повторно открыть их на клиенте.
+      parameters:
+        - name: rewardId
+          in: path
+          required: true
+          description: Идентификатор награды.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Полные данные награды и её текущее состояние.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardDetails'
+              examples:
+                redeemed:
+                  value:
+                    id: 49a70fa1-4a2a-4cc7-b09d-444444444444
+                    title: 100 бонусов
+                    category: AVITO_BONUS
+                    categoryName: Бонусы Авито
+                    source: LEVEL
+                    active: false
+                    status: REDEEMED
+                    expiresAt: '2026-09-04T12:00:00Z'
+                    awardedAt: '2026-08-05T12:00:00Z'
+                    redeemedAt: '2026-08-05T13:30:00Z'
+        '400':
+          description: Передан некорректный идентификатор награды.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '401':
+          description: JWT отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '404':
+          description: Награда не существует или принадлежит другому пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '500':
+          description: Не удалось загрузить награду.
           content:
             application/json:
               schema:
@@ -703,6 +881,146 @@ components:
         message:
           type: string
           description: Текст ошибки.
+
+    RewardCategory:
+      type: string
+      description: Категория награды.
+      enum:
+        - AVITO_BONUS
+        - FREE_DELIVERY
+        - FREE_PROMOTION
+        - PROMOTION_DISCOUNT
+        - DELIVERY_DISCOUNT
+
+    RewardSource:
+      type: string
+      description: Игровое событие, за которое выдана награда.
+      enum:
+        - LEVEL
+        - CHEST
+        - LEADERBOARD
+
+    RewardStatus:
+      type: string
+      description: Текущее состояние награды.
+      enum:
+        - ACTIVE
+        - REDEEMED
+        - EXPIRED
+
+    RewardItem:
+      type: object
+      required: [id, title, category, categoryName, source, active, status, expiresAt, awardedAt, redeemedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор экземпляра награды пользователя.
+        title:
+          type: string
+          minLength: 1
+          description: Отображаемое название награды.
+        category:
+          $ref: '#/components/schemas/RewardCategory'
+        categoryName:
+          type: string
+          description: Локализованное название категории.
+        source:
+          $ref: '#/components/schemas/RewardSource'
+        active:
+          type: boolean
+          description: Равно true только для доступной к использованию награды.
+        status:
+          $ref: '#/components/schemas/RewardStatus'
+        expiresAt:
+          type: string
+          format: date-time
+          description: Срок действия награды в UTC.
+        awardedAt:
+          type: string
+          format: date-time
+          description: Время выдачи награды в UTC.
+        redeemedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Время использования в UTC или null, если награда ещё не использована.
+
+    RewardGroup:
+      type: object
+      required: [category, categoryName, items]
+      properties:
+        category:
+          $ref: '#/components/schemas/RewardCategory'
+        categoryName:
+          type: string
+          description: Локализованное название категории.
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RewardItem'
+
+    RewardsResponse:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          description: Категории, в которых у пользователя есть хотя бы одна награда.
+          items:
+            $ref: '#/components/schemas/RewardGroup'
+
+    RewardDetails:
+      type: object
+      required: [id, title, category, categoryName, source, active, status, expiresAt, awardedAt, redeemedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор экземпляра награды пользователя.
+        title:
+          type: string
+          minLength: 1
+          description: Отображаемое название награды.
+        category:
+          $ref: '#/components/schemas/RewardCategory'
+        categoryName:
+          type: string
+          description: Локализованное название категории.
+        source:
+          $ref: '#/components/schemas/RewardSource'
+        active:
+          type: boolean
+          description: Равно true только для доступной к использованию награды.
+        status:
+          $ref: '#/components/schemas/RewardStatus'
+        expiresAt:
+          type: string
+          format: date-time
+          description: Срок действия награды в UTC.
+        awardedAt:
+          type: string
+          format: date-time
+          description: Время выдачи награды в UTC.
+        redeemedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Время использования в UTC или null, если награда ещё не использована.
+
+    RedeemRewardResponse:
+      type: object
+      required: [id, redeemedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Идентификатор использованной награды.
+        redeemedAt:
+          type: string
+          format: date-time
+          description: Время использования награды в UTC.
 
     LeaderboardPeriod:
       type: object

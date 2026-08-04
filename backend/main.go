@@ -9,6 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 )
 
 func main() {
@@ -31,7 +32,8 @@ func main() {
 	}
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
-	router := handlers.NewRouter(authService)
+	rewardService := rewards.NewService(db)
+	router := handlers.NewRouter(authService, rewardService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
