@@ -6,7 +6,11 @@ import { ButtonNotification } from "./button-notification/button-notification";
 
 import styles from "./header.module.scss";
 
-export const Header = () => {
+interface HeaderProps {
+  petName: string;
+}
+
+export const Header = ({ petName }: HeaderProps) => {
   return (
     <header className={styles.header}>
       <Button
@@ -17,7 +21,7 @@ export const Header = () => {
       </Button>
 
       <Typography className={styles.header__name} as="h1" variant="heading">
-        Коробыш
+        {petName}
       </Typography>
 
       <ButtonNotification className={styles.header__notificationButton} />
