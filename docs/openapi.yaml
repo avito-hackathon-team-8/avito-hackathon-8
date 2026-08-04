@@ -262,8 +262,7 @@ paths:
       summary: Получить текущий цикл еженедельных входов
       description: |
         Возвращает текущий недельный цикл авторизованного пользователя с понедельника
-        по воскресенье в UTC, состояние получения награды за сегодня, все дни цикла,
-        настроенную на бэкенде шкалу наград и максимально достижимый этап.
+        по воскресенье в UTC, состояние получения награды за сегодня и все дни цикла.
       responses:
         '200':
           description: Текущее состояние еженедельных входов.
@@ -278,40 +277,27 @@ paths:
                       isoWeek: 2026-W32
                       startDate: '2026-08-03'
                       endDate: '2026-08-09'
-                      claimedDaysCount: 2
-                      version: 7
                     today:
                       date: '2026-08-05'
                       status: AVAILABLE
-                      step: 3
                       rewardLeaves: 30
                     days:
                       - date: '2026-08-03'
                         weekday: 1
                         status: CLAIMED
-                        step: 1
                         rewardLeaves: 10
-                        projected: false
                       - date: '2026-08-04'
                         weekday: 2
-                        status: MISSED
-                        step: null
-                        rewardLeaves: null
-                        projected: false
+                        status: AVAILABLE
+                        rewardLeaves: 20
                       - date: '2026-08-05'
                         weekday: 3
                         status: AVAILABLE
-                        step: 3
                         rewardLeaves: 30
-                        projected: false
                       - date: '2026-08-06'
                         weekday: 4
                         status: FUTURE
-                        step: 4
                         rewardLeaves: 40
-                        projected: true
-                    ladder: [10, 20, 30, 40, 50, 60, 70]
-                    maxReachableStep: 6
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -323,17 +309,18 @@ paths:
     post:
       tags: [Еженедельный вход]
       operationId: claimWeeklyLogin
-      summary: Получить сегодняшнюю еженедельную награду за активность
+      summary: Получить накопившиеся награды текущей недели
       description: |
-        Позволяет получить награду только за текущую дату в UTC. Дата из запроса
-        используется для проверки согласованности; фактические дату, этап, награду
-        и статус активности определяет сервер.
+        Выдаёт все ещё не полученные награды за дни текущей UTC-недели
+        с понедельника по текущую дату, в которые вход пользователя был подтверждён.
+        Незабранная награда не сгорает в конце дня и остаётся доступной до конца этой недели.
 
-        При внешнем статусе `INACTIVE` запрос отклоняется. Статус `UNKNOWN` или
-        недоступность внешнего сервиса обрабатываются по принципу fail-open: награда
-        выдаётся со статусом проверки `PENDING`. Уже выданная награда впоследствии не отзывается.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        Дата из запроса используется для проверки согласованности. Даты и размеры наград
+        определяет сервер.
+
+        День со статусом `INACTIVE` пропускается. Статус `UNKNOWN` или недоступность внешнего сервиса
+        обрабатываются по принципу fail-open: награда за такой день выдаётся со статусом проверки `PENDING`.
+        Уже выданная награда впоследствии не отзывается.
       requestBody:
         required: true
         content:
@@ -346,7 +333,7 @@ paths:
                   date: '2026-08-05'
       responses:
         '200':
-          description: Награда выдана либо для повторного ключа идемпотентности возвращён сохранённый ответ.
+          description: Все накопившиеся награды текущей недели выданы.
           content:
             application/json:
               schema:
@@ -354,53 +341,48 @@ paths:
               examples:
                 confirmed:
                   value:
-                    claim:
-                      date: '2026-08-05'
-                      step: 3
-                      leaves: 30
-                      verification: CONFIRMED
-                      grantedAt: '2026-08-05T09:34:12Z'
+                    claims:
+                      - date: '2026-08-04'
+                        leaves: 20
+                        verification: CONFIRMED
+                        grantedAt: '2026-08-05T09:34:12Z'
+                      - date: '2026-08-05'
+                        leaves: 30
+                        verification: CONFIRMED
+                        grantedAt: '2026-08-05T09:34:12Z'
                     progression:
                       level: 5
-                      lifetimeLeaves: 240
+                      lifetimeLeaves: 260
                       walletLeaves: 0
                       crossedLevels: [4, 5]
                       version: 18
-                    next:
-                      step: 4
-                      rewardLeaves: 40
                 pending:
                   value:
-                    claim:
-                      date: '2026-08-05'
-                      step: 3
-                      leaves: 30
-                      verification: PENDING
-                      grantedAt: '2026-08-05T09:34:12Z'
+                    claims:
+                      - date: '2026-08-04'
+                        leaves: 20
+                        verification: CONFIRMED
+                        grantedAt: '2026-08-05T09:34:12Z'
+                      - date: '2026-08-05'
+                        leaves: 30
+                        verification: PENDING
+                        grantedAt: '2026-08-05T09:34:12Z'
                     progression:
                       level: 5
-                      lifetimeLeaves: 240
+                      lifetimeLeaves: 260
                       walletLeaves: 0
                       crossedLevels: [4, 5]
                       version: 18
-                    next:
-                      step: 4
-                      rewardLeaves: 40
         '400':
-          description: Обязательный ключ идемпотентности отсутствует или запрос составлен неверно.
+          description: Запрос составлен неверно.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                idempotencyKeyRequired:
-                  value:
-                    code: IDEMPOTENCY_KEY_REQUIRED
-                    message: Требуется заголовок Idempotency-Key
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Внешний сервис активности подтвердил отсутствие подходящей активности за сегодня.
+          description: В текущей неделе до сегодня не было ни одного дня с подтверждённой или ожидающей проверки активностью.
           content:
             application/json:
               schema:
@@ -409,25 +391,20 @@ paths:
                 activityNotConfirmed:
                   value:
                     code: ACTIVITY_NOT_CONFIRMED
-                    message: Активность за текущую дату в UTC не подтверждена
+                    message: На текущей неделе нет дней с подтверждённой активностью
         '404':
           $ref: '#/components/responses/PlayerNotFound'
         '409':
-          description: Награда за текущую дату в UTC уже была получена.
+          description: Активные дни в текущей неделе есть, но все награды за них уже получены.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlreadyClaimedError'
+                $ref: '#/components/schemas/ErrorResponse'
               examples:
                 alreadyClaimed:
                   value:
                     code: ALREADY_CLAIMED
-                    message: Награда за 2026-08-05 уже получена
-                    details:
-                      claim:
-                        date: '2026-08-05'
-                        step: 3
-                        leaves: 30
+                    message: Все доступные награды текущей недели уже получены
         '422':
           description: Дата в запросе не совпадает с текущей датой сервера в UTC.
           content:
@@ -541,21 +518,6 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
-  parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: |
-        Уникальный ключ запроса. Бэкенд хранит результаты идемпотентных операций 24 часа.
-        При повторном использовании того же ключа возвращается сохранённый ответ
-        без повторной выдачи награды.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
-      example: 6f1c2a8e-2b19-4c77-9a41-0b3f5e7d1c22
 
   responses:
     Unauthorized:
@@ -777,7 +739,7 @@ components:
 
     WeeklyLoginCycle:
       type: object
-      required: [isoWeek, startDate, endDate, claimedDaysCount, version]
+      required: [isoWeek, startDate, endDate]
       properties:
         isoWeek:
           type: string
@@ -791,15 +753,6 @@ components:
           type: string
           format: date
           description: Воскресенье, которым заканчивается цикл в UTC.
-        claimedDaysCount:
-          type: integer
-          format: int32
-          minimum: 0
-          maximum: 7
-        version:
-          type: integer
-          format: int64
-          minimum: 0
 
     WeeklyLoginDayStatus:
       type: string
@@ -813,19 +766,13 @@ components:
 
     WeeklyLoginToday:
       type: object
-      required: [date, status, step, rewardLeaves]
+      required: [date, status, rewardLeaves]
       properties:
         date:
           type: string
           format: date
         status:
           $ref: '#/components/schemas/WeeklyLoginDayStatus'
-        step:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 7
-          nullable: true
         rewardLeaves:
           type: integer
           format: int32
@@ -834,7 +781,7 @@ components:
 
     WeeklyLoginDay:
       type: object
-      required: [date, weekday, status, step, rewardLeaves, projected]
+      required: [date, weekday, status, rewardLeaves]
       properties:
         date:
           type: string
@@ -847,26 +794,16 @@ components:
           description: Понедельник обозначается числом 1, воскресенье — числом 7.
         status:
           $ref: '#/components/schemas/WeeklyLoginDayStatus'
-        step:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 7
-          nullable: true
-          description: Равно null для дней со статусом MISSED или BEFORE_REGISTRATION.
         rewardLeaves:
           type: integer
           format: int32
           minimum: 1
           nullable: true
           description: Равно null для дней со статусом MISSED или BEFORE_REGISTRATION.
-        projected:
-          type: boolean
-          description: Равно true для будущих значений, рассчитанных при условии получения награды за каждый предшествующий день.
 
     WeeklyLoginResponse:
       type: object
-      required: [cycle, today, days, ladder, maxReachableStep]
+      required: [cycle, today, days]
       properties:
         cycle:
           $ref: '#/components/schemas/WeeklyLoginCycle'
@@ -878,20 +815,6 @@ components:
           maxItems: 7
           items:
             $ref: '#/components/schemas/WeeklyLoginDay'
-        ladder:
-          type: array
-          minItems: 1
-          maxItems: 7
-          description: Размеры наград, заданные в конфигурации бэкенда.
-          items:
-            type: integer
-            format: int32
-            minimum: 1
-        maxReachableStep:
-          type: integer
-          format: int32
-          minimum: 0
-          maximum: 7
 
     WeeklyLoginClaimRequest:
       type: object
@@ -909,16 +832,11 @@ components:
 
     WeeklyLoginClaim:
       type: object
-      required: [date, step, leaves, verification, grantedAt]
+      required: [date, leaves, verification, grantedAt]
       properties:
         date:
           type: string
           format: date
-        step:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 7
         leaves:
           type: integer
           format: int32
@@ -956,69 +874,19 @@ components:
           format: int64
           minimum: 0
 
-    NextWeeklyLoginReward:
-      type: object
-      required: [step, rewardLeaves]
-      properties:
-        step:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 7
-        rewardLeaves:
-          type: integer
-          format: int32
-          minimum: 1
-
     WeeklyLoginClaimResponse:
       type: object
-      required: [claim, progression, next]
+      required: [claims, progression]
       properties:
-        claim:
-          $ref: '#/components/schemas/WeeklyLoginClaim'
+        claims:
+          type: array
+          minItems: 1
+          maxItems: 7
+          description: Все награды, выданные этим запросом, в порядке дат.
+          items:
+            $ref: '#/components/schemas/WeeklyLoginClaim'
         progression:
           $ref: '#/components/schemas/Progression'
-        next:
-          allOf:
-            - $ref: '#/components/schemas/NextWeeklyLoginReward'
-          nullable: true
-          description: Равно null после получения пользователем награды за этап 7.
-
-    ExistingClaimSummary:
-      type: object
-      required: [date, step, leaves]
-      properties:
-        date:
-          type: string
-          format: date
-        step:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 7
-        leaves:
-          type: integer
-          format: int32
-          minimum: 1
-
-    AlreadyClaimedDetails:
-      type: object
-      required: [claim]
-      properties:
-        claim:
-          $ref: '#/components/schemas/ExistingClaimSummary'
-
-    AlreadyClaimedError:
-      type: object
-      required: [code, message, details]
-      properties:
-        code:
-          type: string
-          enum: [ALREADY_CLAIMED]
-        message:
-          type: string
-        details:
-          $ref: '#/components/schemas/AlreadyClaimedDetails'
 
     ExternalActivityStatus:
       type: string
