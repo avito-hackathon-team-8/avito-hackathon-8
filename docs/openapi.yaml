@@ -354,6 +354,17 @@ paths:
         Возвращает полный список из четырёх заданий текущего дня.
         Задания, недоступные на текущем уровне, также входят в список со статусом `LOCKED`.
         Прогресс обновляется на основании подтверждённых действий пользователя.
+        Если `level` отсутствует, некорректен или меньше 1, сервер использует уровень 1.
+      parameters:
+        - name: level
+          in: query
+          required: false
+          description: Текущий уровень питомца пользователя.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
       responses:
         '200':
           description: Задания и их текущий прогресс.
@@ -386,7 +397,7 @@ paths:
                       - taskId: 72482c10-6976-4823-a835-333333333333
                         slot: 3
                         type: PUBLISH_LISTING
-                        description: Опубликовать 1 объявление
+                        description: Опубликовать объявление
                         currentCount: 0
                         targetCount: 1
                         rewardLeaves: 50
@@ -403,8 +414,6 @@ paths:
                         status: LOCKED
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/PlayerNotFound'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -417,6 +426,17 @@ paths:
         Возвращает компактный прогресс для отображения на страницах приложения.
         `completedCount` учитывает задания со статусами `COMPLETED` и `CLAIMED`.
         В `totalCount` входят все четыре задания, включая недоступные по уровню.
+        Если `level` отсутствует, некорректен или меньше 1, сервер использует уровень 1.
+      parameters:
+        - name: level
+          in: query
+          required: false
+          description: Текущий уровень питомца пользователя.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
       responses:
         '200':
           description: Количество выполненных заданий за текущий день.
@@ -431,23 +451,26 @@ paths:
                     totalCount: 4
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/PlayerNotFound'
         '500':
           $ref: '#/components/responses/InternalError'
 
   /api/v1/tasks/record:
     post:
       tags: [Ежедневные задания]
-      operationId: recordDailyTaskEvent
-      summary: Записать действие для прогресса задания
+      operationId: recordDailyTaskEvents
+      summary: Записать действия для прогресса заданий
       description: |
-        Увеличивает прогресс задания текущего дня по переданному типу действия на единицу.
+        Увеличивает прогресс заданий текущего дня по переданным событиям.
+        Для каждого события `count` меньше 1 трактуется как 1.
         Если после записи `currentCount` достигает `targetCount`, задание получает статус
         `COMPLETED` и становится доступным для получения награды.
 
         Повторные записи после выполнения задания не увеличивают прогресс выше `targetCount`.
-        Записать действие для задания, недоступного на текущем уровне питомца, нельзя.
+        Записать действие для задания, недоступного на переданном уровне питомца, нельзя.
+        Если `level` отсутствует или меньше 1, сервер использует уровень 1.
+        Если `events` отсутствует, равен `null` или пуст, сервер возвращает `204`
+        без изменения прогресса. События применяются в одной транзакции: если одно
+        из них недоступно или не найдено, весь запрос отклоняется.
       requestBody:
         required: true
         content:
@@ -457,10 +480,15 @@ paths:
             examples:
               default:
                 value:
-                  type: ADD_TO_FAVORITES
+                  level: 5
+                  events:
+                    - type: ADD_TO_FAVORITES
+                      count: 2
+                    - type: OPEN_NOTIFICATIONS
+                      count: 1
       responses:
         '204':
-          description: Действие записано, прогресс задания обновлён.
+          description: События записаны, прогресс заданий обновлён.
         '400':
           description: Тело запроса некорректно или передан неизвестный тип задания.
           content:
@@ -468,6 +496,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
+                invalidRequest:
+                  value:
+                    code: INVALID_REQUEST
+                    message: Некорректное тело запроса.
                 invalidTaskType:
                   value:
                     code: INVALID_TASK_TYPE
@@ -475,7 +507,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Задание с таким типом недоступно на текущем уровне питомца.
+          description: Одно из заданий недоступно на текущем уровне питомца.
           content:
             application/json:
               schema:
@@ -484,9 +516,9 @@ paths:
                 taskLocked:
                   value:
                     code: TASK_LOCKED
-                    message: Задание недоступно на текущем уровне питомца.
+                    message: Одно из заданий недоступно на текущем уровне питомца.
         '404':
-          description: Задание текущего дня с таким типом или игрок не найдены.
+          description: Одно из заданий текущего дня не найдено.
           content:
             application/json:
               schema:
@@ -495,7 +527,7 @@ paths:
                 taskNotFound:
                   value:
                     code: TASK_NOT_FOUND
-                    message: Задание текущего дня не найдено.
+                    message: Одно из заданий текущего дня не найдено.
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -505,9 +537,11 @@ paths:
       operationId: claimDailyTaskReward
       summary: Получить награду за конкретное задание
       description: |
-        Начисляет листья за выполненное задание текущего дня и меняет его статус
-        с `COMPLETED` на `CLAIMED`. Награду за одно задание можно получить только один раз.
-        Тело запроса и ключ идемпотентности для MVP не требуются.
+        Помечает выполненное задание текущего дня как полученное и меняет его статус
+        с `COMPLETED` на `CLAIMED`. В ответе возвращается размер награды в листьях.
+        Награду за одно задание можно получить только один раз.
+        Тело запроса содержит текущий уровень питомца. Если `level` отсутствует или меньше 1,
+        сервер использует уровень 1.
       parameters:
         - name: taskId
           in: path
@@ -516,9 +550,19 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyTaskClaimRequest'
+            examples:
+              default:
+                value:
+                  level: 5
       responses:
         '200':
-          description: Награда начислена.
+          description: Награда отмечена полученной.
           content:
             application/json:
               schema:
@@ -529,6 +573,17 @@ paths:
                     taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
                     rewardLeaves: 45
                     status: CLAIMED
+        '400':
+          description: Тело запроса некорректно.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    code: INVALID_REQUEST
+                    message: Некорректное тело запроса.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -543,7 +598,7 @@ paths:
                     code: TASK_LOCKED
                     message: Задание недоступно на текущем уровне питомца.
         '404':
-          description: Задание текущего дня или игрок не найдены.
+          description: Задание текущего дня не найдено.
           content:
             application/json:
               schema:
@@ -1255,7 +1310,7 @@ components:
         `LOCKED` — задание недоступно по уровню;
         `IN_PROGRESS` — условие ещё не выполнено;
         `COMPLETED` — условие выполнено, награду можно забрать;
-        `CLAIMED` — награда уже начислена.
+        `CLAIMED` — награда уже получена.
       enum:
         - LOCKED
         - IN_PROGRESS
@@ -1345,10 +1400,45 @@ components:
     DailyTaskRecordRequest:
       type: object
       additionalProperties: false
+      properties:
+        level:
+          type: integer
+          format: int32
+          default: 1
+          description: |
+            Текущий уровень питомца. Если поле отсутствует или меньше 1,
+            сервер использует уровень 1.
+        events:
+          type: array
+          nullable: true
+          description: События действий, которые нужно записать одним запросом.
+          items:
+            $ref: '#/components/schemas/DailyTaskRecordEvent'
+
+    DailyTaskRecordEvent:
+      type: object
+      additionalProperties: false
       required: [type]
       properties:
         type:
           $ref: '#/components/schemas/DailyTaskType'
+        count:
+          type: integer
+          format: int32
+          default: 1
+          description: Количество действий этого типа. Значение меньше 1 сервер трактует как 1.
+
+    DailyTaskClaimRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        level:
+          type: integer
+          format: int32
+          default: 1
+          description: |
+            Текущий уровень питомца. Если поле отсутствует или меньше 1,
+            сервер использует уровень 1.
 
     DailyTaskClaimResponse:
       type: object
@@ -1361,7 +1451,7 @@ components:
           type: integer
           format: int32
           minimum: 1
-          description: Фактически начисленное количество листьев.
+          description: Количество листьев за это задание.
         status:
           type: string
           enum: [CLAIMED]
