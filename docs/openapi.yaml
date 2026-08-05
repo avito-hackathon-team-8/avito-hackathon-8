@@ -351,7 +351,7 @@ paths:
       operationId: getDailyTasks
       summary: Получить задания на текущий день
       description: |
-        Возвращает уровень питомца и полный список из четырёх заданий текущего дня.
+        Возвращает полный список из четырёх заданий текущего дня.
         Задания, недоступные на текущем уровне, также входят в список со статусом `LOCKED`.
         Прогресс обновляется на основании подтверждённых действий пользователя.
       responses:
@@ -364,7 +364,6 @@ paths:
               examples:
                 default:
                   value:
-                    petLevel: 4
                     tasks:
                       - taskId: 8f123af2-24c5-4ff7-b114-111111111111
                         slot: 1
@@ -1254,13 +1253,8 @@ components:
 
     DailyTasksResponse:
       type: object
-      required: [petLevel, tasks]
+      required: [tasks]
       properties:
-        petLevel:
-          type: integer
-          format: int32
-          minimum: 1
-          description: Текущий уровень питомца, используемый для определения доступа.
         tasks:
           type: array
           minItems: 4
