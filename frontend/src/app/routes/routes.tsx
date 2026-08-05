@@ -1,10 +1,14 @@
 import { createBrowserRouter } from "react-router";
 
+import { AppShell } from "@/app/layouts/app-shell/app-shell";
 import { MainLayout } from "@/app/layouts/main-layout";
+import { TanstackQueryProvider } from "@/app/providers/tanstack-query.provider";
 import { MainPage } from "@/pages/main-page/main.page";
+import { RegisterPage } from "@/pages/register-page";
+import { APP_ROUTES } from "@/shared/config/routes";
 
-import { AppShell } from "../layouts/app-shell/app-shell";
-import { TanstackQueryProvider } from "../providers/tanstack-query.provider";
+import { GuestOnly } from "./guards/guest-only";
+import { RequireAuth } from "./guards/require-auth";
 
 export const browserRouter = createBrowserRouter([
   {
@@ -14,11 +18,25 @@ export const browserRouter = createBrowserRouter([
         element: <AppShell />,
         children: [
           {
-            element: <MainLayout />,
+            element: <GuestOnly />,
             children: [
               {
-                path: "/",
-                element: <MainPage />,
+                path: APP_ROUTES.auth,
+                element: <RegisterPage />,
+              },
+            ],
+          },
+          {
+            element: <RequireAuth />,
+            children: [
+              {
+                element: <MainLayout />,
+                children: [
+                  {
+                    path: APP_ROUTES.home,
+                    element: <MainPage />,
+                  },
+                ],
               },
             ],
           },

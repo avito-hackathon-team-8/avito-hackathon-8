@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
+import { formatDays } from "@/shared/lib/format-days";
 import { Typography } from "@/shared/ui/typography";
-import { formatDays } from "@/shared/utils/format-days";
 
 import type { TResponseActivityDay } from "../../api/get-activity-day";
 

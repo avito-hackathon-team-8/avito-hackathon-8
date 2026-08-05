@@ -10,7 +10,7 @@ export const ArrowIcon = ({ ...props }: SVGAttributes<SVGSVGElement>) => {
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <g clip-path="url(#clip0_89_3)">
+      <g clipPath="url(#clip0_89_3)">
         <path
           d="M7.95455 15.9091L0 7.95454L7.95455 0L9.32174 1.34943L3.69318 6.97798H18.2706V8.9311H3.69318L9.32174 14.5419L7.95455 15.9091Z"
           fill="#0F0F0F"

@@ -1,0 +1,23 @@
+.welcomeStep {
+  display: flex;
+  flex-direction: column;
+  min-height: inherit;
+  padding: 40px 28px 28px;
+
+  .welcomeStep__content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+
+    text-align: center;
+  }
+
+  .welcomeStep__button {
+    width: 100%;
+    min-height: 52px;
+    margin-top: 32px;
+  }
+}

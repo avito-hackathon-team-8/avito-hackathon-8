@@ -1,0 +1,102 @@
+.authFormStep {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: 48px 28px 28px;
+
+  .authFormStep__header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .authFormStep[data-variant="code"] .authFormStep__header {
+    margin-top: 28px;
+  }
+
+  .authFormStep__form {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+  }
+
+  .authFormStep__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .authFormStep__input {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 16px;
+
+    font: inherit;
+    color: var(--black);
+
+    background-color: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: 14px;
+    outline: none;
+
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .authFormStep__input::placeholder {
+    color: var(--gray-400);
+  }
+
+  .authFormStep__input:hover:not(:disabled) {
+    border-color: var(--gray-500);
+  }
+
+  .authFormStep__input:focus {
+    border-color: var(--blue-500);
+    box-shadow: 0 0 0 3px rgb(0 170 255 / 14%);
+  }
+
+  .authFormStep__input[aria-invalid="true"] {
+    border-color: var(--red-500);
+  }
+
+  .authFormStep__input[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 3px rgb(255 64 83 / 12%);
+  }
+
+  .authFormStep__input:disabled {
+    color: var(--gray-500);
+
+    background-color: var(--gray-100);
+
+    cursor: not-allowed;
+  }
+
+  .authFormStep__error {
+    margin-top: 10px;
+  }
+
+  .authFormStep__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .authFormStep__submitButton {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .authFormStep__backButton {
+    min-height: 42px;
+
+    background-color: var(--gray-300);
+  }
+}
