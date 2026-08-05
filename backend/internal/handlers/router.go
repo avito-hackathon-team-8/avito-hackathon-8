@@ -9,6 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 )
 
 type authHandler struct {
@@ -30,9 +31,10 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(authService *auth.Service, rewardService *rewards.Service) http.Handler {
+func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
+	taskHandler := &taskHandler{auth: authService, tasks: taskService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -42,6 +44,10 @@ func NewRouter(authService *auth.Service, rewardService *rewards.Service) http.H
 	mux.HandleFunc("GET /api/app/rewards", rewardHandler.list)
 	mux.HandleFunc("GET /api/app/rewards/{rewardId}", rewardHandler.get)
 	mux.HandleFunc("POST /api/app/rewards/{rewardId}/redeem", rewardHandler.redeem)
+	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
+	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
+	mux.HandleFunc("POST /api/v1/tasks/record", taskHandler.record)
+	mux.HandleFunc("POST /api/v1/tasks/{taskId}/claim", taskHandler.claim)
 
 	return mux
 }

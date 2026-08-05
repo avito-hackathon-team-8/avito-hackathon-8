@@ -17,6 +17,8 @@ func Open(databaseURL string) (*gorm.DB, error) {
 		&models.User{},
 		&models.OTP{},
 		&models.Reward{},
+		&models.Task{},
+		&models.UserTaskProgress{},
 	); err != nil {
 		return nil, err
 	}

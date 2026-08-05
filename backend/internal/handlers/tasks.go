@@ -1,0 +1,251 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
+	"github.com/google/uuid"
+)
+
+type taskHandler struct {
+	auth  *auth.Service
+	tasks *tasks.Service
+}
+
+type dailyTaskResponse struct {
+	TaskID        string            `json:"taskId"`
+	Slot          int               `json:"slot"`
+	Type          models.TaskType   `json:"type"`
+	Description   string            `json:"description"`
+	CurrentCount  int               `json:"currentCount"`
+	TargetCount   int               `json:"targetCount"`
+	RewardLeaves  int               `json:"rewardLeaves"`
+	RequiredLevel int               `json:"requiredLevel"`
+	Status        models.TaskStatus `json:"status"`
+}
+
+type dailyTasksResponse struct {
+	Tasks []dailyTaskResponse `json:"tasks"`
+}
+
+type dailyTasksProgressResponse struct {
+	CompletedCount int `json:"completedCount"`
+	TotalCount     int `json:"totalCount"`
+}
+
+type dailyTaskRecordRequest struct {
+	Level  int         `json:"level"`
+	Events []EventItem `json:"events"`
+}
+
+type EventItem struct {
+	Type  models.TaskType `json:"type"`
+	Count int             `json:"count"`
+}
+
+type dailyTaskClaimRequest struct {
+	Level int `json:"level"`
+}
+
+type dailyTaskClaimResponse struct {
+	TaskID       string            `json:"taskId"`
+	RewardLeaves int               `json:"rewardLeaves"`
+	Status       models.TaskStatus `json:"status"`
+}
+
+type taskErrorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+func (handler *taskHandler) list(response http.ResponseWriter, request *http.Request) {
+	user, ok := handler.authenticate(response, request)
+	if !ok {
+		return
+	}
+
+	levelStr := request.URL.Query().Get("level")
+	level, err := strconv.Atoi(levelStr)
+	if err != nil || level < 1 {
+		level = 1
+	}
+
+	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, level)
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return
+	}
+
+	items := make([]dailyTaskResponse, 0, len(dailyTasks))
+	for _, task := range dailyTasks {
+		items = append(items, responseDailyTask(task))
+	}
+
+	writeJSON(response, http.StatusOK, dailyTasksResponse{Tasks: items})
+}
+
+func (handler *taskHandler) progress(response http.ResponseWriter, request *http.Request) {
+	user, ok := handler.authenticate(response, request)
+	if !ok {
+		return
+	}
+
+	levelStr := request.URL.Query().Get("level")
+	level, err := strconv.Atoi(levelStr)
+	if err != nil || level < 1 {
+		level = 1
+	}
+
+	progress, err := handler.tasks.Progress(request.Context(), user.ID, level)
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return
+	}
+
+	writeJSON(response, http.StatusOK, dailyTasksProgressResponse{
+		CompletedCount: progress.CompletedCount,
+		TotalCount:     progress.TotalCount,
+	})
+}
+
+func (handler *taskHandler) record(response http.ResponseWriter, request *http.Request) {
+	user, ok := handler.authenticate(response, request)
+	if !ok {
+		return
+	}
+
+	var body dailyTaskRecordRequest
+	if err := decodeJSON(response, request, &body); err != nil {
+		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
+		return
+	}
+
+	level := body.Level
+	if level < 1 {
+		level = 1
+	}
+
+	events := make([]tasks.Event, 0, len(body.Events))
+	for _, e := range body.Events {
+		if !validTaskType(e.Type) {
+			writeTaskError(response, http.StatusBadRequest, "INVALID_TASK_TYPE", "Передан неизвестный тип задания.")
+			return
+		}
+		count := e.Count
+		if count < 1 {
+			count = 1
+		}
+		events = append(events, tasks.Event{Type: e.Type, Count: count})
+	}
+
+	err := handler.tasks.RecordEvents(request.Context(), user.ID, events, level)
+
+	switch {
+	case errors.Is(err, tasks.ErrTaskLocked):
+		writeTaskError(response, http.StatusForbidden, "TASK_LOCKED", "Одно из заданий недоступно на текущем уровне питомца.")
+	case errors.Is(err, tasks.ErrTaskNotFound):
+		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Одно из заданий текущего дня не найдено.")
+	case err != nil:
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+	default:
+		response.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Request) {
+	user, ok := handler.authenticate(response, request)
+	if !ok {
+		return
+	}
+
+	taskID, err := uuid.Parse(request.PathValue("taskId"))
+	if err != nil {
+		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Задание текущего дня не найдено.")
+		return
+	}
+
+	var body dailyTaskClaimRequest
+	if err := decodeJSON(response, request, &body); err != nil {
+		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
+		return
+	}
+
+	level := body.Level
+	if level < 1 {
+		level = 1
+	}
+
+	result, err := handler.tasks.Claim(request.Context(), user.ID, taskID, level)
+
+	switch {
+	case errors.Is(err, tasks.ErrTaskLocked):
+		writeTaskError(response, http.StatusForbidden, "TASK_LOCKED", "Задание недоступно на текущем уровне питомца.")
+	case errors.Is(err, tasks.ErrTaskNotFound):
+		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Задание текущего дня не найдено.")
+	case errors.Is(err, tasks.ErrTaskNotCompleted):
+		writeTaskError(response, http.StatusConflict, "TASK_NOT_COMPLETED", "Сначала выполните условие задания.")
+	case errors.Is(err, tasks.ErrRewardAlreadyClaimed):
+		writeTaskError(response, http.StatusConflict, "TASK_REWARD_ALREADY_CLAIMED", "Награда за это задание уже получена.")
+	case err != nil:
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+	default:
+		writeJSON(response, http.StatusOK, dailyTaskClaimResponse{
+			TaskID:       result.TaskID.String(),
+			RewardLeaves: result.RewardLeaves,
+			Status:       result.Status,
+		})
+	}
+}
+
+func (handler *taskHandler) authenticate(response http.ResponseWriter, request *http.Request) (models.User, bool) {
+	user, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
+
+	if errors.Is(err, auth.ErrUnauthorized) {
+		writeTaskError(response, http.StatusUnauthorized, "UNAUTHORIZED", "Требуется аутентификация")
+		return models.User{}, false
+	}
+
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return models.User{}, false
+	}
+
+	return user, true
+}
+
+func responseDailyTask(task tasks.DailyTask) dailyTaskResponse {
+	return dailyTaskResponse{
+		TaskID:        task.ID.String(),
+		Slot:          task.Slot,
+		Type:          task.Type,
+		Description:   task.Description,
+		CurrentCount:  task.CurrentCount,
+		TargetCount:   task.TargetCount,
+		RewardLeaves:  task.RewardLeaves,
+		RequiredLevel: task.RequiredLevel,
+		Status:        task.Status,
+	}
+}
+
+func validTaskType(taskType models.TaskType) bool {
+	switch taskType {
+	case models.OpenNotificationsTaskType,
+		models.AddToFavoritesTaskType,
+		models.PublishListingTaskType,
+		models.BoostListingTaskType,
+		models.LeaveReviewTaskType,
+		models.CompleteDealTaskType,
+		models.OrderWithDeliveryTaskType:
+		return true
+	default:
+		return false
+	}
+}
+
+func writeTaskError(response http.ResponseWriter, status int, code, message string) {
+	writeJSON(response, status, taskErrorResponse{Code: code, Message: message})
+}
