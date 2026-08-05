@@ -2,6 +2,8 @@ package tasks
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -20,50 +22,6 @@ var (
 )
 
 const TotalDailyTasks = 4
-
-type Definition struct {
-	Slot          int
-	Type          models.TaskType
-	Description   string
-	TargetCount   int
-	RewardLeaves  int
-	RequiredLevel int
-}
-
-var dailyTaskDefinitions = []Definition{
-	{
-		Slot:          1,
-		Type:          models.OpenNotificationsTaskType,
-		Description:   "Открыть 5 уведомлений",
-		TargetCount:   5,
-		RewardLeaves:  45,
-		RequiredLevel: 1,
-	},
-	{
-		Slot:          2,
-		Type:          models.AddToFavoritesTaskType,
-		Description:   "Добавить 3 объявления в избранное",
-		TargetCount:   3,
-		RewardLeaves:  45,
-		RequiredLevel: 1,
-	},
-	{
-		Slot:          3,
-		Type:          models.PublishListingTaskType,
-		Description:   "Опубликовать объявление",
-		TargetCount:   1,
-		RewardLeaves:  50,
-		RequiredLevel: 5,
-	},
-	{
-		Slot:          4,
-		Type:          models.CompleteDealTaskType,
-		Description:   "Совершить покупку или продажу",
-		TargetCount:   1,
-		RewardLeaves:  60,
-		RequiredLevel: 10,
-	},
-}
 
 type DailyTask struct {
 	ID            uuid.UUID
@@ -94,12 +52,17 @@ type Event struct {
 }
 
 type Service struct {
-	db  *gorm.DB
-	now func() time.Time
+	db          *gorm.DB
+	now         func() time.Time
+	definitions []Definition
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, now: time.Now}
+func NewService(db *gorm.DB, definitions []Definition) *Service {
+	return &Service{
+		db:          db,
+		now:         time.Now,
+		definitions: append([]Definition(nil), definitions...),
+	}
 }
 
 func (s *Service) List(ctx context.Context, userID uuid.UUID, userLevel int) ([]DailyTask, error) {
@@ -348,9 +311,10 @@ func StatusFor(task models.Task, progress *models.UserTaskProgress, userLevel in
 }
 
 func (s *Service) ensureTasks(ctx context.Context, date time.Time) error {
-	tasks := make([]models.Task, 0, len(dailyTaskDefinitions))
+	definitions := s.definitionsForDate(date)
+	tasks := make([]models.Task, 0, len(definitions))
 
-	for _, definition := range dailyTaskDefinitions {
+	for _, definition := range definitions {
 		tasks = append(tasks, models.Task{
 			Date:          date,
 			Slot:          definition.Slot,
@@ -372,6 +336,31 @@ func (s *Service) ensureTasks(ctx context.Context, date time.Time) error {
 	}
 
 	return nil
+}
+
+func (s *Service) definitionsForDate(date time.Time) []Definition {
+	definitions := make([]Definition, 0, TotalDailyTasks)
+
+	for _, slot := range dailyTaskSlots {
+		candidates := make([]Definition, 0)
+		for _, definition := range s.definitions {
+			if definition.Slot == slot {
+				candidates = append(candidates, definition)
+			}
+		}
+
+		definitions = append(definitions, candidates[definitionIndex(date, slot, len(candidates))])
+	}
+
+	return definitions
+}
+
+func definitionIndex(date time.Time, slot, candidatesCount int) int {
+	source := fmt.Sprintf("%s:%d", date.UTC().Format(time.DateOnly), slot)
+	digest := sha256.Sum256([]byte(source))
+	value := binary.BigEndian.Uint64(digest[:8])
+
+	return int(value % uint64(candidatesCount))
 }
 
 func (s *Service) today() time.Time {

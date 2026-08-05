@@ -131,7 +131,7 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 
 	events := make([]tasks.Event, 0, len(body.Events))
 	for _, e := range body.Events {
-		if !validTaskType(e.Type) {
+		if !tasks.IsKnownTaskType(e.Type) {
 			writeTaskError(response, http.StatusBadRequest, "INVALID_TASK_TYPE", "Передан неизвестный тип задания.")
 			return
 		}
@@ -228,21 +228,6 @@ func responseDailyTask(task tasks.DailyTask) dailyTaskResponse {
 		RewardLeaves:  task.RewardLeaves,
 		RequiredLevel: task.RequiredLevel,
 		Status:        task.Status,
-	}
-}
-
-func validTaskType(taskType models.TaskType) bool {
-	switch taskType {
-	case models.OpenNotificationsTaskType,
-		models.AddToFavoritesTaskType,
-		models.PublishListingTaskType,
-		models.BoostListingTaskType,
-		models.LeaveReviewTaskType,
-		models.CompleteDealTaskType,
-		models.OrderWithDeliveryTaskType:
-		return true
-	default:
-		return false
 	}
 }
 

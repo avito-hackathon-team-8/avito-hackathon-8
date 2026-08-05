@@ -34,7 +34,11 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
-	taskService := tasks.NewService(db)
+	taskDefinitions, err := tasks.LoadDefaultDefinitions()
+	if err != nil {
+		log.Fatalf("load task definitions: %v", err)
+	}
+	taskService := tasks.NewService(db, taskDefinitions)
 	router := handlers.NewRouter(authService, rewardService, taskService)
 
 	server := &http.Server{
