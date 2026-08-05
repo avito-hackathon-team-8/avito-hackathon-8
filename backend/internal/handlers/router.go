@@ -9,6 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
 )
 
 type authHandler struct {
@@ -30,9 +31,14 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(authService *auth.Service, rewardService *rewards.Service) http.Handler {
+func NewRouter(
+	authService *auth.Service,
+	rewardService *rewards.Service,
+	weeklyLoginService *weekly_login.Service,
+) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
+	weeklyLoginHandler := &weeklyLoginHandler{auth: authService, weeklyLogin: weeklyLoginService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -42,6 +48,8 @@ func NewRouter(authService *auth.Service, rewardService *rewards.Service) http.H
 	mux.HandleFunc("GET /api/app/rewards", rewardHandler.list)
 	mux.HandleFunc("GET /api/app/rewards/{rewardId}", rewardHandler.get)
 	mux.HandleFunc("POST /api/app/rewards/{rewardId}/redeem", rewardHandler.redeem)
+	mux.HandleFunc("GET /api/v1/weekly-login", weeklyLoginHandler.get)
+	mux.HandleFunc("POST /api/v1/weekly-login/claim", weeklyLoginHandler.claim)
 
 	return mux
 }

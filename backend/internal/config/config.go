@@ -12,11 +12,14 @@ import (
 )
 
 type Config struct {
-	HTTPAddress       string
-	ReadHeaderTimeout time.Duration
-	DatabaseURL       string
-	Auth              auth.Config
-	Email             email.Config
+	HTTPAddress            string
+	ReadHeaderTimeout      time.Duration
+	DatabaseURL            string
+	ActivityServiceURL     string
+	ActivityServiceToken   string
+	ActivityServiceTimeout time.Duration
+	Auth                   auth.Config
+	Email                  email.Config
 }
 
 func Load() (Config, error) {
@@ -38,10 +41,19 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	activityServiceTimeout, err := envDuration("ACTIVITY_SERVICE_TIMEOUT", 2*time.Second)
+
+	if err != nil {
+		return Config{}, err
+	}
+
 	cfg := Config{
-		HTTPAddress:       env("HTTP_ADDRESS", ":8090"),
-		ReadHeaderTimeout: 5 * time.Second,
-		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		HTTPAddress:            env("HTTP_ADDRESS", ":8090"),
+		ReadHeaderTimeout:      5 * time.Second,
+		DatabaseURL:            os.Getenv("DATABASE_URL"),
+		ActivityServiceURL:     os.Getenv("ACTIVITY_SERVICE_URL"),
+		ActivityServiceToken:   os.Getenv("ACTIVITY_SERVICE_TOKEN"),
+		ActivityServiceTimeout: activityServiceTimeout,
 		Auth: auth.Config{
 			JWTSecret:  os.Getenv("JWT_SECRET"),
 			SessionTTL: sessionTTL,

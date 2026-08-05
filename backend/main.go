@@ -10,6 +10,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
 )
 
 func main() {
@@ -33,7 +34,18 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
-	router := handlers.NewRouter(authService, rewardService)
+	weeklyLoginService := weekly_login.NewService(db)
+
+	if cfg.ActivityServiceURL != "" {
+		activityChecker := weekly_login.NewHTTPActivityChecker(
+			cfg.ActivityServiceURL,
+			cfg.ActivityServiceToken,
+			cfg.ActivityServiceTimeout,
+		)
+		weeklyLoginService = weekly_login.NewService(db, activityChecker)
+	}
+
+	router := handlers.NewRouter(authService, rewardService, weeklyLoginService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
