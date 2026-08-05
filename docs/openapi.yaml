@@ -436,6 +436,69 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/tasks/record:
+    post:
+      tags: [Ежедневные задания]
+      operationId: recordDailyTaskEvent
+      summary: Записать действие для прогресса задания
+      description: |
+        Увеличивает прогресс задания текущего дня по переданному типу действия на единицу.
+        Если после записи `currentCount` достигает `targetCount`, задание получает статус
+        `COMPLETED` и становится доступным для получения награды.
+
+        Повторные записи после выполнения задания не увеличивают прогресс выше `targetCount`.
+        Записать действие для задания, недоступного на текущем уровне питомца, нельзя.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyTaskRecordRequest'
+            examples:
+              default:
+                value:
+                  type: ADD_TO_FAVORITES
+      responses:
+        '204':
+          description: Действие записано, прогресс задания обновлён.
+        '400':
+          description: Тело запроса некорректно или передан неизвестный тип задания.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTaskType:
+                  value:
+                    code: INVALID_TASK_TYPE
+                    message: Передан неизвестный тип задания.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Задание с таким типом недоступно на текущем уровне питомца.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskLocked:
+                  value:
+                    code: TASK_LOCKED
+                    message: Задание недоступно на текущем уровне питомца.
+        '404':
+          description: Задание текущего дня с таким типом или игрок не найдены.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskNotFound:
+                  value:
+                    code: TASK_NOT_FOUND
+                    message: Задание текущего дня не найдено.
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/v1/tasks/{taskId}/claim:
     post:
       tags: [Ежедневные задания]
@@ -1278,6 +1341,14 @@ components:
           format: int32
           enum: [4]
           description: Общее количество заданий дня, включая заблокированные.
+
+    DailyTaskRecordRequest:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          $ref: '#/components/schemas/DailyTaskType'
 
     DailyTaskClaimResponse:
       type: object
