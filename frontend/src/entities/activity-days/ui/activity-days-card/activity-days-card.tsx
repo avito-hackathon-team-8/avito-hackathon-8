@@ -12,12 +12,18 @@ const DESCRIPTION_ERROR = "Не удалось получить данные";
 export const ActivityDaysCard = () => {
   const { data, refetch } = useActivityDays();
 
+  const handleClick = () => {
+    if (!data) {
+      refetch();
+    }
+  };
+
   return (
     <BottomPanel
       title={TITLE_CARD}
       description="Награда зависит от календарного дня"
       disabled={!data}
-      onClick={() => refetch()}
+      onClick={handleClick}
       renderTrigger={(open) => (
         <GamificationCard
           title={TITLE_CARD}

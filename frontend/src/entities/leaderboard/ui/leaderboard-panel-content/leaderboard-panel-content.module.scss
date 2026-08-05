@@ -1,0 +1,32 @@
+.leaderboardPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+
+  .leaderboardPanel__item {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    padding: 12px 10px;
+
+    &_active {
+      font: var(--font-caption-bold);
+
+      background-color: var(--blue-100);
+      border-radius: 10px;
+
+      .leaderboardPanel__text {
+        font: var(--font-caption-bold);
+      }
+    }
+
+    &_points {
+      justify-content: center;
+      padding: 5px;
+    }
+  }
+}
