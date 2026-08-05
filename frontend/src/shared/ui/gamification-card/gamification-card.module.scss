@@ -1,0 +1,38 @@
+.card {
+  padding: 10px 14px;
+
+  background-color: var(--gray-200);
+  border-radius: 22px;
+
+  cursor: pointer;
+
+  &.card_vertical {
+    display: flex;
+    flex-direction: column;
+
+    .card__img {
+      box-sizing: content-box;
+      align-self: flex-end;
+      margin-top: auto;
+      padding-top: 20px;
+    }
+  }
+
+  &.card_horizontal {
+    display: grid;
+    grid-template: "title img" auto "description img" 1fr / 1fr auto;
+    column-gap: 22px;
+
+    .card__img {
+      grid-area: img;
+    }
+
+    .card__description {
+      grid-area: description;
+    }
+  }
+
+  .card__description {
+    padding-top: 12px;
+  }
+}

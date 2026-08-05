@@ -25,7 +25,7 @@ export type TypographyTag =
   | "small";
 
 export type TypographyVariant =
-  "inherit" | "display" | "heading" | "section" | "body" | "caption";
+  "inherit" | "display" | "heading" | "section" | "body" | "caption" | "p3";
 
 export type TypographyColor =
   | "white"

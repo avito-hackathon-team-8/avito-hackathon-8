@@ -1,0 +1,27 @@
+.gamificationDashboard {
+  position: relative;
+
+  display: grid;
+  grid-template:
+    "tasks awards" minmax(150px, 1fr)
+    "leaderboard activity" minmax(150px, 1fr)
+    "summary summary" minmax(114px, auto)
+    "rules rules" minmax(114px, auto) / 1fr 1fr;
+  gap: 12px;
+
+  .gamificationDashboard__title {
+    position: absolute;
+
+    font-size: 0;
+
+    visibility: hidden;
+  }
+
+  .gamificationDashboard__summary {
+    grid-area: summary;
+  }
+
+  .gamificationDashboard__rules {
+    grid-area: rules;
+  }
+}
