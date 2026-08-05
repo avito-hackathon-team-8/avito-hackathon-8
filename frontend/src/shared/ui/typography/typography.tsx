@@ -25,9 +25,19 @@ export type TypographyTag =
   | "small";
 
 export type TypographyVariant =
-  "inherit" | "display" | "heading" | "section" | "body" | "caption" | "p3";
+  | "inherit"
+  | "display"
+  | "heading"
+  | "section"
+  | "body"
+  | "caption"
+  | "caption-bold"
+  | "p3"
+  | "p4-bold"
+  | "p4-regular";
 
 export type TypographyColor =
+  | "inherit"
   | "white"
   | "gray100"
   | "gray200"

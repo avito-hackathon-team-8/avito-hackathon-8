@@ -14,6 +14,7 @@ export const ButtonNotification = ({ className }: IButtonNotificationProps) => {
   return (
     <BottomPanel
       closeOnBackdrop
+      description=""
       title="Уведомления"
       renderTrigger={(open) => (
         <Button

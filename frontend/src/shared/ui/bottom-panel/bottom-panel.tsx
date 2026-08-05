@@ -9,6 +9,8 @@ import {
 
 import { createPortal } from "react-dom";
 
+import { Typography } from "../typography";
+
 import styles from "./bottom-panel.module.scss";
 
 const FOCUSABLE_ELEMENTS_SELECTOR = [
@@ -23,16 +25,22 @@ const FOCUSABLE_ELEMENTS_SELECTOR = [
 
 type BottomPanelProps = {
   title: ReactNode;
+  description: string;
   children: ReactNode;
   renderTrigger: (open: () => void) => ReactNode;
   closeOnBackdrop?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
 };
 
 export const BottomPanel = ({
   title,
+  description,
   children,
   renderTrigger,
   closeOnBackdrop = true,
+  disabled = false,
+  onClick,
 }: BottomPanelProps) => {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
@@ -44,6 +52,12 @@ export const BottomPanel = ({
   const titleId = useId();
 
   const handleOpen = () => {
+    if (onClick) {
+      onClick();
+    }
+
+    if (disabled) return;
+
     if (portalRoot) {
       setIsOpen(true);
 
@@ -232,9 +246,21 @@ export const BottomPanel = ({
                 <div className={styles.panel__handle} aria-hidden="true" />
 
                 <header className={styles.panel__header}>
-                  <h2 id={titleId} className={styles.panel__title}>
+                  <Typography
+                    className={styles.panel__title}
+                    id={titleId}
+                    variant="section"
+                    as="h2"
+                  >
                     {title}
-                  </h2>
+                  </Typography>
+                  <Typography
+                    className={styles.panel__description}
+                    color="gray500"
+                    variant="p4-bold"
+                  >
+                    {description}
+                  </Typography>
 
                   <button
                     type="button"

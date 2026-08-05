@@ -13,6 +13,7 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
   return (
     <BottomPanel
       title={TITLE_CARD}
+      description=""
       renderTrigger={(open) => (
         <GamificationCard
           variant="horizontal"

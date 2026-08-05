@@ -9,6 +9,7 @@ export const RewardCard = () => {
   return (
     <BottomPanel
       title={TITLE_CARD}
+      description=""
       renderTrigger={(open) => (
         <GamificationCard
           title={TITLE_CARD}
