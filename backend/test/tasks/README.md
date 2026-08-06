@@ -11,7 +11,7 @@ Postgres через `docker compose exec postgres psql`.
 ```sh
 make up
 cd backend
-GOCACHE=/private/tmp/avito-go-build-cache go test ./test/tasks -count=1 -v
+GOCACHE="${TMPDIR:-/tmp}/avito-go-build-cache" go test ./test/tasks -count=1 -v
 ```
 
 
