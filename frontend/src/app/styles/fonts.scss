@@ -5,9 +5,21 @@
   font-family: Manrope;
 
   src:
-    url("../../shared/assets/fonts/manrope/Manrope-Bold.woff2") format("woff2"),
-    url("../../shared/assets/fonts/manrope/Manrope-Bold.woff") format("woff"),
-    url("../../shared/assets/fonts/manrope/Manrope-Bold.ttf") format("truetype");
+    url('../../shared/assets/fonts/manrope/Manrope-Bold.woff2') format('woff2'),
+    url('../../shared/assets/fonts/manrope/Manrope-Bold.woff') format('woff'),
+    url('../../shared/assets/fonts/manrope/Manrope-Bold.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-style: normal;
+  font-weight: 600;
+  font-family: Manrope;
+
+  src:
+    url('../../shared/assets/fonts/manrope/Manrope-SemiBold.woff2') format('woff2'),
+    url('../../shared/assets/fonts/manrope/Manrope-SemiBold.woff') format('woff'),
+    url('../../shared/assets/fonts/manrope/Manrope-SemiBold.ttf') format('truetype');
   font-display: swap;
 }
 
@@ -17,10 +29,8 @@
   font-family: Manrope;
 
   src:
-    url("../../shared/assets/fonts/manrope/Manrope-Regular.woff2")
-      format("woff2"),
-    url("../../shared/assets/fonts/manrope/Manrope-Regular.woff") format("woff"),
-    url("../../shared/assets/fonts/manrope/Manrope-Regular.ttf")
-      format("truetype");
+    url('../../shared/assets/fonts/manrope/Manrope-Regular.woff2') format('woff2'),
+    url('../../shared/assets/fonts/manrope/Manrope-Regular.woff') format('woff'),
+    url('../../shared/assets/fonts/manrope/Manrope-Regular.ttf') format('truetype');
   font-display: swap;
 }

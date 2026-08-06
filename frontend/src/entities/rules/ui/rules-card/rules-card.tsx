@@ -1,9 +1,11 @@
-import { BottomPanel } from "@/shared/ui/bottom-panel";
-import { GamificationCard } from "@/shared/ui/gamification-card";
+import { BottomPanel } from '@/shared/ui/bottom-panel';
+import { GamificationCard } from '@/shared/ui/gamification-card';
 
-import rulesIcon from "../assets/rules-icon.svg";
+import { dataRules } from '../../model/rules';
+import rulesIcon from '../assets/rules-icon.svg';
+import { RulesPanelContent } from '../rules-panel-content/rules-panel-content';
 
-const TITLE_CARD = "Правила";
+const TITLE_CARD = 'Правила';
 
 type TRulesCardProps = {
   className?: string;
@@ -21,7 +23,7 @@ export const RulesCard = ({ className }: TRulesCardProps) => {
           description="Как работают листья, уровни и награды"
           imageProps={{
             src: rulesIcon,
-            alt: "Книжка правил",
+            alt: 'Книжка правил',
             width: 94,
             height: 74,
           }}
@@ -30,7 +32,7 @@ export const RulesCard = ({ className }: TRulesCardProps) => {
         />
       )}
     >
-      <div></div>
+      <RulesPanelContent rules={dataRules} />
     </BottomPanel>
   );
 };

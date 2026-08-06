@@ -1,6 +1,6 @@
-import { GamificationDashboard } from "@/widgets/gamification-dashboard";
+import { GamificationDashboard } from '@/widgets/gamification-dashboard';
 
-import styles from "./main.page.module.scss";
+import styles from './main.page.module.scss';
 
 export const MainPage = () => {
   return (
