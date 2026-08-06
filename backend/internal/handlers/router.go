@@ -35,10 +35,15 @@ func NewRouter(
 	authService *auth.Service,
 	rewardService *rewards.Service,
 	weeklyLoginService *weekly_login.Service,
+	activityService weekly_login.ActivityProvider,
 ) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
-	weeklyLoginHandler := &weeklyLoginHandler{auth: authService, weeklyLogin: weeklyLoginService}
+	weeklyLoginHandler := &weeklyLoginHandler{
+		auth:        authService,
+		activity:    activityService,
+		weeklyLogin: weeklyLoginService,
+	}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -48,6 +53,7 @@ func NewRouter(
 	mux.HandleFunc("GET /api/app/rewards", rewardHandler.list)
 	mux.HandleFunc("GET /api/app/rewards/{rewardId}", rewardHandler.get)
 	mux.HandleFunc("POST /api/app/rewards/{rewardId}/redeem", rewardHandler.redeem)
+	mux.HandleFunc("POST /api/v1/weekly-login/activity", weeklyLoginHandler.addActivity)
 	mux.HandleFunc("GET /api/v1/weekly-login", weeklyLoginHandler.get)
 	mux.HandleFunc("POST /api/v1/weekly-login/claim", weeklyLoginHandler.claim)
 

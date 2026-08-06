@@ -13,57 +13,40 @@ import (
 )
 
 var (
-	ErrPlayerNotFound       = errors.New("player not found")
+	ErrUserNotFound         = errors.New("player not found")
 	ErrAlreadyClaimed       = errors.New("weekly login reward already claimed")
 	ErrActivityNotConfirmed = errors.New("activity is not confirmed")
 )
 
-// DayStatus Типы статусов дней
-type DayStatus string
+const weeklyLoginDays = 7
+
+// Награда за каждый день недели
+type weeklyReward int
 
 const (
-	DayStatusClaimed            DayStatus = "CLAIMED"             // награда получена
-	DayStatusAvailable          DayStatus = "AVAILABLE"           // награда доступна для получения
-	DayStatusUnconfirmed        DayStatus = "UNCONFIRMED"         // активность за сегодня не подтверждена
-	DayStatusMissed             DayStatus = "MISSED"              // награда пропущена за данный день
-	DayStatusFuture             DayStatus = "FUTURE"              // день не наступил
-	DayStatusBeforeRegistration DayStatus = "BEFORE_REGISTRATION" // пользователь зарегистрировался в середине недели и не может забрать награду
+	weeklyRewardFirst   weeklyReward = 10
+	weeklyRewardSecond  weeklyReward = 20
+	weeklyRewardThird   weeklyReward = 30
+	weeklyRewardFourth  weeklyReward = 40
+	weeklyRewardFifth   weeklyReward = 50
+	weeklyRewardSixth   weeklyReward = 60
+	weeklyRewardSeventh weeklyReward = 70
 )
-
-type ActivityStatus string
-
-const (
-	ActivityStatusActive             ActivityStatus = "ACTIVE"
-	ActivityStatusInactive           ActivityStatus = "INACTIVE"
-	ActivityStatusUnknown            ActivityStatus = "UNKNOWN"
-	ActivityStatusFuture             ActivityStatus = "FUTURE"
-	ActivityStatusBeforeRegistration ActivityStatus = "BEFORE_REGISTRATION"
-)
-
-type ActivityChecker interface {
-	Status(ctx context.Context, userID uuid.UUID, date time.Time) (ActivityStatus, error)
-}
 
 type Service struct {
-	db              *gorm.DB
-	now             func() time.Time
-	activityChecker ActivityChecker
+	db       *gorm.DB
+	now      func() time.Time
+	activity ActivityProvider
 }
 
-func NewService(db *gorm.DB, activityCheckers ...ActivityChecker) *Service {
-	service := &Service{db: db, now: time.Now}
-
-	if len(activityCheckers) > 0 {
-		service.activityChecker = activityCheckers[0]
-	}
-
-	return service
+func NewService(db *gorm.DB, activity ActivityProvider) *Service {
+	return &Service{db: db, now: time.Now, activity: activity}
 }
 
 type WeeklyLoginDay struct {
 	Weekday      int
 	Date         string
-	Status       DayStatus
+	Status       models.DayStatus
 	RewardLeaves int
 	ClaimID      *uuid.UUID
 }
@@ -81,7 +64,7 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 		First(&user).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return CurrentWeek{}, ErrPlayerNotFound
+		return CurrentWeek{}, ErrUserNotFound
 	}
 
 	if err != nil {
@@ -100,24 +83,16 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 		return CurrentWeek{}, fmt.Errorf("get weekly login claims: %w", err)
 	}
 
-	activityStatus := ActivityStatusUnknown
+	activityInactive := false
 
-	if service.activityChecker != nil && shouldCheckTodayActivity(user, claims, today) {
-		status, activityErr := service.activityChecker.Status(ctx, userID, today)
-
-		if activityErr == nil {
-			activityStatus = status
-		}
+	if shouldCheckTodayActivity(user, claims, today) {
+		activityInactive = service.activityInactive(ctx, userID, today)
 	}
 
-	return buildCurrentWeek(user, claims, today, activityStatus), nil
+	return buildCurrentWeek(user, claims, today, activityInactive), nil
 }
 
-func (service *Service) Claim(
-	ctx context.Context,
-	userID uuid.UUID,
-	date time.Time,
-) (models.WeeklyLoginClaim, error) {
+func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.Time) (models.WeeklyLoginClaim, error) {
 	claimDate := utcDate(date)
 	var claim models.WeeklyLoginClaim
 
@@ -129,7 +104,7 @@ func (service *Service) Claim(
 			First(&user).Error
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrPlayerNotFound
+			return ErrUserNotFound
 		}
 
 		if err != nil {
@@ -147,12 +122,8 @@ func (service *Service) Claim(
 			return err
 		}
 
-		if service.activityChecker != nil {
-			activityStatus, activityErr := service.activityChecker.Status(ctx, userID, claimDate)
-
-			if activityErr == nil && activityStatus == ActivityStatusInactive {
-				return ErrActivityNotConfirmed
-			}
+		if service.activityInactive(ctx, userID, claimDate) {
+			return ErrActivityNotConfirmed
 		}
 
 		weekStart, weekEnd := utcWeekBounds(claimDate)
@@ -164,16 +135,22 @@ func (service *Service) Claim(
 			return err
 		}
 
+		reward := weeklyRewardByIndex(int(claimedDaysCount))
+
+		if reward == 0 {
+			return fmt.Errorf("weekly reward is not configured for claim index %d", claimedDaysCount)
+		}
+
 		claim = models.WeeklyLoginClaim{
 			UserID:       userID,
 			ClaimDate:    claimDate,
-			RewardLeaves: weeklyRewardLadder[claimedDaysCount],
+			RewardLeaves: int(reward),
 		}
 
 		return tx.Create(&claim).Error
 	})
 
-	if errors.Is(err, ErrPlayerNotFound) ||
+	if errors.Is(err, ErrUserNotFound) ||
 		errors.Is(err, ErrAlreadyClaimed) ||
 		errors.Is(err, ErrActivityNotConfirmed) {
 		return models.WeeklyLoginClaim{}, err
@@ -186,14 +163,39 @@ func (service *Service) Claim(
 	return claim, nil
 }
 
-var weeklyRewardLadder = [...]int{
-	10,
-	20,
-	30,
-	40,
-	50,
-	60,
-	70,
+func (service *Service) activityInactive(ctx context.Context, userID uuid.UUID, date time.Time) bool {
+	if service.activity == nil {
+		return false
+	}
+
+	activity, err := service.activity.Get(ctx, userID, date)
+
+	if err != nil {
+		return false
+	}
+
+	return !activity.Active
+}
+
+func weeklyRewardByIndex(index int) weeklyReward {
+	switch index {
+	case 0:
+		return weeklyRewardFirst
+	case 1:
+		return weeklyRewardSecond
+	case 2:
+		return weeklyRewardThird
+	case 3:
+		return weeklyRewardFourth
+	case 4:
+		return weeklyRewardFifth
+	case 5:
+		return weeklyRewardSixth
+	case 6:
+		return weeklyRewardSeventh
+	default:
+		return 0
+	}
 }
 
 func utcDate(value time.Time) time.Time {
@@ -214,7 +216,7 @@ func buildCurrentWeek(
 	user models.User,
 	claims []models.WeeklyLoginClaim,
 	today time.Time,
-	activityStatus ActivityStatus,
+	activityInactive bool,
 ) CurrentWeek {
 	today = utcDate(today)
 	weekStart, _ := utcWeekBounds(today)
@@ -227,11 +229,11 @@ func buildCurrentWeek(
 
 	result := CurrentWeek{
 		ClaimedDaysCount: len(claims),
-		Claims:           make([]WeeklyLoginDay, 0, len(weeklyRewardLadder)),
+		Claims:           make([]WeeklyLoginDay, 0, weeklyLoginDays),
 	}
 	nextRewardIndex := len(claims)
 
-	for dayIndex := range weeklyRewardLadder {
+	for dayIndex := range weeklyLoginDays {
 		date := weekStart.AddDate(0, 0, dayIndex)
 		dateString := date.Format(time.DateOnly)
 		day := WeeklyLoginDay{
@@ -241,7 +243,7 @@ func buildCurrentWeek(
 
 		if claim, ok := claimsByDate[dateString]; ok {
 			claimID := claim.ID
-			day.Status = DayStatusClaimed
+			day.Status = models.DayStatusClaimed
 			day.RewardLeaves = claim.RewardLeaves
 			day.ClaimID = &claimID
 			result.Claims = append(result.Claims, day)
@@ -251,20 +253,24 @@ func buildCurrentWeek(
 
 		switch {
 		case date.Before(registrationDate):
-			day.Status = DayStatusBeforeRegistration
+			day.Status = models.DayStatusBeforeRegistration
 		case date.Before(today):
-			day.Status = DayStatusMissed
+			day.Status = models.DayStatusMissed
 		case date.After(today):
-			day.Status = DayStatusFuture
-		case activityStatus == ActivityStatusInactive:
-			day.Status = DayStatusUnconfirmed
+			day.Status = models.DayStatusFuture
+		case activityInactive:
+			day.Status = models.DayStatusUnconfirmed
 		default:
-			day.Status = DayStatusAvailable
+			day.Status = models.DayStatusAvailable
 		}
 
-		if day.Status == DayStatusAvailable || day.Status == DayStatusFuture {
-			day.RewardLeaves = weeklyRewardLadder[nextRewardIndex]
-			nextRewardIndex++
+		if day.Status == models.DayStatusAvailable || day.Status == models.DayStatusFuture {
+			reward := weeklyRewardByIndex(nextRewardIndex)
+
+			if reward != 0 {
+				day.RewardLeaves = int(reward)
+				nextRewardIndex++
+			}
 		}
 
 		result.Claims = append(result.Claims, day)

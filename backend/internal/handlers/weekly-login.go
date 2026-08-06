@@ -12,6 +12,7 @@ import (
 
 type weeklyLoginHandler struct {
 	auth        *auth.Service
+	activity    weekly_login.ActivityProvider
 	weeklyLogin *weekly_login.Service
 }
 
@@ -44,6 +45,67 @@ type weeklyLoginClaimResponse struct {
 	Claim weeklyLoginClaim `json:"claim"`
 }
 
+type dailyActivityRequest struct {
+	Days *[]dailyActivityDayRequest `json:"days"`
+}
+
+type dailyActivityDayRequest struct {
+	Date   string `json:"date"`
+	Active *bool  `json:"active"`
+}
+
+func (handler *weeklyLoginHandler) addActivity(response http.ResponseWriter, request *http.Request) {
+	user, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
+
+	if err != nil {
+		writeAuthenticationError(response, err)
+
+		return
+	}
+
+	var body dailyActivityRequest
+
+	if err := decodeJSON(response, request, &body); err != nil {
+		writeError(response, http.StatusBadRequest, "Invalid request body")
+
+		return
+	}
+
+	if body.Days == nil {
+		writeError(response, http.StatusBadRequest, "Invalid request body")
+
+		return
+	}
+
+	days := make([]weekly_login.ActivityDay, 0, len(*body.Days))
+
+	for _, item := range *body.Days {
+		if item.Active == nil {
+			writeError(response, http.StatusBadRequest, "Invalid request body")
+
+			return
+		}
+
+		date, err := time.Parse(time.DateOnly, item.Date)
+
+		if err != nil {
+			writeError(response, http.StatusBadRequest, "Invalid activity date")
+
+			return
+		}
+
+		days = append(days, weekly_login.ActivityDay{Date: date, Active: *item.Active})
+	}
+
+	if err := handler.activity.Add(request.Context(), user.ID, days); err != nil {
+		writeError(response, http.StatusInternalServerError, "Could not record daily activity")
+
+		return
+	}
+
+	response.WriteHeader(http.StatusNoContent)
+}
+
 func (handler *weeklyLoginHandler) get(response http.ResponseWriter, request *http.Request) {
 	user, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
 
@@ -53,15 +115,9 @@ func (handler *weeklyLoginHandler) get(response http.ResponseWriter, request *ht
 		return
 	}
 
-	if handler.weeklyLogin == nil {
-		writeError(response, http.StatusInternalServerError, "Weekly login service is not configured")
-
-		return
-	}
-
 	weeklyLogin, err := handler.weeklyLogin.Get(request.Context(), user.ID)
 
-	if errors.Is(err, weekly_login.ErrPlayerNotFound) {
+	if errors.Is(err, weekly_login.ErrUserNotFound) {
 		writeError(response, http.StatusNotFound, err.Error())
 
 		return
@@ -101,12 +157,6 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 		return
 	}
 
-	if handler.weeklyLogin == nil {
-		writeError(response, http.StatusInternalServerError, "Weekly login service is not configured")
-
-		return
-	}
-
 	claim, err := handler.weeklyLogin.Claim(request.Context(), user.ID, date)
 
 	if errors.Is(err, weekly_login.ErrAlreadyClaimed) {
@@ -124,7 +174,7 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 		return
 	}
 
-	if errors.Is(err, weekly_login.ErrPlayerNotFound) {
+	if errors.Is(err, weekly_login.ErrUserNotFound) {
 		writeError(response, http.StatusNotFound, err.Error())
 
 		return
@@ -169,7 +219,7 @@ func responseWeeklyLoginClaim(claim models.WeeklyLoginClaim) weeklyLoginClaim {
 		ID:           claim.ID.String(),
 		Weekday:      isoWeekday(claim.ClaimDate),
 		Date:         claim.ClaimDate.Format(time.DateOnly),
-		Status:       string(weekly_login.DayStatusClaimed),
+		Status:       string(models.DayStatusClaimed),
 		RewardLeaves: claim.RewardLeaves,
 	}
 }

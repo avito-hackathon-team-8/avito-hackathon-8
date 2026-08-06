@@ -7,8 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// WeeklyLoginClaim is the source of truth for a weekly-login reward issued by
-// the backend. ClaimDate stores a UTC calendar date (without a time component).
+type DayStatus string
+
+const (
+	DayStatusClaimed            DayStatus = "CLAIMED"
+	DayStatusAvailable          DayStatus = "AVAILABLE"
+	DayStatusUnconfirmed        DayStatus = "UNCONFIRMED"
+	DayStatusMissed             DayStatus = "MISSED"
+	DayStatusFuture             DayStatus = "FUTURE"
+	DayStatusBeforeRegistration DayStatus = "BEFORE_REGISTRATION"
+)
+
 type WeeklyLoginClaim struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_weekly_login_claim_user_date,priority:1"`

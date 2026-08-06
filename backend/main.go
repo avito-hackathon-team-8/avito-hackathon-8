@@ -34,18 +34,10 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
-	weeklyLoginService := weekly_login.NewService(db)
+	activityService := weekly_login.NewLoginService(db)
+	weeklyLoginService := weekly_login.NewService(db, activityService)
 
-	if cfg.ActivityServiceURL != "" {
-		activityChecker := weekly_login.NewHTTPActivityChecker(
-			cfg.ActivityServiceURL,
-			cfg.ActivityServiceToken,
-			cfg.ActivityServiceTimeout,
-		)
-		weeklyLoginService = weekly_login.NewService(db, activityChecker)
-	}
-
-	router := handlers.NewRouter(authService, rewardService, weeklyLoginService)
+	router := handlers.NewRouter(authService, rewardService, weeklyLoginService, activityService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
