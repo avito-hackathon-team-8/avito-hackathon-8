@@ -193,6 +193,14 @@ func TestRecordEventsRollsBackBatchForLockedTask(t *testing.T) {
 	}
 }
 
+func TestRecordEventsRejectsUnknownTaskType(t *testing.T) {
+	service := testService(t)
+	err := service.RecordEvents(context.Background(), uuid.New(), []Event{{Type: models.TaskType("UNKNOWN"), Count: 1}}, 1)
+	if !errors.Is(err, ErrInvalidTaskType) {
+		t.Fatalf("RecordEvents() error = %v, want ErrInvalidTaskType", err)
+	}
+}
+
 func TestClaimMarksCompletedTaskAsClaimed(t *testing.T) {
 	service := testService(t)
 	userID := uuid.New()
@@ -224,6 +232,30 @@ func TestClaimMarksCompletedTaskAsClaimed(t *testing.T) {
 	_, err = service.Claim(context.Background(), userID, task.ID, 1)
 	if !errors.Is(err, ErrRewardAlreadyClaimed) {
 		t.Fatalf("second Claim() error = %v, want ErrRewardAlreadyClaimed", err)
+	}
+}
+
+func TestClaimWithRewardRollsBackWhenRewardApplicationFails(t *testing.T) {
+	service := testService(t)
+	userID := uuid.New()
+	if _, err := service.List(context.Background(), userID, 1); err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	task := testTaskBySlot(t, service, 1)
+	if err := service.RecordEvents(context.Background(), userID, []Event{{Type: task.Type, Count: task.TargetCount}}, 1); err != nil {
+		t.Fatalf("RecordEvents() error = %v", err)
+	}
+
+	rewardErr := errors.New("reward application failed")
+	if _, err := service.ClaimWithReward(context.Background(), userID, task.ID, 1, func(_ *gorm.DB, _ int) error {
+		return rewardErr
+	}); !errors.Is(err, rewardErr) {
+		t.Fatalf("ClaimWithReward() error = %v, want %v", err, rewardErr)
+	}
+
+	progress := testProgress(t, service, userID, task.ID)
+	if progress.ClaimedAt != nil {
+		t.Fatal("ClaimWithReward() committed claimed time after reward failure")
 	}
 }
 

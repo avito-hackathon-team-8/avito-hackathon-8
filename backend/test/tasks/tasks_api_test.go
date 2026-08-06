@@ -221,7 +221,8 @@ func TestTasksClaimErrors(t *testing.T) {
 	}
 
 	locked := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+lockedTask.TaskID+"/claim", map[string]any{
-		"level": 1,
+		// The server must ignore a client-supplied level and use the pet level.
+		"level": 10,
 	})
 	if locked.status != http.StatusForbidden || locked.json["code"] != "TASK_LOCKED" {
 		t.Fatalf("locked claim response = %d %s", locked.status, locked.body)
