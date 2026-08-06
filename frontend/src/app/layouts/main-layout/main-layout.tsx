@@ -1,12 +1,16 @@
-import { Outlet } from "react-router";
+import { Outlet } from 'react-router';
 
-import { Header } from "@/widgets/header";
+import { Header } from '@/widgets/header';
+
+import styles from './main-layout.module.scss';
 
 export const MainLayout = () => {
   return (
-    <main>
+    <>
       <Header />
-      <Outlet />
-    </main>
+      <main className={styles.page__main}>
+        <Outlet />
+      </main>
+    </>
   );
 };

@@ -1,0 +1,11 @@
+.page__main {
+  max-height: 100%;
+  padding-bottom: 28px;
+  overflow-y: auto;
+
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

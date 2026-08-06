@@ -1,12 +1,12 @@
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { Outlet, useLocation, useNavigate } from 'react-router';
 
-import { useCurrentUser } from "@/entities/user";
-import { APP_ROUTES } from "@/shared/config/routes";
-import { Typography } from "@/shared/ui/typography";
+import { useCurrentUser } from '@/entities/user';
+import { APP_ROUTES } from '@/shared/config/routes';
+import { Typography } from '@/shared/ui/typography';
 
-import styles from "./app-shell.module.scss";
+import styles from './app-shell.module.scss';
 
 export const AppShell = () => {
   const navigate = useNavigate();
@@ -25,16 +25,12 @@ export const AppShell = () => {
   }, [currentUser, isLoading, location.pathname, navigate]);
 
   return (
-    <main className={styles.appShell}>
+    <div className={styles.appShell}>
       <div className={styles.appShell__container}>
-        {isLoading ? (
-          <Typography variant="heading">Загрузка</Typography>
-        ) : (
-          <Outlet />
-        )}
+        {isLoading ? <Typography variant="heading">Загрузка</Typography> : <Outlet />}
 
         <div id="app-overlay-root" className={styles.appShell__overlayRoot} />
       </div>
-    </main>
+    </div>
   );
 };
