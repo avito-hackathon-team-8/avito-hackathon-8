@@ -382,8 +382,8 @@ paths:
                     tasks:
                       - taskId: 8f123af2-24c5-4ff7-b114-111111111111
                         slot: 1
-                        type: OPEN_NOTIFICATIONS
-                        description: Открыть 5 уведомлений
+                        type: VIEW_LISTINGS
+                        description: Посмотреть 5 объявлений
                         currentCount: 5
                         targetCount: 5
                         rewardLeaves: 45
@@ -490,7 +490,7 @@ paths:
                   events:
                     - type: ADD_TO_FAVORITES
                       count: 2
-                    - type: OPEN_NOTIFICATIONS
+                    - type: VIEW_LISTINGS
                       count: 1
       responses:
         '204':
@@ -665,8 +665,8 @@ paths:
                       occurredAt: '2026-08-05T10:00:00Z'
                     tasks:
                       - taskId: 8f123af2-24c5-4ff7-b114-111111111111
-                        type: OPEN_NOTIFICATIONS
-                        description: Открыть 5 уведомлений
+                        type: VIEW_LISTINGS
+                        description: Посмотреть 5 объявлений
                         rewardLeaves: 45
                         rewardClaimed: true
                         completedAt: '2026-08-05T09:15:00Z'
@@ -1292,7 +1292,7 @@ components:
       type: string
       description: |
         Действие, прогресс которого учитывается для задания:
-        - `OPEN_NOTIFICATIONS` — открыть уведомления;
+        - `VIEW_LISTINGS` — посмотреть объявления;
         - `ADD_TO_FAVORITES` — добавить объявления в избранное;
         - `PUBLISH_LISTING` — успешно опубликовать объявления;
         - `BOOST_LISTING` — применить поднятие к своим объявлениям;
@@ -1302,7 +1302,7 @@ components:
 
         Требуемое количество действий задаётся полем `targetCount`, а не типом.
       enum:
-        - OPEN_NOTIFICATIONS
+        - VIEW_LISTINGS
         - ADD_TO_FAVORITES
         - PUBLISH_LISTING
         - BOOST_LISTING
