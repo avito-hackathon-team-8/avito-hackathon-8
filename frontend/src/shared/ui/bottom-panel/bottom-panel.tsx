@@ -1,31 +1,24 @@
-import {
-  type MouseEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
-import { createPortal } from "react-dom";
+import { createPortal } from 'react-dom';
 
-import { Typography } from "../typography";
+import { Typography } from '../typography';
 
-import styles from "./bottom-panel.module.scss";
+import styles from './bottom-panel.module.scss';
 
 const FOCUSABLE_ELEMENTS_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
   '[contenteditable="true"]',
   '[tabindex]:not([tabindex="-1"])',
-].join(",");
+].join(',');
 
 type BottomPanelProps = {
   title: ReactNode;
-  description: string;
+  description?: string;
   children: ReactNode;
   renderTrigger: (open: () => void) => ReactNode;
   closeOnBackdrop?: boolean;
@@ -64,10 +57,10 @@ export const BottomPanel = ({
       return;
     }
 
-    const root = document.getElementById("app-overlay-root");
+    const root = document.getElementById('app-overlay-root');
 
     if (!root) {
-      console.error("BottomPanel: не найден элемент #app-overlay-root");
+      console.error('BottomPanel: не найден элемент #app-overlay-root');
 
       return;
     }
@@ -101,29 +94,25 @@ export const BottomPanel = ({
     }
 
     previouslyFocusedElementRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const appContent =
-      portalRoot?.parentElement?.querySelector<HTMLElement>(
-        "[data-app-content]",
-      ) ?? null;
+      portalRoot?.parentElement?.querySelector<HTMLElement>('[data-app-content]') ?? null;
 
     if (appContent) {
       appContent.inert = true;
     }
 
     const getFocusableElements = () => {
-      return Array.from(
-        panel.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENTS_SELECTOR),
-      ).filter((element) => {
-        const isVisible = element.getClientRects().length > 0;
+      return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENTS_SELECTOR)).filter(
+        (element) => {
+          const isVisible = element.getClientRects().length > 0;
 
-        const isAriaHidden = element.getAttribute("aria-hidden") === "true";
+          const isAriaHidden = element.getAttribute('aria-hidden') === 'true';
 
-        return isVisible && !isAriaHidden;
-      });
+          return isVisible && !isAriaHidden;
+        },
+      );
     };
 
     const focusFirstElement = () => {
@@ -139,14 +128,14 @@ export const BottomPanel = ({
     focusFirstElement();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         event.preventDefault();
         setIsOpen(false);
 
         return;
       }
 
-      if (event.key !== "Tab") {
+      if (event.key !== 'Tab') {
         return;
       }
 
@@ -167,13 +156,9 @@ export const BottomPanel = ({
 
       const activeElement = document.activeElement;
 
-      const focusIsOutside =
-        activeElement === null || !panel.contains(activeElement);
+      const focusIsOutside = activeElement === null || !panel.contains(activeElement);
 
-      if (
-        event.shiftKey &&
-        (activeElement === firstElement || focusIsOutside)
-      ) {
+      if (event.shiftKey && (activeElement === firstElement || focusIsOutside)) {
         event.preventDefault();
 
         lastElement.focus({
@@ -183,10 +168,7 @@ export const BottomPanel = ({
         return;
       }
 
-      if (
-        !event.shiftKey &&
-        (activeElement === lastElement || focusIsOutside)
-      ) {
+      if (!event.shiftKey && (activeElement === lastElement || focusIsOutside)) {
         event.preventDefault();
 
         firstElement.focus({
@@ -201,14 +183,14 @@ export const BottomPanel = ({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
 
-    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener('focusin', handleFocusIn);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown);
 
-      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener('focusin', handleFocusIn);
 
       if (appContent) {
         appContent.inert = false;
@@ -254,13 +236,15 @@ export const BottomPanel = ({
                   >
                     {title}
                   </Typography>
-                  <Typography
-                    className={styles.panel__description}
-                    color="gray500"
-                    variant="p4-bold"
-                  >
-                    {description}
-                  </Typography>
+                  {description && (
+                    <Typography
+                      className={styles.panel__description}
+                      color="gray500"
+                      variant="p4-bold"
+                    >
+                      {description}
+                    </Typography>
+                  )}
 
                   <button
                     type="button"

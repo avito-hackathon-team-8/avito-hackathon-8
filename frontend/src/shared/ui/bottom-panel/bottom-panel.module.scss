@@ -12,21 +12,21 @@
 
   pointer-events: none;
 
-  &[data-open="true"] {
+  &[data-open='true'] {
     animation: overlay-in 200ms ease both;
 
     pointer-events: auto;
   }
 
-  &[data-open="false"] {
+  &[data-open='false'] {
     animation: overlay-out 200ms ease both;
   }
 
-  &[data-open="true"] .panel {
+  &[data-open='true'] .panel {
     animation: panel-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &[data-open="false"] .panel {
+  &[data-open='false'] .panel {
     animation: panel-out 200ms ease both;
   }
 }
@@ -57,8 +57,8 @@
   .panel__header {
     display: grid;
     grid-template:
-      "title close" auto
-      "description close" auto / 1fr auto;
+      'title close' auto
+      'description close' auto / 1fr auto;
     gap: 5px;
     padding: 8px 24px 12px;
   }
@@ -101,9 +101,14 @@
   .panel__content {
     flex: 1;
     min-height: 0;
+    margin-right: calc(var(--scrollbar-width) * -1);
     padding: 0 24px 24px;
     overflow-y: auto;
     overscroll-behavior: contain;
+
+    scrollbar-width: thin;
+
+    --scrollbar-width: 8px;
   }
 }
 

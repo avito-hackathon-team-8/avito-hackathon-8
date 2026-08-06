@@ -36,6 +36,10 @@
   font: var(--font-caption);
 }
 
+.typography_caption-semiBold {
+  font: var(--font-caption-semiBold);
+}
+
 .typography_caption-bold {
   font: var(--font-caption-bold);
 }
@@ -68,6 +72,10 @@
 
 .typography_color_gray200 {
   color: var(--gray-200);
+}
+
+.typography_color_gray250 {
+  color: var(--gray-250);
 }
 
 .typography_color_gray500 {

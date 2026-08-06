@@ -1,52 +1,49 @@
-import {
-  type ComponentPropsWithoutRef,
-  type ElementType,
-  type ReactNode,
-  type Ref,
-} from "react";
+import { type ComponentPropsWithoutRef, type ElementType, type ReactNode, type Ref } from 'react';
 
-import clsx from "clsx";
+import clsx from 'clsx';
 
-import styles from "./typography.module.scss";
+import styles from './typography.module.scss';
 
 export type TypographyTag =
-  | "h1"
-  | "h2"
-  | "h3"
-  | "h4"
-  | "p"
-  | "span"
-  | "div"
-  | "a"
-  | "label"
-  | "legend"
-  | "caption"
-  | "strong"
-  | "small";
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'p'
+  | 'span'
+  | 'div'
+  | 'a'
+  | 'label'
+  | 'legend'
+  | 'caption'
+  | 'strong'
+  | 'small';
 
 export type TypographyVariant =
-  | "inherit"
-  | "display"
-  | "heading"
-  | "section"
-  | "body"
-  | "caption"
-  | "caption-bold"
-  | "p3"
-  | "p4-bold"
-  | "p4-regular";
+  | 'inherit'
+  | 'display'
+  | 'heading'
+  | 'section'
+  | 'body'
+  | 'caption'
+  | 'caption-semiBold'
+  | 'caption-bold'
+  | 'p3'
+  | 'p4-bold'
+  | 'p4-regular';
 
 export type TypographyColor =
-  | "inherit"
-  | "white"
-  | "gray100"
-  | "gray200"
-  | "gray500"
-  | "black"
-  | "blue"
-  | "green"
-  | "red"
-  | "purple";
+  | 'inherit'
+  | 'white'
+  | 'gray100'
+  | 'gray200'
+  | 'gray250'
+  | 'gray500'
+  | 'black'
+  | 'blue'
+  | 'green'
+  | 'red'
+  | 'purple';
 
 interface TypographyOwnProps<T extends TypographyTag> {
   as?: T;
@@ -58,18 +55,18 @@ interface TypographyOwnProps<T extends TypographyTag> {
 }
 
 export type TypographyProps<T extends TypographyTag> = TypographyOwnProps<T> &
-  Omit<ComponentPropsWithoutRef<T>, keyof TypographyOwnProps<T> | "color">;
+  Omit<ComponentPropsWithoutRef<T>, keyof TypographyOwnProps<T> | 'color'>;
 
 function Typography<T extends TypographyTag>({
   as,
   variant,
-  color = "black",
+  color = 'black',
   className,
   children,
   ref,
   ...props
 }: TypographyProps<T>) {
-  const Component = (as as ElementType) || "p";
+  const Component = (as as ElementType) || 'p';
 
   return (
     <Component

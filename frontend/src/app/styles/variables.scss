@@ -1,10 +1,11 @@
-@use "./fonts";
+@use './fonts';
 
 :root {
   /* Colors */
   --white: #fff;
   --gray-100: #f7f7f7;
   --gray-200: #f2f2f2;
+  --gray-250: #ececec;
   --gray-300: #e5e5e5;
   --gray-500: #8a8a8a;
   --black: #0f0f0f;
@@ -18,16 +19,15 @@
   --purple: #a169f7;
 
   /* Typography */
-  --font-primary:
-    "Manrope", "Inter", -apple-system, blinkmacsystemfont, "Segoe UI", arial,
-    sans-serif;
+  --font-primary: 'Manrope', 'Inter', -apple-system, 'Segoe UI', arial, sans-serif;
   --font-display: normal 700 32px / 44px var(--font-primary);
   --font-heading: normal 700 24px / 33px var(--font-primary);
   --font-section: normal 700 20px / 27px var(--font-primary);
   --font-body: normal 400 16px / 22px var(--font-primary);
   --font-caption: normal 400 12px / 17px var(--font-primary);
+  --font-caption-semiBold: normal 600 12px / 17px var(--font-primary);
   --font-caption-bold: normal 700 12px / 17px var(--font-primary);
   --font-p3: normal 700 16px / 16px var(--font-primary);
   --font-p4-bold: normal 700 10px / 16px var(--font-primary);
-  --font-p4-regular: normal 700 10px / 14px var(--font-primary);
+  --font-p4-regular: normal 400 10px / 14px var(--font-primary);
 }

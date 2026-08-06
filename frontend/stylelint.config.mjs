@@ -21,6 +21,7 @@ export default {
   rules: {
     'declaration-empty-line-before': null,
     'selector-class-pattern': null,
+    'custom-property-pattern': null,
 
     'order/properties-order': [
       [
