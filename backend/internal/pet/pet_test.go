@@ -39,6 +39,26 @@ func TestApplyLevelUps(t *testing.T) {
 	}
 }
 
+func TestProgressForPetReturnsRegularAndMaxLevelProgress(t *testing.T) {
+	regular := ProgressForPet(models.Pet{Name: "Листик", Level: 2, Leaves: 15}, false)
+	if regular.Name != "Листик" || regular.Level != 2 || regular.Leaves != 15 || regular.NextLevelTargetLeaves != 130 || regular.LevelUp {
+		t.Fatalf("regular progress = %+v, want level 2, leaves 15, target 130", regular)
+	}
+
+	max := ProgressForPet(models.Pet{Name: "Листик", Level: MaxPetLevel, Leaves: 50}, true)
+	if max.Name != "Листик" || max.Level != MaxPetLevel || max.Leaves != 50 || max.NextLevelTargetLeaves != 0 || !max.LevelUp {
+		t.Fatalf("max progress = %+v, want max-level progress with zero target", max)
+	}
+}
+
+func TestGetOrCreateRejectsNilUser(t *testing.T) {
+	service, _ := testService(t)
+
+	if _, err := service.GetOrCreate(context.Background(), uuid.Nil); !errors.Is(err, ErrPetNotFound) {
+		t.Fatalf("GetOrCreate(nil) error = %v, want ErrPetNotFound", err)
+	}
+}
+
 func TestAddLeavesCrossesLevelsInOneTransaction(t *testing.T) {
 	service, user := testService(t)
 	pet, err := service.GetOrCreate(context.Background(), user.ID)
@@ -84,6 +104,37 @@ func TestAddLeavesRejectsInvalidAmountAndOverflow(t *testing.T) {
 
 	if _, err := service.AddLeaves(context.Background(), user.ID, 1); !errors.Is(err, ErrLeavesOverflow) {
 		t.Fatalf("AddLeaves() error = %v, want ErrLeavesOverflow", err)
+	}
+}
+
+func TestAddLeavesTxUpdatesExistingPet(t *testing.T) {
+	service, user := testService(t)
+	if _, err := service.GetOrCreate(context.Background(), user.ID); err != nil {
+		t.Fatalf("GetOrCreate() error = %v", err)
+	}
+
+	var result Progress
+	err := service.db.Transaction(func(tx *gorm.DB) error {
+		var err error
+		result, err = service.AddLeavesTx(tx, user.ID, 45)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("AddLeavesTx() error = %v", err)
+	}
+	if result.Level != 1 || result.Leaves != 45 || result.NextLevelTargetLeaves != 100 || result.LevelUp {
+		t.Fatalf("AddLeavesTx() progress = %+v, want level 1, leaves 45, target 100", result)
+	}
+}
+
+func TestAddLeavesTxRejectsMissingPetAndInvalidAmount(t *testing.T) {
+	service, user := testService(t)
+
+	if _, err := service.AddLeavesTx(service.db, user.ID, 1); !errors.Is(err, ErrPetNotFound) {
+		t.Fatalf("AddLeavesTx() missing pet error = %v, want ErrPetNotFound", err)
+	}
+	if _, err := service.AddLeavesTx(service.db, user.ID, 0); !errors.Is(err, ErrInvalidLeaves) {
+		t.Fatalf("AddLeavesTx(0) error = %v, want ErrInvalidLeaves", err)
 	}
 }
 

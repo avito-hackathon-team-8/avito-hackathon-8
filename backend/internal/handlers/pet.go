@@ -62,63 +62,82 @@ var petWebSocketUpgrader = websocket.Upgrader{
 }
 
 func (handler *petHandler) get(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
-	currentPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
+	userPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
+
 	if err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load pet")
+
 		return
 	}
 
-	writeJSON(response, http.StatusOK, responsePet(currentPet))
+	writeJSON(response, http.StatusOK, responsePet(userPet))
 }
 
 func (handler *petHandler) updateName(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
-	var body petNameUpdateRequest
-	if err := decodeJSON(response, request, &body); err != nil {
+	var nameUpdateRequest petNameUpdateRequest
+
+	err := decodeJSON(response, request, &nameUpdateRequest)
+
+	if err != nil {
 		writeError(response, http.StatusBadRequest, "Invalid request body")
+
 		return
 	}
 
-	currentPet, err := handler.pets.UpdateName(request.Context(), user.ID, body.Name)
+	userPet, err := handler.pets.UpdateName(request.Context(), user.ID, nameUpdateRequest.Name)
+
 	if errors.Is(err, pet.ErrInvalidName) {
 		writeError(response, http.StatusBadRequest, err.Error())
-		return
-	}
-	if errors.Is(err, pet.ErrPetNotFound) {
-		writeError(response, http.StatusNotFound, "Pet not found")
-		return
-	}
-	if err != nil {
-		writeError(response, http.StatusInternalServerError, "Could not update pet name")
+
 		return
 	}
 
-	writeJSON(response, http.StatusOK, responsePet(currentPet))
+	if errors.Is(err, pet.ErrPetNotFound) {
+		writeError(response, http.StatusNotFound, "Pet not found")
+
+		return
+	}
+
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, "Could not update pet name")
+
+		return
+	}
+
+	writeJSON(response, http.StatusOK, responsePet(userPet))
 }
 
 func (handler *petHandler) ws(response http.ResponseWriter, request *http.Request) {
 	user, err := handler.auth.Authenticate(request.Context(), websocketToken(request))
+
 	if err != nil {
 		writeAuthenticationError(response, err)
+
 		return
 	}
 
-	currentPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
+	userPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
+
 	if err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load pet")
+
 		return
 	}
 
 	connection, err := petWebSocketUpgrader.Upgrade(response, request, nil)
+
 	if err != nil {
 		return
 	}
@@ -127,7 +146,9 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	updates, unsubscribe := handler.pets.Subscribe(user.ID)
 	defer unsubscribe()
 
-	if err := writePetProgressEvent(connection, pet.ProgressForPet(currentPet, false)); err != nil {
+	err = writePetProgressEvent(connection, pet.ProgressForPet(userPet, false))
+
+	if err != nil {
 		return
 	}
 
@@ -143,8 +164,8 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 
 	for {
 		select {
-		case update, ok := <-updates:
-			if !ok || writePetProgressEvent(connection, update.Progress) != nil {
+		case update, isOpen := <-updates:
+			if !isOpen || writePetProgressEvent(connection, update.Progress) != nil {
 				return
 			}
 		case <-done:
@@ -155,8 +176,10 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 
 func (handler *petHandler) authenticate(response http.ResponseWriter, request *http.Request) (models.User, bool) {
 	user, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
+
 	if err != nil {
 		writeAuthenticationError(response, err)
+
 		return models.User{}, false
 	}
 
@@ -171,11 +194,11 @@ func websocketToken(request *http.Request) string {
 	return request.URL.Query().Get("token")
 }
 
-func responsePet(currentPet models.Pet) petResponse {
+func responsePet(pet models.Pet) petResponse {
 	return petResponse{
-		Name:   currentPet.Name,
-		Level:  currentPet.Level,
-		Leaves: currentPet.Leaves,
+		Name:   pet.Name,
+		Level:  pet.Level,
+		Leaves: pet.Leaves,
 	}
 }
 

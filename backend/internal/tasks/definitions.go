@@ -57,14 +57,6 @@ func LoadDefaultDefinitions() ([]Definition, error) {
 }
 
 func IsKnownTaskType(taskType models.TaskType) bool {
-	if isConfiguredTaskType(taskType) {
-		return true
-	}
-
-	return false
-}
-
-func isConfiguredTaskType(taskType models.TaskType) bool {
 	for _, knownType := range knownTaskTypes {
 		if taskType == knownType {
 			return true
@@ -92,6 +84,7 @@ func loadDefinitions(content []byte) ([]Definition, error) {
 		if err == nil {
 			return nil, fmt.Errorf("decode task definitions: expected one YAML document")
 		}
+
 		return nil, fmt.Errorf("decode task definitions: %w", err)
 	}
 
@@ -109,8 +102,8 @@ func validateDefinitions(definitions []Definition) error {
 		return fmt.Errorf("task definitions are empty")
 	}
 
-	bySlot := make(map[int]int, TotalDailyTasks)
-	byType := make(map[models.TaskType]bool, len(knownTaskTypes))
+	taskCountBySlot := make(map[int]int, TotalDailyTasks)
+	taskTypeExists := make(map[models.TaskType]bool, len(knownTaskTypes))
 	uniqueDefinitions := make(map[string]bool, len(definitions))
 
 	for _, definition := range definitions {
@@ -118,18 +111,23 @@ func validateDefinitions(definitions []Definition) error {
 		if !ok {
 			return fmt.Errorf("task definition has unknown slot %d", definition.Slot)
 		}
-		if !isConfiguredTaskType(definition.Type) {
+
+		if !IsKnownTaskType(definition.Type) {
 			return fmt.Errorf("task definition has unknown type %q", definition.Type)
 		}
+
 		if strings.TrimSpace(definition.Description) == "" {
 			return fmt.Errorf("task definition %d/%s has empty description", definition.Slot, definition.Type)
 		}
+
 		if definition.TargetCount < 1 {
 			return fmt.Errorf("task definition %d/%s has invalid target count", definition.Slot, definition.Type)
 		}
+
 		if definition.RewardLeaves != rule.RewardLeaves {
 			return fmt.Errorf("task definition %d/%s has reward %d, want %d", definition.Slot, definition.Type, definition.RewardLeaves, rule.RewardLeaves)
 		}
+
 		if definition.RequiredLevel != rule.RequiredLevel {
 			return fmt.Errorf("task definition %d/%s has required level %d, want %d", definition.Slot, definition.Type, definition.RequiredLevel, rule.RequiredLevel)
 		}
@@ -138,18 +136,20 @@ func validateDefinitions(definitions []Definition) error {
 		if uniqueDefinitions[key] {
 			return fmt.Errorf("duplicate task definition %s", key)
 		}
+
 		uniqueDefinitions[key] = true
-		bySlot[definition.Slot]++
-		byType[definition.Type] = true
+		taskCountBySlot[definition.Slot]++
+		taskTypeExists[definition.Type] = true
 	}
 
 	for _, slot := range dailyTaskSlots {
-		if bySlot[slot] == 0 {
+		if taskCountBySlot[slot] == 0 {
 			return fmt.Errorf("task definitions do not contain slot %d", slot)
 		}
 	}
+
 	for _, taskType := range knownTaskTypes {
-		if !byType[taskType] {
+		if !taskTypeExists[taskType] {
 			return fmt.Errorf("task definitions do not contain type %s", taskType)
 		}
 	}

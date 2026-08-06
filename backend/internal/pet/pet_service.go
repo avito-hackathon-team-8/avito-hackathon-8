@@ -103,17 +103,21 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 	}
 
 	var pet models.Pet
+
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		candidate := models.Pet{UserID: userID}
-		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&candidate).Error; err != nil {
+		newPet := models.Pet{UserID: userID}
+
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&newPet).Error; err != nil {
 			return fmt.Errorf("create pet: %w", err)
 		}
+
 		if err := tx.Where("user_id = ?", userID).First(&pet).Error; err != nil {
 			return fmt.Errorf("load pet: %w", err)
 		}
 
 		return nil
 	})
+
 	if err != nil {
 		return models.Pet{}, err
 	}
@@ -123,25 +127,35 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 
 func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name string) (models.Pet, error) {
 	name = strings.TrimSpace(name)
+
 	if utf8.RuneCountInString(name) < 1 || utf8.RuneCountInString(name) > 35 {
 		return models.Pet{}, ErrInvalidName
 	}
 
 	var pet models.Pet
+
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", userID).First(&pet).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrPetNotFound
-			}
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ?", userID).
+			First(&pet).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrPetNotFound
+		}
+
+		if err != nil {
 			return fmt.Errorf("lock pet: %w", err)
 		}
+
 		if err := tx.Model(&pet).Update("name", name).Error; err != nil {
 			return fmt.Errorf("update pet name: %w", err)
 		}
 
 		pet.Name = name
+
 		return nil
 	})
+
 	if err != nil {
 		return models.Pet{}, err
 	}
@@ -154,18 +168,21 @@ func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount 
 		return Progress{}, ErrInvalidLeaves
 	}
 
-	var result Progress
+	var progress Progress
+
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var err error
-		result, err = service.addLeavesTx(tx, userID, amount)
+		progress, err = service.addLeavesTx(tx, userID, amount)
 		return err
 	})
+
 	if err != nil {
 		return Progress{}, err
 	}
-	service.publish(Update{UserID: userID, Progress: result})
 
-	return result, nil
+	service.publish(Update{UserID: userID, Progress: progress})
+
+	return progress, nil
 }
 
 func (service *Service) AddLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
@@ -178,21 +195,35 @@ func (service *Service) AddLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64)
 
 func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
 	var pet models.Pet
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", userID).First(&pet).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return Progress{}, ErrPetNotFound
-		}
+
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("user_id = ?", userID).
+		First(&pet).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return Progress{}, ErrPetNotFound
+	}
+
+	if err != nil {
 		return Progress{}, fmt.Errorf("lock pet: %w", err)
 	}
+
 	if pet.Leaves < 0 || pet.Leaves > maxInt64-amount {
 		return Progress{}, ErrLeavesOverflow
 	}
 
 	newLevel, remainingLeaves := applyLevelUps(pet.Level, pet.Leaves+amount)
-	pet.Leaves = remainingLeaves
 	oldLevel := pet.Level
+
+	pet.Leaves = remainingLeaves
 	pet.Level = newLevel
-	if err := tx.Model(&pet).Updates(map[string]any{"leaves": pet.Leaves, "level": newLevel}).Error; err != nil {
+
+	err = tx.Model(&pet).Updates(map[string]any{
+		"leaves": pet.Leaves,
+		"level":  newLevel,
+	}).Error
+
+	if err != nil {
 		return Progress{}, fmt.Errorf("save pet progress: %w", err)
 	}
 
@@ -220,6 +251,7 @@ func applyLevelUps(level int, leaves int64) (int, int64) {
 		leaves -= cost
 		level++
 	}
+
 	return level, leaves
 }
 
@@ -229,7 +261,13 @@ func ProgressForPet(pet models.Pet, levelUp bool) Progress {
 
 func progressFor(pet models.Pet, levelUp bool) Progress {
 	if pet.Level >= MaxPetLevel {
-		return Progress{Name: pet.Name, Level: MaxPetLevel, Leaves: pet.Leaves, LevelUp: levelUp, NextLevelTargetLeaves: 0}
+		return Progress{
+			Name:                  pet.Name,
+			Level:                 MaxPetLevel,
+			Leaves:                pet.Leaves,
+			NextLevelTargetLeaves: 0,
+			LevelUp:               levelUp,
+		}
 	}
 
 	return Progress{

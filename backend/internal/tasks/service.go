@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	ErrInvalidTaskType      = errors.New("invalid task type")
 	ErrTaskNotFound         = errors.New("task not found")
 	ErrTaskLocked           = errors.New("task is locked")
 	ErrTaskNotCompleted     = errors.New("task is not completed")
@@ -89,7 +90,7 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 		return nil, fmt.Errorf("list daily task progress: %w", err)
 	}
 
-	result := make([]DailyTask, 0, len(tasks))
+	dailyTasks := make([]DailyTask, 0, len(tasks))
 
 	for _, task := range tasks {
 		var taskProgress *models.UserTaskProgress
@@ -103,7 +104,7 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 			}
 		}
 
-		result = append(result, DailyTask{
+		dailyTasks = append(dailyTasks, DailyTask{
 			ID:            task.ID,
 			Slot:          task.Slot,
 			Type:          task.Type,
@@ -116,7 +117,7 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 		})
 	}
 
-	return result, nil
+	return dailyTasks, nil
 }
 
 func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLevel int) (DailyProgress, error) {
@@ -138,11 +139,21 @@ func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLeve
 	}, nil
 }
 
-func (service *Service) RecordEvent(ctx context.Context, userID uuid.UUID, taskType models.TaskType, userLevel int) error {
+func (service *Service) RecordEvent(
+	ctx context.Context,
+	userID uuid.UUID,
+	taskType models.TaskType,
+	userLevel int,
+) error {
 	return service.RecordEvents(ctx, userID, []Event{{Type: taskType, Count: 1}}, userLevel)
 }
 
-func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, events []Event, userLevel int) error {
+func (service *Service) RecordEvents(
+	ctx context.Context,
+	userID uuid.UUID,
+	events []Event,
+	userLevel int,
+) error {
 	if len(events) == 0 {
 		return nil
 	}
@@ -154,17 +165,23 @@ func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, even
 	}
 
 	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, ev := range events {
-			if ev.Count < 1 {
-				ev.Count = 1
+		for _, event := range events {
+			if event.Count < 1 {
+				event.Count = 1
 			}
 
 			var task models.Task
-			err := tx.Where("date = ? AND type = ?", date, ev.Type).First(&task).Error
+			err := tx.Where("date = ? AND type = ?", date, event.Type).First(&task).Error
 
 			if errors.Is(err, gorm.ErrRecordNotFound) {
+				if !IsKnownTaskType(event.Type) {
+					return ErrInvalidTaskType
+				}
+
 				return ErrTaskNotFound
-			} else if err != nil {
+			}
+
+			if err != nil {
 				return fmt.Errorf("find task: %w", err)
 			}
 
@@ -183,20 +200,25 @@ func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, even
 					TaskID:       task.ID,
 					CurrentCount: 0,
 				}
-				if task.TargetCount <= ev.Count {
+
+				if task.TargetCount <= event.Count {
 					progress.CurrentCount = task.TargetCount
 					now := service.now().UTC()
 					progress.CompletedAt = &now
 				} else {
-					progress.CurrentCount = ev.Count
+					progress.CurrentCount = event.Count
 				}
+
 				err = tx.Create(&progress).Error
 
 				if err != nil {
 					return err
 				}
+
 				continue
-			} else if err != nil {
+			}
+
+			if err != nil {
 				return err
 			}
 
@@ -204,7 +226,7 @@ func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, even
 				continue
 			}
 
-			newCount := progress.CurrentCount + ev.Count
+			newCount := progress.CurrentCount + event.Count
 			if newCount > task.TargetCount {
 				newCount = task.TargetCount
 			}
@@ -229,18 +251,30 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, taskID uuid
 	return service.claim(ctx, userID, taskID, userLevel, nil)
 }
 
-func (service *Service) ClaimWithReward(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
+func (service *Service) ClaimWithReward(
+	ctx context.Context,
+	userID uuid.UUID,
+	taskID uuid.UUID,
+	userLevel int,
+	applyReward func(*gorm.DB, int) error,
+) (ClaimResult, error) {
 	return service.claim(ctx, userID, taskID, userLevel, applyReward)
 }
 
-func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
+func (service *Service) claim(
+	ctx context.Context,
+	userID uuid.UUID,
+	taskID uuid.UUID,
+	userLevel int,
+	applyReward func(*gorm.DB, int) error,
+) (ClaimResult, error) {
 	date := service.today()
 
 	if err := service.ensureTasks(ctx, date); err != nil {
 		return ClaimResult{}, err
 	}
 
-	var result ClaimResult
+	var claimResult ClaimResult
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var task models.Task
@@ -250,6 +284,7 @@ func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
 		}
+
 		if err != nil {
 			return err
 		}
@@ -267,6 +302,7 @@ func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotCompleted
 		}
+
 		if err != nil {
 			return err
 		}
@@ -286,14 +322,16 @@ func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid
 			return err
 		}
 
-		result = ClaimResult{
+		claimResult = ClaimResult{
 			TaskID:       task.ID,
 			RewardLeaves: task.RewardLeaves,
 			Status:       models.ClaimedTaskStatus,
 		}
 
 		if applyReward != nil {
-			if err := applyReward(tx, result.RewardLeaves); err != nil {
+			err := applyReward(tx, claimResult.RewardLeaves)
+
+			if err != nil {
 				return fmt.Errorf("apply task reward: %w", err)
 			}
 		}
@@ -312,7 +350,7 @@ func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid
 		return ClaimResult{}, fmt.Errorf("claim task reward: %w", err)
 	}
 
-	return result, nil
+	return claimResult, nil
 }
 
 func StatusFor(task models.Task, progress *models.UserTaskProgress, userLevel int) models.TaskStatus {
@@ -396,9 +434,11 @@ func (service *Service) today() time.Time {
 }
 
 func taskIDs(tasks []models.Task) []uuid.UUID {
-	ids := make([]uuid.UUID, 0, len(tasks))
+	taskIDs := make([]uuid.UUID, 0, len(tasks))
+
 	for _, task := range tasks {
-		ids = append(ids, task.ID)
+		taskIDs = append(taskIDs, task.ID)
 	}
-	return ids
+
+	return taskIDs
 }

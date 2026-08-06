@@ -67,46 +67,53 @@ type taskErrorResponse struct {
 }
 
 func (handler *taskHandler) list(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
-	level, ok := handler.petLevel(response, request, user.ID)
-	if !ok {
+	userLevel, hasPetLevel := handler.petLevel(response, request, user.ID)
+
+	if !hasPetLevel {
 		return
 	}
 
-	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, level)
+	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, userLevel)
 
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
 
-	items := make([]dailyTaskResponse, 0, len(dailyTasks))
+	responseTasks := make([]dailyTaskResponse, 0, len(dailyTasks))
+
 	for _, task := range dailyTasks {
-		items = append(items, responseDailyTask(task))
+		responseTasks = append(responseTasks, responseDailyTask(task))
 	}
 
-	writeJSON(response, http.StatusOK, dailyTasksResponse{Tasks: items})
+	writeJSON(response, http.StatusOK, dailyTasksResponse{Tasks: responseTasks})
 }
 
 func (handler *taskHandler) progress(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
-	level, ok := handler.petLevel(response, request, user.ID)
-	if !ok {
+	userLevel, hasPetLevel := handler.petLevel(response, request, user.ID)
+
+	if !hasPetLevel {
 		return
 	}
 
-	progress, err := handler.tasks.Progress(request.Context(), user.ID, level)
+	progress, err := handler.tasks.Progress(request.Context(), user.ID, userLevel)
 
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
 
@@ -117,41 +124,45 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 }
 
 func (handler *taskHandler) record(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
-	var body dailyTaskRecordRequest
+	var recordRequest dailyTaskRecordRequest
 
-	err := decodeJSON(response, request, &body)
+	err := decodeJSON(response, request, &recordRequest)
 
 	if err != nil {
 		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
+
 		return
 	}
 
-	level, ok := handler.petLevel(response, request, user.ID)
-	if !ok {
+	userLevel, hasPetLevel := handler.petLevel(response, request, user.ID)
+
+	if !hasPetLevel {
 		return
 	}
 
-	events := make([]tasks.Event, 0, len(body.Events))
-	for _, e := range body.Events {
-		if !tasks.IsKnownTaskType(e.Type) {
-			writeTaskError(response, http.StatusBadRequest, "INVALID_TASK_TYPE", "Передан неизвестный тип задания.")
-			return
-		}
-		count := e.Count
+	events := make([]tasks.Event, 0, len(recordRequest.Events))
+
+	for _, event := range recordRequest.Events {
+		count := event.Count
+
 		if count < 1 {
 			count = 1
 		}
-		events = append(events, tasks.Event{Type: e.Type, Count: count})
+
+		events = append(events, tasks.Event{Type: event.Type, Count: count})
 	}
 
-	err = handler.tasks.RecordEvents(request.Context(), user.ID, events, level)
+	err = handler.tasks.RecordEvents(request.Context(), user.ID, events, userLevel)
 
 	switch {
+	case errors.Is(err, tasks.ErrInvalidTaskType):
+		writeTaskError(response, http.StatusBadRequest, "INVALID_TASK_TYPE", "Передан неизвестный тип задания.")
 	case errors.Is(err, tasks.ErrTaskLocked):
 		writeTaskError(response, http.StatusForbidden, "TASK_LOCKED", "Одно из заданий недоступно на текущем уровне питомца.")
 	case errors.Is(err, tasks.ErrTaskNotFound):
@@ -164,8 +175,9 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 }
 
 func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Request) {
-	user, ok := handler.authenticate(response, request)
-	if !ok {
+	user, isAuthenticated := handler.authenticate(response, request)
+
+	if !isAuthenticated {
 		return
 	}
 
@@ -173,27 +185,33 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 
 	if err != nil {
 		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Задание текущего дня не найдено.")
+
 		return
 	}
 
-	var body dailyTaskClaimRequest
+	var claimRequest dailyTaskClaimRequest
 
-	err = decodeJSON(response, request, &body)
+	err = decodeJSON(response, request, &claimRequest)
 
 	if err != nil {
 		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
+
 		return
 	}
 
-	level, ok := handler.petLevel(response, request, user.ID)
-	if !ok {
+	userLevel, hasPetLevel := handler.petLevel(response, request, user.ID)
+
+	if !hasPetLevel {
 		return
 	}
 
 	var progress pet.Progress
-	result, err := handler.tasks.ClaimWithReward(request.Context(), user.ID, taskID, level, func(tx *gorm.DB, amount int) error {
+
+	claimResult, err := handler.tasks.ClaimWithReward(request.Context(), user.ID, taskID, userLevel, func(tx *gorm.DB, amount int) error {
 		var err error
+
 		progress, err = handler.pets.AddLeavesTx(tx, user.ID, int64(amount))
+
 		return err
 	})
 
@@ -211,9 +229,9 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 	default:
 		handler.pets.PublishProgress(user.ID, progress)
 		writeJSON(response, http.StatusOK, dailyTaskClaimResponse{
-			TaskID:       result.TaskID.String(),
-			RewardLeaves: result.RewardLeaves,
-			Status:       result.Status,
+			TaskID:       claimResult.TaskID.String(),
+			RewardLeaves: claimResult.RewardLeaves,
+			Status:       claimResult.Status,
 		})
 	}
 }
@@ -223,11 +241,13 @@ func (handler *taskHandler) authenticate(response http.ResponseWriter, request *
 
 	if errors.Is(err, auth.ErrUnauthorized) {
 		writeTaskError(response, http.StatusUnauthorized, "UNAUTHORIZED", "Требуется аутентификация")
+
 		return models.User{}, false
 	}
 
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return models.User{}, false
 	}
 
@@ -235,13 +255,15 @@ func (handler *taskHandler) authenticate(response http.ResponseWriter, request *
 }
 
 func (handler *taskHandler) petLevel(response http.ResponseWriter, request *http.Request, userID uuid.UUID) (int, bool) {
-	currentPet, err := handler.pets.GetOrCreate(request.Context(), userID)
+	pet, err := handler.pets.GetOrCreate(request.Context(), userID)
+
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return 0, false
 	}
 
-	return currentPet.Level, true
+	return pet.Level, true
 }
 
 func responseDailyTask(task tasks.DailyTask) dailyTaskResponse {

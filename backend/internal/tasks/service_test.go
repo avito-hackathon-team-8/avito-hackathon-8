@@ -193,6 +193,14 @@ func TestRecordEventsRollsBackBatchForLockedTask(t *testing.T) {
 	}
 }
 
+func TestRecordEventsRejectsUnknownTaskType(t *testing.T) {
+	service := testService(t)
+	err := service.RecordEvents(context.Background(), uuid.New(), []Event{{Type: models.TaskType("UNKNOWN"), Count: 1}}, 1)
+	if !errors.Is(err, ErrInvalidTaskType) {
+		t.Fatalf("RecordEvents() error = %v, want ErrInvalidTaskType", err)
+	}
+}
+
 func TestClaimMarksCompletedTaskAsClaimed(t *testing.T) {
 	service := testService(t)
 	userID := uuid.New()
