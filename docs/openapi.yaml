@@ -22,6 +22,8 @@ tags:
     description: Проверка доступности и готовности бэкенда.
   - name: Авторизация
     description: Вход по одноразовому коду из электронной почты и получение текущего пользователя.
+  - name: Питомец
+    description: Имя, уровень и текущий прогресс питомца авторизованного пользователя.
   - name: Награды
     description: Все персональные бонусы пользователя, их состояния и использование.
   - name: Рейтинг
@@ -184,6 +186,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/v1/pet:
+    get:
+      tags: [Питомец]
+      operationId: getPet
+      summary: Получить питомца текущего пользователя
+      description: |
+        Возвращает единственного питомца, связанного с авторизованным пользователем.
+        Уровень вычисляется сервером по накопленному количеству листьев и не принимается
+        от клиента. Новый пользователь начинает с питомцем 1-го уровня и пустым именем.
+        Если `name` пустое, клиент показывает пользователю форму первичной настройки имени.
+      responses:
+        '200':
+          description: Текущее состояние питомца.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+              examples:
+                default:
+                  value:
+                    name: Листик
+                    level: 5
+                    leaves: 245
+                uninitialized:
+                  value:
+                    name: ''
+                    level: 1
+                    leaves: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Питомец]
+      operationId: updatePetName
+      summary: Изменить имя питомца
+      description: Обновляет имя питомца текущего пользователя. Уровень и листья этим запросом не изменяются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetNameUpdateRequest'
+            examples:
+              default:
+                value:
+                  name: Листик
+      responses:
+        '200':
+          description: Имя успешно изменено.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+        '400':
+          description: Имя отсутствует, пустое или превышает допустимую длину.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/pet/ws:
+    get:
+      tags: [Питомец]
+      operationId: subscribePetProgress
+      summary: Подписаться на прогресс питомца
+      description: |
+        WebSocket-подключение для авторизованного пользователя. После подключения сервер
+        сразу отправляет полный снимок прогресса и повторяет его после каждого изменения
+        количества листьев или уровня питомца. Уровень и целевые значения рассчитываются
+        сервером.
+
+        Для подключения используется тот же JWT Bearer-токен, что и для HTTP API.
+        В OpenAPI 3.0.3 WebSocket описан расширением `x-websocket`.
+      x-websocket:
+        serverMessages:
+          event: PET_PROGRESS_UPDATED
+          schema:
+            $ref: '#/components/schemas/PetProgressUpdatedEvent'
+      responses:
+        '101':
+          description: Соединение переключено на протокол WebSocket.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
 
   /api/app/rewards:
     get:
@@ -1073,6 +1170,17 @@ components:
               value:
                 code: PLAYER_NOT_FOUND
                 message: Авторизованный игрок не найден
+    PetNotFound:
+      description: Питомец авторизованного пользователя не найден.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            petNotFound:
+              value:
+                code: PET_NOT_FOUND
+                message: Питомец пользователя не найден
     LeaderboardNotReady:
       description: Ни одного успешно рассчитанного снимка рейтинга ещё не опубликовано.
       content:
@@ -1169,6 +1277,81 @@ components:
         verified:
           type: boolean
           description: Подтверждён ли адрес электронной почты одноразовым кодом.
+
+    PetLevel:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 10
+      enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      description: Текущий уровень питомца. Максимальный уровень — 10.
+
+    PetResponse:
+      type: object
+      required: [name, level, leaves]
+      properties:
+        name:
+          type: string
+          minLength: 0
+          maxLength: 64
+          description: Имя питомца текущего пользователя. Пустая строка означает, что имя ещё не задано.
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        leaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Текущее количество листьев, учитываемое сервером.
+
+    PetNameUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Новое имя питомца без начальных и конечных пробелов.
+
+    PetProgress:
+      type: object
+      required: [level, leaves, leavesToNextLevel, nextLevelTargetLeaves]
+      description: |
+        Прогресс рассчитывается сервером по количеству листьев. Порог перехода
+        на следующий уровень задаётся накопленным количеством листьев:
+        1 — 0, 2 — 50, 3 — 100, 4 — 160, 5 — 210, 6 — 380,
+        7 — 560, 8 — 750, 9 — 1160, 10 — 1640.
+        На 10-м уровне `leavesToNextLevel` и `nextLevelTargetLeaves` равны 0.
+      properties:
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        leaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Текущее количество листьев.
+        leavesToNextLevel:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Количество листьев до следующего уровня; 0 на максимальном уровне.
+        nextLevelTargetLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Порог листьев для следующего уровня; 0 на максимальном уровне.
+
+    PetProgressUpdatedEvent:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          enum: [PET_PROGRESS_UPDATED]
+          description: Тип события WebSocket.
+        data:
+          $ref: '#/components/schemas/PetProgress'
 
     AuthResponse:
       type: object
