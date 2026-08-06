@@ -141,7 +141,9 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	if err != nil {
 		return
 	}
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 
 	updates, unsubscribe := handler.pets.Subscribe(user.ID)
 	defer unsubscribe()

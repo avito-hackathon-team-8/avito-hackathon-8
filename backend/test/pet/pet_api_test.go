@@ -92,7 +92,9 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	}
 
 	connection := openPetWebSocket(t, cfg, token)
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 
 	initialEvent := readPetEvent(t, connection)
 	if initialEvent.Event != "PET_PROGRESS_UPDATED" || initialEvent.Data.Name != "Листик" ||
@@ -147,7 +149,9 @@ func TestPetWebSocketReportsLevelUp(t *testing.T) {
 	seedPetLeaves(t, cfg, userID, 70)
 
 	connection := openPetWebSocket(t, cfg, token)
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 	initial := readPetEvent(t, connection)
 	if initial.Data.Level != 1 || initial.Data.Leaves != 70 || initial.Data.NextLevelTargetLeaves != 100 {
 		t.Fatalf("initial level-up snapshot = %+v, want level 1 with 70 leaves", initial)
@@ -328,7 +332,9 @@ func request(t *testing.T, cfg testConfig, token, method, path string, body any)
 	if err != nil {
 		t.Fatalf("request %s %s: %v", method, path, err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		t.Fatalf("read response: %v", err)
@@ -355,9 +361,10 @@ func websocketURL(t *testing.T, cfg testConfig, token string) string {
 	if err != nil {
 		t.Fatalf("parse API URL: %v", err)
 	}
-	if parsed.Scheme == "http" {
+	switch parsed.Scheme {
+	case "http":
 		parsed.Scheme = "ws"
-	} else if parsed.Scheme == "https" {
+	case "https":
 		parsed.Scheme = "wss"
 	}
 	if token != "" {
