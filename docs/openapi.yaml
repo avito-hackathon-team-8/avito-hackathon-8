@@ -22,6 +22,8 @@ tags:
     description: Проверка доступности и готовности бэкенда.
   - name: Авторизация
     description: Вход по одноразовому коду из электронной почты и получение текущего пользователя.
+  - name: Питомец
+    description: Имя, уровень и текущий прогресс питомца авторизованного пользователя.
   - name: Награды
     description: Все персональные бонусы пользователя, их состояния и использование.
   - name: Рейтинг
@@ -184,6 +186,270 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
+
+  /api/v1/pet:
+    get:
+      tags: [Питомец]
+      operationId: getPet
+      summary: Получить питомца текущего пользователя
+      description: |
+        Возвращает единственного питомца, связанного с авторизованным пользователем.
+        Уровень вычисляется сервером по накопленному количеству листьев и не принимается
+        от клиента. Новый пользователь начинает с питомцем 1-го уровня и пустым именем.
+        Если `name` пустое, клиент показывает пользователю форму первичной настройки имени.
+      responses:
+        '200':
+          description: Текущее состояние питомца.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+              examples:
+                default:
+                  value:
+                    name: Листик
+                    level: 5
+                    leaves: 245
+                uninitialized:
+                  value:
+                    name: ''
+                    level: 1
+                    leaves: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Питомец]
+      operationId: updatePetName
+      summary: Изменить имя питомца
+      description: Обновляет имя питомца текущего пользователя. Уровень и листья этим запросом не изменяются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetNameUpdateRequest'
+            examples:
+              default:
+                value:
+                  name: Листик
+      responses:
+        '200':
+          description: Имя успешно изменено.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+        '400':
+          description: Имя отсутствует, пустое или превышает допустимую длину.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/pet/ws:
+    get:
+      tags: [Питомец]
+      operationId: subscribePetProgress
+      summary: Подписаться на прогресс питомца
+      description: |
+        WebSocket-подключение для авторизованного пользователя. После подключения сервер
+        сразу отправляет полный снимок прогресса и повторяет его после каждого изменения
+        количества листьев или уровня питомца. Уровень и целевые значения рассчитываются
+        сервером. Поле `levelUp` сообщает, повысился ли уровень именно в операции,
+        вызвавшей это сообщение.
+
+        Для подключения используется тот же JWT Bearer-токен, что и для HTTP API.
+        В OpenAPI 3.0.3 WebSocket описан расширением `x-websocket`.
+      x-websocket:
+        serverMessages:
+          event: PET_PROGRESS_UPDATED
+          schema:
+            $ref: '#/components/schemas/PetProgressUpdatedEvent'
+      responses:
+        '101':
+          description: Соединение переключено на протокол WebSocket.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+
+  /api/v1/pet/levels:
+    get:
+      tags: [Питомец]
+      operationId: getPetLevels
+      summary: Получить уровни и награды питомца
+      description: |
+        Возвращает все десять уровней в порядке возрастания. У каждого уровня есть
+        награда и её состояние. Когда пользователь достигает уровня, награда получает
+        статус `UNOPENED` и должна быть забрана в течение трёх суток.
+
+        Для `UNOPENED` поле `expiresAt` является дедлайном, по которому клиент отображает
+        обратный отсчёт. После его наступления сервер переводит награду в `FROZEN`; для
+        этого статуса в поле остаётся прошедшая метка дедлайна. Для `LOCKED` и `CLAIMED`
+        значение равно null.
+      responses:
+        '200':
+          description: Полная шкала уровней и состояние награды каждого уровня.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetLevelsResponse'
+              examples:
+                petAtLevelFour:
+                  value:
+                    levels:
+                      - level: 1
+                        status: CLAIMED
+                        reward:
+                          id: 10101010-1010-4010-8010-101010101010
+                          type: AVITO_BONUS
+                          description: 50 бонусов Авито
+                        expiresAt: null
+                      - level: 2
+                        status: CLAIMED
+                        reward:
+                          id: 20202020-2020-4020-8020-202020202020
+                          type: FREE_DELIVERY
+                          description: Бесплатная доставка для одного заказа
+                        expiresAt: null
+                      - level: 3
+                        status: FROZEN
+                        reward:
+                          id: 30303030-3030-4030-8030-303030303030
+                          type: PROMOTION_DISCOUNT
+                          description: Скидка 10% на продвижение объявления
+                        expiresAt: '2026-08-03T12:00:00Z'
+                      - level: 4
+                        status: UNOPENED
+                        reward:
+                          id: 40404040-4040-4040-8040-404040404040
+                          type: FREE_PROMOTION
+                          description: Бесплатное продвижение объявления на 3 дня
+                        expiresAt: '2026-08-09T12:00:00Z'
+                      - level: 5
+                        status: LOCKED
+                        reward:
+                          id: 50505050-5050-4050-8050-505050505050
+                          type: DELIVERY_DISCOUNT
+                          description: Скидка 15% на Авито Доставку
+                        expiresAt: null
+                      - level: 6
+                        status: LOCKED
+                        reward:
+                          id: 60606060-6060-4060-8060-606060606060
+                          type: AVITO_BONUS
+                          description: 100 бонусов Авито
+                        expiresAt: null
+                      - level: 7
+                        status: LOCKED
+                        reward:
+                          id: 70707070-7070-4070-8070-707070707070
+                          type: FREE_DELIVERY
+                          description: Бесплатная доставка для двух заказов
+                        expiresAt: null
+                      - level: 8
+                        status: LOCKED
+                        reward:
+                          id: 80808080-8080-4080-8080-808080808080
+                          type: PROMOTION_DISCOUNT
+                          description: Скидка 20% на продвижение объявления
+                        expiresAt: null
+                      - level: 9
+                        status: LOCKED
+                        reward:
+                          id: 90909090-9090-4090-8090-909090909090
+                          type: FREE_PROMOTION
+                          description: Бесплатное продвижение объявления на 7 дней
+                        expiresAt: null
+                      - level: 10
+                        status: LOCKED
+                        reward:
+                          id: a0a0a0a0-a0a0-40a0-80a0-a0a0a0a0a0a0
+                          type: DELIVERY_DISCOUNT
+                          description: Скидка 25% на Авито Доставку
+                        expiresAt: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/pet/level-rewards/{rewardId}/claim:
+    post:
+      tags: [Питомец]
+      operationId: claimPetLevelReward
+      summary: Забрать награду за уровень
+      description: |
+        Переводит указанную награду уровня из `UNOPENED` в `CLAIMED`. Награды остальных
+        уровней этим запросом не изменяются. Сервер сопоставляет `rewardId` с
+        авторизованным пользователем и уровнем, после чего добавляет награду с источником
+        `LEVEL` в одной транзакции.
+      parameters:
+        - name: rewardId
+          in: path
+          required: true
+          description: Идентификатор награды из соответствующего элемента `levels`.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Награда за указанный уровень успешно забрана.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimLevelRewardResponse'
+              examples:
+                claimed:
+                  value:
+                    level: 4
+                    status: CLAIMED
+        '400':
+          description: Передан некорректный идентификатор награды.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Питомец не найден, либо награда не принадлежит авторизованному пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Награду нельзя забрать в её текущем состоянии.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                locked:
+                  value:
+                    code: LEVEL_REWARD_LOCKED
+                    message: Сначала необходимо достичь этого уровня
+                frozen:
+                  value:
+                    code: LEVEL_REWARD_FROZEN
+                    message: Срок получения награды истёк
+                claimed:
+                  value:
+                    code: LEVEL_REWARD_ALREADY_CLAIMED
+                    message: Награда за этот уровень уже забрана
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/app/rewards:
     get:
@@ -1073,6 +1339,17 @@ components:
               value:
                 code: PLAYER_NOT_FOUND
                 message: Авторизованный игрок не найден
+    PetNotFound:
+      description: Питомец авторизованного пользователя не найден.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            petNotFound:
+              value:
+                code: PET_NOT_FOUND
+                message: Питомец пользователя не найден
     LeaderboardNotReady:
       description: Ни одного успешно рассчитанного снимка рейтинга ещё не опубликовано.
       content:
@@ -1169,6 +1446,86 @@ components:
         verified:
           type: boolean
           description: Подтверждён ли адрес электронной почты одноразовым кодом.
+
+    PetLevel:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 10
+      enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      description: Текущий уровень питомца. Максимальный уровень — 10.
+
+    PetResponse:
+      type: object
+      required: [name, level, leaves]
+      properties:
+        name:
+          type: string
+          minLength: 0
+          maxLength: 64
+          description: Имя питомца текущего пользователя. Пустая строка означает, что имя ещё не задано.
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        leaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Текущее количество листьев, учитываемое сервером.
+
+    PetNameUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Новое имя питомца без начальных и конечных пробелов.
+
+    PetProgress:
+      type: object
+      required: [level, leaves, leavesToNextLevel, nextLevelTargetLeaves, levelUp]
+      description: |
+        Прогресс рассчитывается сервером по количеству листьев. Порог перехода
+        на следующий уровень задаётся накопленным количеством листьев:
+        1 — 0, 2 — 50, 3 — 100, 4 — 160, 5 — 210, 6 — 380,
+        7 — 560, 8 — 750, 9 — 1160, 10 — 1640.
+        На 10-м уровне `leavesToNextLevel` и `nextLevelTargetLeaves` равны 0.
+      properties:
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        leaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Текущее количество листьев.
+        leavesToNextLevel:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Количество листьев до следующего уровня; 0 на максимальном уровне.
+        nextLevelTargetLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Порог листьев для следующего уровня; 0 на максимальном уровне.
+        levelUp:
+          type: boolean
+          description: |
+            Равно true, если операция, вызвавшая это WebSocket-сообщение, повысила
+            уровень питомца. В первом сообщении после подключения всегда false.
+
+    PetProgressUpdatedEvent:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          enum: [PET_PROGRESS_UPDATED]
+          description: Тип события WebSocket.
+        data:
+          $ref: '#/components/schemas/PetProgress'
 
     AuthResponse:
       type: object
@@ -1287,6 +1644,72 @@ components:
           type: string
           format: date-time
           description: Время использования награды в UTC.
+
+    LevelRewardStatus:
+      type: string
+      description: |
+        Состояние награды за уровень:
+        - `LOCKED` — уровень ещё не достигнут;
+        - `UNOPENED` — уровень достигнут, награда ожидает получения;
+        - `CLAIMED` — награда за этот уровень уже забрана;
+        - `FROZEN` — три дня на получение истекли, награду больше нельзя забрать.
+      enum: [LOCKED, UNOPENED, CLAIMED, FROZEN]
+
+    LevelReward:
+      type: object
+      required: [id, type, description]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Серверный идентификатор награды за уровень.
+        type:
+          $ref: '#/components/schemas/RewardCategory'
+        description:
+          type: string
+          minLength: 1
+          description: Описание награды и условий её использования.
+
+    PetLevelItem:
+      type: object
+      required: [level, status, reward, expiresAt]
+      properties:
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        status:
+          $ref: '#/components/schemas/LevelRewardStatus'
+        reward:
+          $ref: '#/components/schemas/LevelReward'
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Время заморозки награды в UTC. Передаётся для `UNOPENED` и `FROZEN`;
+            для `LOCKED` и `CLAIMED` равно null.
+
+    ClaimLevelRewardResponse:
+      type: object
+      required: [level, status]
+      properties:
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        status:
+          type: string
+          enum: [CLAIMED]
+          description: Подтверждает, что награда указанного уровня забрана.
+
+    PetLevelsResponse:
+      type: object
+      required: [levels]
+      properties:
+        levels:
+          type: array
+          minItems: 10
+          maxItems: 10
+          description: Все уровни питомца от 1 до 10 в порядке возрастания.
+          items:
+            $ref: '#/components/schemas/PetLevelItem'
 
     DailyTaskType:
       type: string
