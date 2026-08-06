@@ -468,7 +468,9 @@ func rawRequest(t *testing.T, cfg testConfig, token, method, path, body string) 
 	if err != nil {
 		t.Fatalf("%s %s failed: %v", method, path, err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {

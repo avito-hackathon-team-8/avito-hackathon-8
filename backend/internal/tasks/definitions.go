@@ -3,6 +3,7 @@ package tasks
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -70,19 +71,25 @@ func loadDefinitions(content []byte) ([]Definition, error) {
 	decoder.KnownFields(true)
 
 	var config definitionsFile
-	if err := decoder.Decode(&config); err != nil {
+	err := decoder.Decode(&config)
+
+	if err != nil {
 		return nil, fmt.Errorf("decode task definitions: %w", err)
 	}
 
 	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
+	err = decoder.Decode(&extra)
+
+	if !errors.Is(err, io.EOF) {
 		if err == nil {
 			return nil, fmt.Errorf("decode task definitions: expected one YAML document")
 		}
 		return nil, fmt.Errorf("decode task definitions: %w", err)
 	}
 
-	if err := validateDefinitions(config.Tasks); err != nil {
+	err = validateDefinitions(config.Tasks)
+
+	if err != nil {
 		return nil, err
 	}
 
