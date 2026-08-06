@@ -70,11 +70,13 @@ func (handler *taskHandler) list(response http.ResponseWriter, request *http.Req
 
 	levelStr := request.URL.Query().Get("level")
 	level, err := strconv.Atoi(levelStr)
+
 	if err != nil || level < 1 {
 		level = 1
 	}
 
 	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, level)
+
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 		return
@@ -96,11 +98,13 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 
 	levelStr := request.URL.Query().Get("level")
 	level, err := strconv.Atoi(levelStr)
+
 	if err != nil || level < 1 {
 		level = 1
 	}
 
 	progress, err := handler.tasks.Progress(request.Context(), user.ID, level)
+
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 		return
@@ -119,19 +123,23 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 	}
 
 	var body dailyTaskRecordRequest
-	if err := decodeJSON(response, request, &body); err != nil {
+
+	err := decodeJSON(response, request, &body)
+
+	if err != nil {
 		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
 		return
 	}
 
 	level := body.Level
+
 	if level < 1 {
 		level = 1
 	}
 
 	events := make([]tasks.Event, 0, len(body.Events))
 	for _, e := range body.Events {
-		if !validTaskType(e.Type) {
+		if !tasks.IsKnownTaskType(e.Type) {
 			writeTaskError(response, http.StatusBadRequest, "INVALID_TASK_TYPE", "Передан неизвестный тип задания.")
 			return
 		}
@@ -142,7 +150,7 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 		events = append(events, tasks.Event{Type: e.Type, Count: count})
 	}
 
-	err := handler.tasks.RecordEvents(request.Context(), user.ID, events, level)
+	err = handler.tasks.RecordEvents(request.Context(), user.ID, events, level)
 
 	switch {
 	case errors.Is(err, tasks.ErrTaskLocked):
@@ -163,18 +171,23 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 	}
 
 	taskID, err := uuid.Parse(request.PathValue("taskId"))
+
 	if err != nil {
 		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Задание текущего дня не найдено.")
 		return
 	}
 
 	var body dailyTaskClaimRequest
-	if err := decodeJSON(response, request, &body); err != nil {
+
+	err = decodeJSON(response, request, &body)
+
+	if err != nil {
 		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
 		return
 	}
 
 	level := body.Level
+
 	if level < 1 {
 		level = 1
 	}
@@ -228,21 +241,6 @@ func responseDailyTask(task tasks.DailyTask) dailyTaskResponse {
 		RewardLeaves:  task.RewardLeaves,
 		RequiredLevel: task.RequiredLevel,
 		Status:        task.Status,
-	}
-}
-
-func validTaskType(taskType models.TaskType) bool {
-	switch taskType {
-	case models.OpenNotificationsTaskType,
-		models.AddToFavoritesTaskType,
-		models.PublishListingTaskType,
-		models.BoostListingTaskType,
-		models.LeaveReviewTaskType,
-		models.CompleteDealTaskType,
-		models.OrderWithDeliveryTaskType:
-		return true
-	default:
-		return false
 	}
 }
 

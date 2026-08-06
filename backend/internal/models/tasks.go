@@ -19,7 +19,7 @@ const (
 )
 
 const (
-	OpenNotificationsTaskType TaskType = "OPEN_NOTIFICATIONS"
+	ViewListingsTaskType      TaskType = "VIEW_LISTINGS"
 	AddToFavoritesTaskType    TaskType = "ADD_TO_FAVORITES"
 	PublishListingTaskType    TaskType = "PUBLISH_LISTING"
 	BoostListingTaskType      TaskType = "BOOST_LISTING"

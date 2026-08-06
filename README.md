@@ -49,7 +49,8 @@ backend/
 │   ├── email/      # SMTP
 │   ├── handlers/   # HTTP routes и JSON handlers
 │   ├── models/     # GORM-модели
-│   └── rewards/    # выдача, список и использование наград
+│   ├── rewards/    # выдача, список и использование наград
+│   └── tasks/      # дневные задачи и YAML-конфигурация вариантов
 └── main.go         # сборка зависимостей и запуск сервера
 ```
 
@@ -62,3 +63,18 @@ make lint
 make feature NAME=auth
 make down
 ```
+
+## Ежедневные задачи
+
+Проверка сценария: получить задачи дня, записать подтверждённые события,
+дождаться статуса `COMPLETED` и забрать награду через `claim`.
+
+```text
+GET  /api/v1/tasks?level=1
+GET  /api/v1/tasks/progress?level=1
+POST /api/v1/tasks/record
+POST /api/v1/tasks/{taskId}/claim
+```
+
+В текущем MVP уровень питомца и начисление листьев являются заглушками до
+подключения соответствующего сервиса.

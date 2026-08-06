@@ -1,0 +1,100 @@
+tasks:
+  - slot: 1
+    type: VIEW_LISTINGS
+    description: Посмотреть 3 объявления
+    targetCount: 3
+    rewardLeaves: 45
+    requiredLevel: 1
+  - slot: 1
+    type: VIEW_LISTINGS
+    description: Посмотреть 5 объявлений
+    targetCount: 5
+    rewardLeaves: 45
+    requiredLevel: 1
+  - slot: 1
+    type: VIEW_LISTINGS
+    description: Посмотреть 8 объявлений
+    targetCount: 8
+    rewardLeaves: 45
+    requiredLevel: 1
+
+  - slot: 2
+    type: ADD_TO_FAVORITES
+    description: Добавить 3 объявления в избранное
+    targetCount: 3
+    rewardLeaves: 45
+    requiredLevel: 1
+  - slot: 2
+    type: ADD_TO_FAVORITES
+    description: Добавить 4 объявления в избранное
+    targetCount: 4
+    rewardLeaves: 45
+    requiredLevel: 1
+  - slot: 2
+    type: ADD_TO_FAVORITES
+    description: Добавить 5 объявлений в избранное
+    targetCount: 5
+    rewardLeaves: 45
+    requiredLevel: 1
+
+  - slot: 3
+    type: PUBLISH_LISTING
+    description: Опубликовать объявление
+    targetCount: 1
+    rewardLeaves: 50
+    requiredLevel: 5
+  - slot: 3
+    type: PUBLISH_LISTING
+    description: Опубликовать 2 объявления
+    targetCount: 2
+    rewardLeaves: 50
+    requiredLevel: 5
+  - slot: 3
+    type: BOOST_LISTING
+    description: Поднять объявление
+    targetCount: 1
+    rewardLeaves: 50
+    requiredLevel: 5
+  - slot: 3
+    type: BOOST_LISTING
+    description: Поднять 2 объявления
+    targetCount: 2
+    rewardLeaves: 50
+    requiredLevel: 5
+  - slot: 3
+    type: LEAVE_REVIEW
+    description: Оставить отзыв
+    targetCount: 1
+    rewardLeaves: 50
+    requiredLevel: 5
+  - slot: 3
+    type: LEAVE_REVIEW
+    description: Оставить 2 отзыва
+    targetCount: 2
+    rewardLeaves: 50
+    requiredLevel: 5
+
+  - slot: 4
+    type: COMPLETE_DEAL
+    description: Совершить покупку или продажу
+    targetCount: 1
+    rewardLeaves: 60
+    requiredLevel: 10
+  - slot: 4
+    type: COMPLETE_DEAL
+    description: Совершить 2 покупки или продажи
+    targetCount: 2
+    rewardLeaves: 60
+    requiredLevel: 10
+  - slot: 4
+    type: ORDER_WITH_DELIVERY
+    description: Заказать с Авито Доставкой
+    targetCount: 1
+    rewardLeaves: 60
+    requiredLevel: 10
+  - slot: 4
+    type: ORDER_WITH_DELIVERY
+    description: Заказать 2 товара с Авито Доставкой
+    targetCount: 2
+    rewardLeaves: 60
+    requiredLevel: 10
