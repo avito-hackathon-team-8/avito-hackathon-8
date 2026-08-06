@@ -1,8 +1,6 @@
-import type { SVGAttributes } from "react";
+import type { SVGAttributes } from 'react';
 
-export const NotificationIcon = ({
-  ...props
-}: SVGAttributes<SVGSVGElement>) => {
+export const NotificationIcon = ({ ...props }: SVGAttributes<SVGSVGElement>) => {
   return (
     <svg
       width="24"

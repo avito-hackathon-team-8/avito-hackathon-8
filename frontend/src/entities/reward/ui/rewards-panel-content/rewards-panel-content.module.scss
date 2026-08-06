@@ -1,0 +1,43 @@
+.rewardsPanel {
+  .rewardsPanel__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .rewardsPanel__item {
+    display: grid;
+    grid-template:
+      'img content button' auto
+      'img content button' auto
+      / auto 1fr auto;
+    gap: 12px;
+    padding-bottom: 11px;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--gray-250);
+
+      .rewardsPanel__itemContent {
+        padding-bottom: 12px;
+      }
+    }
+
+    .rewardsPanel__itemImg {
+      grid-area: img;
+      max-width: 25px;
+    }
+
+    .rewardsPanel__itemContent {
+      grid-area: content;
+
+      line-height: 1;
+    }
+
+    .rewardsPanel__itemButton {
+      grid-area: button;
+      align-self: start;
+    }
+  }
+}

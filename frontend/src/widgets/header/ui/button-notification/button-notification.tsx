@@ -1,11 +1,11 @@
-import clsx from "clsx";
+import clsx from 'clsx';
 
-import { NotificationIcon } from "@/shared/assets/icon/notification";
-import { BottomPanel } from "@/shared/ui/bottom-panel";
-import { Button } from "@/shared/ui/button";
-import { Typography } from "@/shared/ui/typography";
+import { NotificationIcon } from '@/shared/assets/icon/notification-icon';
+import { BottomPanel } from '@/shared/ui/bottom-panel';
+import { Button } from '@/shared/ui/button';
+import { Typography } from '@/shared/ui/typography';
 
-import styles from "./button-notification.module.scss";
+import styles from './button-notification.module.scss';
 interface IButtonNotificationProps {
   className?: string;
 }
@@ -38,9 +38,9 @@ export const ButtonNotification = ({ className }: IButtonNotificationProps) => {
       )}
     >
       <div>
-        Lorem ipsum dolor sit amet consectetur, adipisicing elit. In vitae eius
-        corrupti beatae, veritatis aliquam omnis vel ipsum distinctio dicta,
-        dolor, eaque earum necessitatibus quidem a? Sequi dolorum cumque vitae?
+        Lorem ipsum dolor sit amet consectetur, adipisicing elit. In vitae eius corrupti beatae,
+        veritatis aliquam omnis vel ipsum distinctio dicta, dolor, eaque earum necessitatibus quidem
+        a? Sequi dolorum cumque vitae?
       </div>
     </BottomPanel>
   );

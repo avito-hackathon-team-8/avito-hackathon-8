@@ -1,18 +1,15 @@
-import { ArrowIcon } from "@/shared/assets/icon/arrow";
-import { Button } from "@/shared/ui/button";
-import { Typography } from "@/shared/ui/typography";
+import { ArrowIcon } from '@/shared/assets/icon/arrow-icon';
+import { Button } from '@/shared/ui/button';
+import { Typography } from '@/shared/ui/typography';
 
-import { ButtonNotification } from "./button-notification/button-notification";
+import { ButtonNotification } from './button-notification/button-notification';
 
-import styles from "./header.module.scss";
+import styles from './header.module.scss';
 
 export const Header = () => {
   return (
     <header className={styles.header}>
-      <Button
-        className={styles.header__backButton}
-        aria-label="Вернуться назад"
-      >
+      <Button className={styles.header__backButton} aria-label="Вернуться назад">
         <ArrowIcon></ArrowIcon>
       </Button>
 
