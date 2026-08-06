@@ -3,16 +3,18 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type taskHandler struct {
 	auth  *auth.Service
+	pets  *pet.Service
 	tasks *tasks.Service
 }
 
@@ -38,6 +40,7 @@ type dailyTasksProgressResponse struct {
 }
 
 type dailyTaskRecordRequest struct {
+	// Level is kept for backward compatibility with older clients and ignored.
 	Level  int         `json:"level"`
 	Events []EventItem `json:"events"`
 }
@@ -48,6 +51,7 @@ type EventItem struct {
 }
 
 type dailyTaskClaimRequest struct {
+	// Level is kept for backward compatibility with older clients and ignored.
 	Level int `json:"level"`
 }
 
@@ -68,11 +72,9 @@ func (handler *taskHandler) list(response http.ResponseWriter, request *http.Req
 		return
 	}
 
-	levelStr := request.URL.Query().Get("level")
-	level, err := strconv.Atoi(levelStr)
-
-	if err != nil || level < 1 {
-		level = 1
+	level, ok := handler.petLevel(response, request, user.ID)
+	if !ok {
+		return
 	}
 
 	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, level)
@@ -96,11 +98,9 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 		return
 	}
 
-	levelStr := request.URL.Query().Get("level")
-	level, err := strconv.Atoi(levelStr)
-
-	if err != nil || level < 1 {
-		level = 1
+	level, ok := handler.petLevel(response, request, user.ID)
+	if !ok {
+		return
 	}
 
 	progress, err := handler.tasks.Progress(request.Context(), user.ID, level)
@@ -131,10 +131,9 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	level := body.Level
-
-	if level < 1 {
-		level = 1
+	level, ok := handler.petLevel(response, request, user.ID)
+	if !ok {
+		return
 	}
 
 	events := make([]tasks.Event, 0, len(body.Events))
@@ -186,13 +185,17 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 		return
 	}
 
-	level := body.Level
-
-	if level < 1 {
-		level = 1
+	level, ok := handler.petLevel(response, request, user.ID)
+	if !ok {
+		return
 	}
 
-	result, err := handler.tasks.Claim(request.Context(), user.ID, taskID, level)
+	var progress pet.Progress
+	result, err := handler.tasks.ClaimWithReward(request.Context(), user.ID, taskID, level, func(tx *gorm.DB, amount int) error {
+		var err error
+		progress, err = handler.pets.AddLeavesTx(tx, user.ID, int64(amount))
+		return err
+	})
 
 	switch {
 	case errors.Is(err, tasks.ErrTaskLocked):
@@ -206,6 +209,7 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 	case err != nil:
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 	default:
+		handler.pets.PublishProgress(user.ID, progress)
 		writeJSON(response, http.StatusOK, dailyTaskClaimResponse{
 			TaskID:       result.TaskID.String(),
 			RewardLeaves: result.RewardLeaves,
@@ -228,6 +232,16 @@ func (handler *taskHandler) authenticate(response http.ResponseWriter, request *
 	}
 
 	return user, true
+}
+
+func (handler *taskHandler) petLevel(response http.ResponseWriter, request *http.Request, userID uuid.UUID) (int, bool) {
+	currentPet, err := handler.pets.GetOrCreate(request.Context(), userID)
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return 0, false
+	}
+
+	return currentPet.Level, true
 }
 
 func responseDailyTask(task tasks.DailyTask) dailyTaskResponse {

@@ -9,6 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 )
@@ -39,7 +40,8 @@ func main() {
 		log.Fatalf("load task definitions: %v", err)
 	}
 	taskService := tasks.NewService(db, taskDefinitions)
-	router := handlers.NewRouter(authService, rewardService, taskService)
+	petService := pet.NewService(db)
+	router := handlers.NewRouter(authService, rewardService, taskService, petService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

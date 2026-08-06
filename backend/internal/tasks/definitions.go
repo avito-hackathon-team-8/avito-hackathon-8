@@ -57,6 +57,14 @@ func LoadDefaultDefinitions() ([]Definition, error) {
 }
 
 func IsKnownTaskType(taskType models.TaskType) bool {
+	if isConfiguredTaskType(taskType) {
+		return true
+	}
+
+	return false
+}
+
+func isConfiguredTaskType(taskType models.TaskType) bool {
 	for _, knownType := range knownTaskTypes {
 		if taskType == knownType {
 			return true
@@ -110,7 +118,7 @@ func validateDefinitions(definitions []Definition) error {
 		if !ok {
 			return fmt.Errorf("task definition has unknown slot %d", definition.Slot)
 		}
-		if !IsKnownTaskType(definition.Type) {
+		if !isConfiguredTaskType(definition.Type) {
 			return fmt.Errorf("task definition has unknown type %q", definition.Type)
 		}
 		if strings.TrimSpace(definition.Description) == "" {

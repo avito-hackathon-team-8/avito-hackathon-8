@@ -226,6 +226,14 @@ func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, even
 }
 
 func (service *Service) Claim(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int) (ClaimResult, error) {
+	return service.claim(ctx, userID, taskID, userLevel, nil)
+}
+
+func (service *Service) ClaimWithReward(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
+	return service.claim(ctx, userID, taskID, userLevel, applyReward)
+}
+
+func (service *Service) claim(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
 	date := service.today()
 
 	if err := service.ensureTasks(ctx, date); err != nil {
@@ -282,6 +290,12 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, taskID uuid
 			TaskID:       task.ID,
 			RewardLeaves: task.RewardLeaves,
 			Status:       models.ClaimedTaskStatus,
+		}
+
+		if applyReward != nil {
+			if err := applyReward(tx, result.RewardLeaves); err != nil {
+				return fmt.Errorf("apply task reward: %w", err)
+			}
 		}
 
 		return nil

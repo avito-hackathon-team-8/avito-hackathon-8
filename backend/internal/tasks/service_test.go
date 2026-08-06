@@ -227,6 +227,30 @@ func TestClaimMarksCompletedTaskAsClaimed(t *testing.T) {
 	}
 }
 
+func TestClaimWithRewardRollsBackWhenRewardApplicationFails(t *testing.T) {
+	service := testService(t)
+	userID := uuid.New()
+	if _, err := service.List(context.Background(), userID, 1); err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	task := testTaskBySlot(t, service, 1)
+	if err := service.RecordEvents(context.Background(), userID, []Event{{Type: task.Type, Count: task.TargetCount}}, 1); err != nil {
+		t.Fatalf("RecordEvents() error = %v", err)
+	}
+
+	rewardErr := errors.New("reward application failed")
+	if _, err := service.ClaimWithReward(context.Background(), userID, task.ID, 1, func(_ *gorm.DB, _ int) error {
+		return rewardErr
+	}); !errors.Is(err, rewardErr) {
+		t.Fatalf("ClaimWithReward() error = %v, want %v", err, rewardErr)
+	}
+
+	progress := testProgress(t, service, userID, task.ID)
+	if progress.ClaimedAt != nil {
+		t.Fatal("ClaimWithReward() committed claimed time after reward failure")
+	}
+}
+
 func TestClaimRejectsIncompleteAndLockedTasks(t *testing.T) {
 	service := testService(t)
 	userID := uuid.New()
