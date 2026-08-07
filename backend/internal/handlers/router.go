@@ -34,7 +34,6 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-
 func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, petService *pet.Service, weeklyLoginService *weekly_login.Service,
 	activityService weekly_login.ActivityProvider, chestService *chest.Service) http.Handler {
 	handler := &authHandler{service: authService}
