@@ -482,6 +482,10 @@ func TestLoadDefinitionsRejectsInvalidYAML(t *testing.T) {
 	}
 }
 
+type dailyReportNotifierMock struct{}
+
+func (dailyReportNotifierMock) Notify(uuid.UUID) {}
+
 func testService(t *testing.T) *Service {
 	t.Helper()
 
@@ -501,7 +505,7 @@ func testService(t *testing.T) *Service {
 		t.Fatalf("load task definitions: %v", err)
 	}
 
-	service := NewService(db, definitions)
+	service := NewService(db, definitions, dailyReportNotifierMock{})
 	service.now = func() time.Time {
 		return time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
 	}

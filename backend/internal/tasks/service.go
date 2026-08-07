@@ -52,17 +52,23 @@ type Event struct {
 	Count int
 }
 
-type Service struct {
-	db          *gorm.DB
-	now         func() time.Time
-	definitions []Definition
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB, definitions []Definition) *Service {
+type Service struct {
+	db                  *gorm.DB
+	now                 func() time.Time
+	definitions         []Definition
+	dailyReportNotifier DailyReportNotifier
+}
+
+func NewService(db *gorm.DB, definitions []Definition, dailyReportNotifier DailyReportNotifier) *Service {
 	return &Service{
-		db:          db,
-		now:         time.Now,
-		definitions: append([]Definition(nil), definitions...),
+		db:                  db,
+		now:                 time.Now,
+		definitions:         append([]Definition(nil), definitions...),
+		dailyReportNotifier: dailyReportNotifier,
 	}
 }
 
@@ -349,6 +355,8 @@ func (service *Service) claim(
 	if err != nil {
 		return ClaimResult{}, fmt.Errorf("claim task reward: %w", err)
 	}
+
+	service.dailyReportNotifier.Notify(userID)
 
 	return claimResult, nil
 }

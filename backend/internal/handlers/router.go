@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/daily_report"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
@@ -33,18 +34,21 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, petService *pet.Service, weeklyLoginService *weekly_login.Service,
+func NewRouter(authService *auth.Service,
+	rewardService *rewards.Service,
+	taskService *tasks.Service,
+	petService *pet.Service,
+	weeklyLoginService *weekly_login.Service,
 	activityService weekly_login.ActivityProvider,
-) http.Handler {
+	dailyReportService *daily_report.Service) http.Handler {
+
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, pets: petService}
 	petHandler := &petHandler{auth: authService, pets: petService}
-	weeklyLoginHandler := &weeklyLoginHandler{
-		auth:        authService,
-		activity:    activityService,
-		weeklyLogin: weeklyLoginService,
-	}
+	weeklyLoginHandler := &weeklyLoginHandler{auth: authService, activity: activityService,
+		weeklyLogin: weeklyLoginService}
+	dailyReportHandler := &dailyReportHandler{auth: authService, dailyReport: dailyReportService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -64,6 +68,8 @@ func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskSe
 	mux.HandleFunc("POST /api/v1/weekly-login/activity", weeklyLoginHandler.addActivity)
 	mux.HandleFunc("GET /api/v1/weekly-login", weeklyLoginHandler.get)
 	mux.HandleFunc("POST /api/v1/weekly-login/claim", weeklyLoginHandler.claim)
+	mux.HandleFunc("GET /api/v1/daily-report", dailyReportHandler.get)
+	mux.HandleFunc("GET /api/v1/daily-report/ws", dailyReportHandler.ws)
 
 	return mux
 }
