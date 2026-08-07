@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
@@ -38,11 +39,13 @@ func NewRouter(
 	taskService *tasks.Service,
 	petService *pet.Service,
 	levelClaimsService *pet.LevelClaimsService,
+	chestService *chest.Service,
 ) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, pets: petService}
 	petHandler := &petHandler{auth: authService, pets: petService, levelClaims: levelClaimsService}
+	chestHandler := &chestHandler{auth: authService, chests: chestService, rewards: rewardService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -57,6 +60,7 @@ func NewRouter(
 	mux.HandleFunc("GET /api/v1/pet/ws", petHandler.ws)
 	mux.HandleFunc("GET /api/v1/pet/levels", petHandler.levels)
 	mux.HandleFunc("POST /api/v1/pet/level-rewards/{rewardId}/claim", petHandler.claimLevelReward)
+	mux.HandleFunc("POST /api/v1/pet/chests/open", chestHandler.open)
 	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
 	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
 	mux.HandleFunc("POST /api/v1/tasks/record", taskHandler.record)

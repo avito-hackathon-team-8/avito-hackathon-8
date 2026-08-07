@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
@@ -43,7 +44,8 @@ func main() {
 	taskService := tasks.NewService(db, taskDefinitions)
 	petService := pet.NewService(db)
 	petService.SetLevelClaimsService(levelClaimsService)
-	router := handlers.NewRouter(authService, rewardService, taskService, petService, levelClaimsService)
+	chestService := chest.NewService(db, petService, rewardService)
+	router := handlers.NewRouter(authService, rewardService, taskService, petService, levelClaimsService, chestService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

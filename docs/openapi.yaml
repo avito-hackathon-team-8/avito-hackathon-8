@@ -475,7 +475,7 @@ paths:
                 opened:
                   value:
                     id: c2323232-2323-4232-8232-232323232323
-                    title: Бесплатная доставка для двух заказов
+                    title: Бесплатная доставка для трёх заказов
                     category: FREE_DELIVERY
                     categoryName: Бесплатная доставка
                     source: CHEST
@@ -486,6 +486,17 @@ paths:
                     redeemedAt: null
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Питомец пользователя ещё не создан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                petNotFound:
+                  value:
+                    code: PET_NOT_FOUND
+                    message: Питомец пользователя не найден.
         '409':
           description: Сундук недоступен до 10-го уровня либо на балансе меньше 200 листьев.
           content:
