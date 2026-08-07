@@ -33,8 +33,6 @@ var defaultRewardDefinitions = [...]RewardDefinition{
 	{Title: "1000 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
 	{Title: "Бесплатная доставка для трёх заказов", Category: models.RewardCategoryFreeDelivery},
 	{Title: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
-	{Title: "Скидка 50% на продвижение объявления", Category: models.RewardCategoryPromotionDiscount},
-	{Title: "Скидка 50% на Авито Доставку", Category: models.RewardCategoryDeliveryDiscount},
 }
 
 type Service struct {
@@ -69,10 +67,10 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("user_id = ?", userID).
 			First(&userPet).Error
-
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrPetNotFound
 		}
+
 		if err != nil {
 			return fmt.Errorf("lock pet: %w", err)
 		}
@@ -80,6 +78,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 		if userPet.Level < pet.MaxPetLevel {
 			return ErrChestLevelRequired
 		}
+
 		if userPet.Leaves < models.ChestOpeningLeavesCost {
 			return ErrInsufficientLeaves
 		}

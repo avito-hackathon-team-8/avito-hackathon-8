@@ -118,6 +118,68 @@ func TestOpenRejectsMissingPet(t *testing.T) {
 	}
 }
 
+func TestOpenRejectsNilUser(t *testing.T) {
+	service, _, _, _ := testService(t)
+
+	if _, err := service.Open(context.Background(), uuid.Nil); !errors.Is(err, ErrPetNotFound) {
+		t.Fatalf("Open() error = %v, want ErrPetNotFound", err)
+	}
+}
+
+func TestOpenRollsBackWhenRewardSelectionFails(t *testing.T) {
+	service, db, user, _ := testService(t)
+	if err := db.Create(&models.Pet{
+		UserID: user.ID,
+		Level:  pet.MaxPetLevel,
+		Leaves: models.ChestOpeningLeavesCost,
+	}).Error; err != nil {
+		t.Fatalf("create pet: %v", err)
+	}
+
+	selectionError := errors.New("reward selection failed")
+	service.selectReward = func() (RewardDefinition, error) {
+		return RewardDefinition{}, selectionError
+	}
+
+	if _, err := service.Open(context.Background(), user.ID); !errors.Is(err, selectionError) {
+		t.Fatalf("Open() error = %v, want reward selection error", err)
+	}
+
+	var storedPet models.Pet
+	if err := db.Where("user_id = ?", user.ID).First(&storedPet).Error; err != nil {
+		t.Fatalf("load pet: %v", err)
+	}
+	if storedPet.Leaves != models.ChestOpeningLeavesCost {
+		t.Fatalf("stored leaves = %d, want %d after rollback", storedPet.Leaves, models.ChestOpeningLeavesCost)
+	}
+
+	var openings, issuedRewards int64
+	if err := db.Model(&models.ChestOpening{}).Count(&openings).Error; err != nil {
+		t.Fatalf("count chest openings: %v", err)
+	}
+	if err := db.Model(&models.Reward{}).Count(&issuedRewards).Error; err != nil {
+		t.Fatalf("count rewards: %v", err)
+	}
+	if openings != 0 || issuedRewards != 0 {
+		t.Fatalf("openings = %d and rewards = %d, want no persisted records", openings, issuedRewards)
+	}
+}
+
+func TestRandomRewardReturnsConfiguredReward(t *testing.T) {
+	reward, err := randomReward()
+	if err != nil {
+		t.Fatalf("randomReward() error = %v", err)
+	}
+
+	for _, definition := range defaultRewardDefinitions {
+		if reward == definition {
+			return
+		}
+	}
+
+	t.Fatalf("randomReward() = %+v, want configured reward", reward)
+}
+
 func testService(t *testing.T) (*Service, *gorm.DB, models.User, *pet.Service) {
 	t.Helper()
 
