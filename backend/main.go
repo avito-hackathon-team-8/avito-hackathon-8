@@ -48,7 +48,16 @@ func main() {
 	chestService := chest.NewService(db, petService, rewardService)
 	activityService := weekly_login.NewLoginService(db)
 	weeklyLoginService := weekly_login.NewService(db, activityService)
-	router := handlers.NewRouter(authService, rewardService, taskService, petService, weeklyLoginService, activityService, chestService)
+	router := handlers.NewRouter(
+		authService,
+		rewardService,
+		taskService,
+		petService,
+		levelClaimsService,
+		weeklyLoginService,
+		activityService,
+		chestService,
+	)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

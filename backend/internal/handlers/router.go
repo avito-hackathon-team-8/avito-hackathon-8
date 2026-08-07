@@ -34,13 +34,26 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, petService *pet.Service, weeklyLoginService *weekly_login.Service,
-	activityService weekly_login.ActivityProvider, chestService *chest.Service) http.Handler {
+type errorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+func NewRouter(
+	authService *auth.Service,
+	rewardService *rewards.Service,
+	taskService *tasks.Service,
+	petService *pet.Service,
+	levelClaimsService *pet.LevelClaimsService,
+	weeklyLoginService *weekly_login.Service,
+	activityService weekly_login.ActivityProvider,
+	chestService *chest.Service,
+) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, pets: petService}
+	petHandler := &petHandler{auth: authService, pets: petService, levelClaims: levelClaimsService}
 	chestHandler := &chestHandler{auth: authService, chests: chestService, rewards: rewardService}
-	petHandler := &petHandler{auth: authService, pets: petService}
 	weeklyLoginHandler := &weeklyLoginHandler{
 		auth:        authService,
 		activity:    activityService,
@@ -69,7 +82,7 @@ func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskSe
 	mux.HandleFunc("GET /api/v1/weekly-login", weeklyLoginHandler.get)
 	mux.HandleFunc("POST /api/v1/weekly-login/claim", weeklyLoginHandler.claim)
 
-	return mux
+	return withCORS(mux)
 }
 
 func health(response http.ResponseWriter, _ *http.Request) {
@@ -163,7 +176,24 @@ func decodeJSON(response http.ResponseWriter, request *http.Request, target any)
 }
 
 func writeError(response http.ResponseWriter, status int, message string) {
-	writeJSON(response, status, map[string]string{"message": message})
+	writeJSON(response, status, errorResponse{Code: errorCode(status), Message: message})
+}
+
+func errorCode(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "INVALID_REQUEST"
+	case http.StatusUnauthorized:
+		return "UNAUTHORIZED"
+	case http.StatusForbidden:
+		return "FORBIDDEN"
+	case http.StatusNotFound:
+		return "NOT_FOUND"
+	case http.StatusConflict:
+		return "CONFLICT"
+	default:
+		return "INTERNAL_ERROR"
+	}
 }
 
 func writeJSON(response http.ResponseWriter, status int, body any) {

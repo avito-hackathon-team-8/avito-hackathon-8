@@ -40,7 +40,6 @@ type dailyTasksProgressResponse struct {
 }
 
 type dailyTaskRecordRequest struct {
-	Level  int         `json:"level"`
 	Events []EventItem `json:"events"`
 }
 

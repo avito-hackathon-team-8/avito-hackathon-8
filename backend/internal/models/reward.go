@@ -30,9 +30,9 @@ type Reward struct {
 	UserID         uuid.UUID      `gorm:"type:uuid;not null;index:idx_rewards_active,priority:1"`
 	User           User           `gorm:"constraint:OnDelete:CASCADE"`
 	LevelRewardID  *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
-	LevelReward    *LevelReward   `gorm:"constraint:OnDelete:SET NULL"`
+	LevelReward    *LevelReward   `gorm:"foreignKey:UserID,LevelRewardID;references:UserID,ID;constraint:OnDelete:RESTRICT"`
 	ChestOpeningID *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
-	ChestOpening   *ChestOpening  `gorm:"constraint:OnDelete:SET NULL"`
+	ChestOpening   *ChestOpening  `gorm:"foreignKey:UserID,ChestOpeningID;references:UserID,ID;constraint:OnDelete:RESTRICT"`
 	Title          string         `gorm:"not null"`
 	Category       RewardCategory `gorm:"type:varchar(32);not null;index"`
 	Source         RewardSource   `gorm:"type:varchar(32);not null;check:chk_rewards_origin,((source = 'LEVEL' AND level_reward_id IS NOT NULL AND chest_opening_id IS NULL) OR (source = 'CHEST' AND level_reward_id IS NULL AND chest_opening_id IS NOT NULL) OR (source = 'LEADERBOARD' AND level_reward_id IS NULL AND chest_opening_id IS NULL))"`
