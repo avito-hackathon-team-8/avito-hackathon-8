@@ -46,10 +46,17 @@ type Service struct {
 	db            *gorm.DB
 	subscribersMu sync.Mutex
 	subscribers   map[uuid.UUID]map[chan Update]struct{}
+	levelClaims   *LevelClaimsService
 }
 
 func NewService(db *gorm.DB) *Service {
 	return &Service{db: db, subscribers: make(map[uuid.UUID]map[chan Update]struct{})}
+}
+
+// SetLevelClaimsService connects level-up transactions with level-reward
+// deadlines. It is intended to be called while wiring the application.
+func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
+	service.levelClaims = levelClaims
 }
 
 func (service *Service) Subscribe(userID uuid.UUID) (<-chan Update, func()) {
@@ -113,6 +120,12 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 
 		if err := tx.Where("user_id = ?", userID).First(&pet).Error; err != nil {
 			return fmt.Errorf("load pet: %w", err)
+		}
+
+		if service.levelClaims != nil {
+			if err := service.levelClaims.openReachedRewards(tx, userID, pet.Level); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -225,6 +238,11 @@ func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64)
 
 	if err != nil {
 		return Progress{}, fmt.Errorf("save pet progress: %w", err)
+	}
+	if newLevel > oldLevel && service.levelClaims != nil {
+		if err := service.levelClaims.openReachedRewards(tx, userID, newLevel); err != nil {
+			return Progress{}, err
+		}
 	}
 
 	return progressFor(pet, newLevel > oldLevel), nil

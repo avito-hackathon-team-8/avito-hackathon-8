@@ -35,13 +35,15 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
+	levelClaimsService := pet.NewLevelClaimsService(db, rewardService)
 	taskDefinitions, err := tasks.LoadDefaultDefinitions()
 	if err != nil {
 		log.Fatalf("load task definitions: %v", err)
 	}
 	taskService := tasks.NewService(db, taskDefinitions)
 	petService := pet.NewService(db)
-	router := handlers.NewRouter(authService, rewardService, taskService, petService)
+	petService.SetLevelClaimsService(levelClaimsService)
+	router := handlers.NewRouter(authService, rewardService, taskService, petService, levelClaimsService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

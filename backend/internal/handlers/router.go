@@ -32,11 +32,17 @@ type userResponse struct {
 	Verified bool   `json:"verified"`
 }
 
-func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, petService *pet.Service) http.Handler {
+func NewRouter(
+	authService *auth.Service,
+	rewardService *rewards.Service,
+	taskService *tasks.Service,
+	petService *pet.Service,
+	levelClaimsService *pet.LevelClaimsService,
+) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, pets: petService}
-	petHandler := &petHandler{auth: authService, pets: petService}
+	petHandler := &petHandler{auth: authService, pets: petService, levelClaims: levelClaimsService}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
@@ -49,6 +55,8 @@ func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskSe
 	mux.HandleFunc("GET /api/v1/pet", petHandler.get)
 	mux.HandleFunc("PATCH /api/v1/pet", petHandler.updateName)
 	mux.HandleFunc("GET /api/v1/pet/ws", petHandler.ws)
+	mux.HandleFunc("GET /api/v1/pet/levels", petHandler.levels)
+	mux.HandleFunc("POST /api/v1/pet/level-rewards/{rewardId}/claim", petHandler.claimLevelReward)
 	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
 	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
 	mux.HandleFunc("POST /api/v1/tasks/record", taskHandler.record)

@@ -33,10 +33,11 @@ var CategoryOrder = []models.RewardCategory{
 }
 
 type Grant struct {
-	Title     string
-	Category  models.RewardCategory
-	Source    models.RewardSource
-	ExpiresAt time.Time
+	Title         string
+	Category      models.RewardCategory
+	Source        models.RewardSource
+	ExpiresAt     time.Time
+	LevelRewardID *uuid.UUID
 }
 
 type Service struct {
@@ -49,6 +50,12 @@ func NewService(db *gorm.DB) *Service {
 }
 
 func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant) (models.Reward, error) {
+	return service.GrantTx(ctx, service.db, userID, grant)
+}
+
+// GrantTx creates a reward using the caller's transaction. This is needed when
+// issuing a reward must be committed together with the state that produced it.
+func (service *Service) GrantTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, grant Grant) (models.Reward, error) {
 	now := service.now().UTC()
 	grant.Title = strings.TrimSpace(grant.Title)
 
@@ -57,14 +64,15 @@ func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant
 	}
 
 	reward := models.Reward{
-		UserID:    userID,
-		Title:     grant.Title,
-		Category:  grant.Category,
-		Source:    grant.Source,
-		ExpiresAt: grant.ExpiresAt.UTC(),
+		UserID:        userID,
+		LevelRewardID: grant.LevelRewardID,
+		Title:         grant.Title,
+		Category:      grant.Category,
+		Source:        grant.Source,
+		ExpiresAt:     grant.ExpiresAt.UTC(),
 	}
 
-	if err := service.db.WithContext(ctx).Create(&reward).Error; err != nil {
+	if err := tx.WithContext(ctx).Create(&reward).Error; err != nil {
 		return models.Reward{}, fmt.Errorf("grant reward: %w", err)
 	}
 
