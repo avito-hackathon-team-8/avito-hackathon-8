@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { Typography } from '@/shared/ui/typography';
 
+import { LevelsPanelContent } from '../levels-panel-content/levels-panel-content';
+
 import styles from './gamification-profile.module.scss';
 
 export const GamificationProfile = () => {
@@ -55,7 +57,7 @@ export const GamificationProfile = () => {
           </section>
         )}
       >
-        <div></div>
+        <LevelsPanelContent />
       </BottomPanel>
     </section>
   );
