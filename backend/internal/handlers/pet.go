@@ -154,6 +154,7 @@ func (handler *petHandler) levels(response http.ResponseWriter, request *http.Re
 		writeLevelRewardError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")
 		return
 	}
+
 	if err != nil {
 		writeLevelRewardError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить награды уровней")
 		return

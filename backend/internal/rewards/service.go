@@ -53,8 +53,6 @@ func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant
 	return service.GrantTx(ctx, service.db, userID, grant)
 }
 
-// GrantTx creates a reward using the caller's transaction. This is needed when
-// issuing a reward must be committed together with the state that produced it.
 func (service *Service) GrantTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, grant Grant) (models.Reward, error) {
 	now := service.now().UTC()
 	grant.Title = strings.TrimSpace(grant.Title)

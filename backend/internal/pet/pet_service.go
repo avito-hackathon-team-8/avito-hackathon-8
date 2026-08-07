@@ -53,8 +53,6 @@ func NewService(db *gorm.DB) *Service {
 	return &Service{db: db, subscribers: make(map[uuid.UUID]map[chan Update]struct{})}
 }
 
-// SetLevelClaimsService connects level-up transactions with level-reward
-// deadlines. It is intended to be called while wiring the application.
 func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
 	service.levelClaims = levelClaims
 }
@@ -245,7 +243,7 @@ func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64)
 		}
 	}
 
-	return progressFor(pet, newLevel > oldLevel), nil
+	return ProgressForPet(pet, newLevel > oldLevel), nil
 }
 
 func (service *Service) PublishProgress(userID uuid.UUID, progress Progress) {
@@ -274,10 +272,6 @@ func applyLevelUps(level int, leaves int64) (int, int64) {
 }
 
 func ProgressForPet(pet models.Pet, levelUp bool) Progress {
-	return progressFor(pet, levelUp)
-}
-
-func progressFor(pet models.Pet, levelUp bool) Progress {
 	if pet.Level >= MaxPetLevel {
 		return Progress{
 			Name:                  pet.Name,

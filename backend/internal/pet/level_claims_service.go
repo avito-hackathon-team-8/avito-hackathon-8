@@ -124,8 +124,6 @@ func (service *LevelClaimsService) openReachedRewards(tx *gorm.DB, userID uuid.U
 	return err
 }
 
-// Claim atomically marks an eligible level reward as claimed and adds the
-// corresponding regular reward to the user's reward history.
 func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewardID uuid.UUID) (LevelClaimResult, error) {
 	if userID == uuid.Nil {
 		return LevelClaimResult{}, ErrPetNotFound
@@ -221,8 +219,8 @@ func (service *LevelClaimsService) ensureLevelRewards(tx *gorm.DB, userID uuid.U
 		return nil, fmt.Errorf("list level rewards: %w", err)
 	}
 
-	for index := range levelRewards {
-		levelReward := &levelRewards[index]
+	for i := range levelRewards {
+		levelReward := &levelRewards[i]
 		if levelReward.Level > userLevel || levelReward.ClaimExpiresAt != nil || levelReward.ClaimedAt != nil {
 			continue
 		}
