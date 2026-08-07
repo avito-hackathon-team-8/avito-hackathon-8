@@ -44,6 +44,10 @@
   font: var(--font-caption-bold);
 }
 
+.typography_p2-bold {
+  font: var(--font-p2-semiBold);
+}
+
 .typography_p2-semiBold {
   font: var(--font-p2-semiBold);
 }
@@ -100,6 +104,14 @@
 
 .typography_color_green {
   color: var(--green);
+}
+
+.typography_color_green400 {
+  color: var(--green-400);
+}
+
+.typography_color_green700 {
+  color: var(--green-700);
 }
 
 .typography_color_red {

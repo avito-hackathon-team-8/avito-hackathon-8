@@ -1,8 +1,8 @@
+import { RewardsIcons } from '@/entities/reward/ui/assets/reward-icon';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TReward } from '../../api/get-rewards';
-import { REWARD_CATEGORY_ICONS } from '../../model/icons';
 
 import styles from './rewards-panel-content.module.scss';
 
@@ -16,10 +16,10 @@ export const RewardsPanelContent = ({ listReward }: IRewardsPanelContentProps) =
       <ul className={styles.rewardsPanel__list}>
         {listReward.map((data) => (
           <li key={data.id} className={styles.rewardsPanel__item}>
-            <img
+            <RewardsIcons
               className={styles.rewardsPanel__itemImg}
-              src={REWARD_CATEGORY_ICONS[data.category]}
               aria-hidden
+              variant={data.category}
             />
 
             <div className={styles.rewardsPanel__itemContent}>

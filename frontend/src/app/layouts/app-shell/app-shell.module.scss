@@ -5,7 +5,7 @@
   min-height: 100dvh;
   padding: 24px;
 
-  background-color: var(--black);
+  background-color: var(--white);
 }
 
 .appShell__container {
@@ -15,11 +15,14 @@
   max-width: 390px;
   height: calc(100dvh - 48px);
   max-height: 900px;
-  padding: 12px 12px 28px;
+  padding: 12px;
   overflow: hidden;
 
   background-color: var(--white);
-  border-radius: 20px;
+  border-radius: 32px;
+  box-shadow:
+    0 24px 64px rgb(15 15 15 / 12%),
+    0 4px 16px rgb(15 15 15 / 6%);
 
   isolation: isolate;
 }
