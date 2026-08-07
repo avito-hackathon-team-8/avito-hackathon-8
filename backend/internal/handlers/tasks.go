@@ -40,7 +40,6 @@ type dailyTasksProgressResponse struct {
 }
 
 type dailyTaskRecordRequest struct {
-	// Level is kept for backward compatibility with older clients and ignored.
 	Level  int         `json:"level"`
 	Events []EventItem `json:"events"`
 }
@@ -48,11 +47,6 @@ type dailyTaskRecordRequest struct {
 type EventItem struct {
 	Type  models.TaskType `json:"type"`
 	Count int             `json:"count"`
-}
-
-type dailyTaskClaimRequest struct {
-	// Level is kept for backward compatibility with older clients and ignored.
-	Level int `json:"level"`
 }
 
 type dailyTaskClaimResponse struct {
@@ -185,16 +179,6 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 
 	if err != nil {
 		writeTaskError(response, http.StatusNotFound, "TASK_NOT_FOUND", "Задание текущего дня не найдено.")
-
-		return
-	}
-
-	var claimRequest dailyTaskClaimRequest
-
-	err = decodeJSON(response, request, &claimRequest)
-
-	if err != nil {
-		writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректное тело запроса.")
 
 		return
 	}

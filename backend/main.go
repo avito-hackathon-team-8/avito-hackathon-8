@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
@@ -36,15 +37,18 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
+	levelClaimsService := pet.NewLevelClaimsService(db, rewardService)
 	taskDefinitions, err := tasks.LoadDefaultDefinitions()
 	if err != nil {
 		log.Fatalf("load task definitions: %v", err)
 	}
 	taskService := tasks.NewService(db, taskDefinitions)
 	petService := pet.NewService(db)
+	petService.SetLevelClaimsService(levelClaimsService)
+	chestService := chest.NewService(db, petService, rewardService)
 	activityService := weekly_login.NewLoginService(db)
 	weeklyLoginService := weekly_login.NewService(db, activityService)
-	router := handlers.NewRouter(authService, rewardService, taskService, petService, weeklyLoginService, activityService)
+	router := handlers.NewRouter(authService, rewardService, taskService, petService, weeklyLoginService, activityService, chestService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

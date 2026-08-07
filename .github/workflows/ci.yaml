@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main", "master"]
   pull_request:
@@ -72,6 +73,7 @@ jobs:
         with:
           version: v2.12.2
           working-directory: backend
+          args: --config ../.golangci.yaml
 
   docker:
     name: Docker

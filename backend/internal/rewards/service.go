@@ -33,10 +33,12 @@ var CategoryOrder = []models.RewardCategory{
 }
 
 type Grant struct {
-	Title     string
-	Category  models.RewardCategory
-	Source    models.RewardSource
-	ExpiresAt time.Time
+	Title          string
+	Category       models.RewardCategory
+	Source         models.RewardSource
+	ExpiresAt      time.Time
+	LevelRewardID  *uuid.UUID
+	ChestOpeningID *uuid.UUID
 }
 
 type Service struct {
@@ -49,22 +51,28 @@ func NewService(db *gorm.DB) *Service {
 }
 
 func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant) (models.Reward, error) {
+	return service.GrantTx(ctx, service.db, userID, grant)
+}
+
+func (service *Service) GrantTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, grant Grant) (models.Reward, error) {
 	now := service.now().UTC()
 	grant.Title = strings.TrimSpace(grant.Title)
 
-	if grant.Title == "" || !validCategory(grant.Category) || !validSource(grant.Source) || !grant.ExpiresAt.After(now) {
+	if grant.Title == "" || !validCategory(grant.Category) || !validGrantOrigin(grant) || !grant.ExpiresAt.After(now) {
 		return models.Reward{}, ErrInvalidReward
 	}
 
 	reward := models.Reward{
-		UserID:    userID,
-		Title:     grant.Title,
-		Category:  grant.Category,
-		Source:    grant.Source,
-		ExpiresAt: grant.ExpiresAt.UTC(),
+		UserID:         userID,
+		LevelRewardID:  grant.LevelRewardID,
+		ChestOpeningID: grant.ChestOpeningID,
+		Title:          grant.Title,
+		Category:       grant.Category,
+		Source:         grant.Source,
+		ExpiresAt:      grant.ExpiresAt.UTC(),
 	}
 
-	if err := service.db.WithContext(ctx).Create(&reward).Error; err != nil {
+	if err := tx.WithContext(ctx).Create(&reward).Error; err != nil {
 		return models.Reward{}, fmt.Errorf("grant reward: %w", err)
 	}
 
@@ -168,6 +176,23 @@ func validSource(source models.RewardSource) bool {
 	switch source {
 	case models.RewardSourceLevel, models.RewardSourceChest, models.RewardSourceLeaderboard:
 		return true
+	default:
+		return false
+	}
+}
+
+func validGrantOrigin(grant Grant) bool {
+	if !validSource(grant.Source) {
+		return false
+	}
+
+	switch grant.Source {
+	case models.RewardSourceLevel:
+		return grant.LevelRewardID != nil && grant.ChestOpeningID == nil
+	case models.RewardSourceChest:
+		return grant.LevelRewardID == nil && grant.ChestOpeningID != nil
+	case models.RewardSourceLeaderboard:
+		return grant.LevelRewardID == nil && grant.ChestOpeningID == nil
 	default:
 		return false
 	}

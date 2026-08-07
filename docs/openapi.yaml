@@ -450,6 +450,70 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/pet/chests/open:
+    post:
+      tags: [Питомец]
+      operationId: openPetChest
+      summary: Открыть сундук за листья
+      description: |
+        Открывает один сундук для авторизованного пользователя. Операция доступна
+        только после достижения 10-го уровня и стоит ровно 200 листьев.
+
+        Сервер в одной транзакции проверяет уровень и баланс, списывает листья,
+        создаёт запись об открытии и сразу выдаёт одну существенную награду уровня
+        10 с источником `CHEST`. Выданная награда немедленно доступна в разделе
+        «Награды»; отдельного подтверждения получения не требуется.
+      responses:
+        '200':
+          description: Сундук открыт, листья списаны и награда выдана.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardItem'
+              examples:
+                opened:
+                  value:
+                    id: c2323232-2323-4232-8232-232323232323
+                    title: Бесплатная доставка для трёх заказов
+                    category: FREE_DELIVERY
+                    categoryName: Бесплатная доставка
+                    source: CHEST
+                    active: true
+                    status: ACTIVE
+                    expiresAt: '2026-11-07T12:00:00Z'
+                    awardedAt: '2026-08-07T12:00:00Z'
+                    redeemedAt: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Питомец пользователя ещё не создан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                petNotFound:
+                  value:
+                    code: PET_NOT_FOUND
+                    message: Питомец пользователя не найден.
+        '409':
+          description: Сундук недоступен до 10-го уровня либо на балансе меньше 200 листьев.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                levelRequired:
+                  value:
+                    code: CHEST_LEVEL_REQUIRED
+                    message: Сундуки доступны с 10-го уровня питомца.
+                insufficientLeaves:
+                  value:
+                    code: INSUFFICIENT_LEAVES
+                    message: Для открытия сундука требуется 200 листьев.
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/app/rewards:
     get:
       tags: [Награды]
@@ -793,7 +857,6 @@ paths:
         с `COMPLETED` на `CLAIMED`. В ответе возвращается размер награды в листьях.
         Награду за одно задание можно получить только один раз.
         Текущий уровень питомца сервер получает из состояния авторизованного пользователя.
-        Клиент не может повысить уровень через тело запроса.
       parameters:
         - name: taskId
           in: path
@@ -802,15 +865,6 @@ paths:
           schema:
             type: string
             format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DailyTaskClaimRequest'
-            examples:
-              default:
-                value: {}
       responses:
         '200':
           description: Награда отмечена полученной.
@@ -824,17 +878,6 @@ paths:
                     taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
                     rewardLeaves: 45
                     status: CLAIMED
-        '400':
-          description: Тело запроса некорректно.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  value:
-                    code: INVALID_REQUEST
-                    message: Некорректное тело запроса.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1417,7 +1460,9 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Текущий остаток листьев после переходов между уровнями.
+          description: |
+            Текущий баланс листьев. На 10-м уровне листья больше не расходуются на
+            повышение уровня и могут быть потрачены пользователем на открытие сундуков.
 
     PetNameUpdateRequest:
       type: object
@@ -1451,7 +1496,9 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Текущий остаток листьев после сгорания на предыдущих уровнях.
+          description: |
+            Текущий остаток листьев после повышения предыдущих уровней. На 10-м
+            уровне это расходуемый баланс для открытия сундуков.
         nextLevelTargetLeaves:
           type: integer
           format: int64
@@ -1796,11 +1843,6 @@ components:
           format: int32
           default: 1
           description: Количество действий этого типа. Значение меньше 1 сервер трактует как 1.
-
-    DailyTaskClaimRequest:
-      type: object
-      additionalProperties: false
-      properties:
 
     DailyTaskClaimResponse:
       type: object
