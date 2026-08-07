@@ -12,6 +12,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
 )
 
 func main() {
@@ -41,7 +42,9 @@ func main() {
 	}
 	taskService := tasks.NewService(db, taskDefinitions)
 	petService := pet.NewService(db)
-	router := handlers.NewRouter(authService, rewardService, taskService, petService)
+	activityService := weekly_login.NewLoginService(db)
+	weeklyLoginService := weekly_login.NewService(db, activityService)
+	router := handlers.NewRouter(authService, rewardService, taskService, petService, weeklyLoginService, activityService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
