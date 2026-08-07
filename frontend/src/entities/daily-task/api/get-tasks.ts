@@ -1,9 +1,16 @@
 import { tasksMock } from '../model/mock/tasks-mock';
 
 export type TTaskType =
-  'OPEN_NOTIFICATIONS' | 'ADD_TO_FAVORITES' | 'PUBLISH_LISTING' | 'COMPLETE_DEAL';
+  | 'OPEN_NOTIFICATIONS'
+  | 'VIEW_LISTINGS'
+  | 'ADD_TO_FAVORITES'
+  | 'PUBLISH_LISTING'
+  | 'BOOST_LISTING'
+  | 'LEAVE_REVIEW'
+  | 'COMPLETE_DEAL'
+  | 'ORDER_WITH_DELIVERY';
 
-export type TaskStatus = 'CLAIMED' | 'COMPLETED' | 'LOCKED';
+export type TaskStatus = 'CLAIMED' | 'COMPLETED' | 'LOCKED' | 'IN_PROGRESS';
 
 export type TTask = {
   taskId: string;

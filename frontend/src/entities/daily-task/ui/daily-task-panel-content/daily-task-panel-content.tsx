@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { LeafIcon } from '@/shared/assets/icon/leaf-Icon';
+import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TTask } from '../../api/get-tasks';
@@ -50,7 +50,7 @@ export const DailyTaskPanelContent = ({ listTasks }: IDailyTaskPanelContentProps
 
             <div className={styles.listTask__info}>
               <Typography className={styles.listTask__reward} variant="caption-semiBold">
-                <LeafIcon />
+                <img width={24} height={24} src={leafIcon} aria-hidden />
                 <span
                   aria-label="Кол-во листьев за выполнение задания"
                   className={styles.listTask__rewardText}

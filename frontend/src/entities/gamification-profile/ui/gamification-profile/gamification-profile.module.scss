@@ -1,0 +1,81 @@
+.profile {
+  .profile__game {
+    aspect-ratio: 296px/176px;
+    overflow: hidden;
+
+    border-radius: 20px;
+  }
+
+  .profile__content {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 16px;
+    overflow: hidden;
+
+    background-color: var(--gray-200);
+    border-radius: 20px;
+
+    .profile__info {
+      display: grid;
+      grid-template:
+        'levels experience' auto
+        'progressBar progressBar' auto
+        'reward reward' auto
+        / auto 1fr;
+      grid-template-columns: auto 1fr;
+      gap: 4px;
+
+      .profile__infoLevels {
+        grid-area: levels;
+
+        line-height: 1;
+      }
+
+      .profile__infoExperience {
+        grid-area: experience;
+        place-self: end end;
+      }
+
+      .profile__infoProgressBar {
+        grid-area: progressBar;
+        height: 7px;
+        overflow: hidden;
+
+        background-color: var(--gray-300);
+        border-radius: 999px;
+
+        .profile__infoProgressBar_line {
+          width: var(--progress);
+          height: 100%;
+
+          background-color: var(--green-400);
+          border-radius: inherit;
+
+          transition: width 0.3s ease;
+        }
+      }
+
+      .profile__infoReward {
+        grid-area: reward;
+      }
+    }
+
+    .profile__button {
+      position: absolute;
+      top: 0;
+      left: 0;
+
+      width: 100%;
+      height: 100%;
+      padding: 0;
+
+      background-color: transparent;
+      border: none;
+
+      cursor: pointer;
+    }
+  }
+}

@@ -28,7 +28,10 @@ export type TypographyVariant =
   | 'caption'
   | 'caption-semiBold'
   | 'caption-bold'
+  | 'p2-bold'
+  | 'p2-semiBold'
   | 'p3'
+  | 'p3-semiBold'
   | 'p4-bold'
   | 'p4-regular';
 
@@ -42,6 +45,8 @@ export type TypographyColor =
   | 'black'
   | 'blue'
   | 'green'
+  | 'green400'
+  | 'green700'
   | 'red'
   | 'purple';
 
