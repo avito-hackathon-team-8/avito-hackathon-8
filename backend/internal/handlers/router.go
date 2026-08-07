@@ -36,8 +36,7 @@ type userResponse struct {
 
 
 func NewRouter(authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, petService *pet.Service, weeklyLoginService *weekly_login.Service,
-	activityService weekly_login.ActivityProvider, chestService *chest.Service,
-) http.Handler {
+	activityService weekly_login.ActivityProvider, chestService *chest.Service) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, pets: petService}
