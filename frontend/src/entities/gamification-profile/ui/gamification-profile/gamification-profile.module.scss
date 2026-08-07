@@ -1,4 +1,14 @@
 .profile {
+  position: relative;
+
+  .profile__title {
+    position: absolute;
+
+    font-size: 0;
+
+    visibility: hidden;
+  }
+
   .profile__game {
     aspect-ratio: 296px/176px;
     overflow: hidden;
