@@ -1,8 +1,10 @@
 import type { TTaskType } from '@/entities/daily-task/api/tasks';
 import type { TRewardCategory } from '@/entities/reward/api/rewards';
+import { apiRequest } from '@/shared/api/api-request';
+import { getAuthHeaders } from '@/shared/api/get-auth-headers';
+import { API_URL } from '@/shared/config/api';
 
-import { getTodaySummaryStats, type TTodaySummaryStats } from '../model/get-today-summary-stats ';
-import { mockTodaySummary } from '../model/mock/mock-today-summary';
+import { API_ROUTE_TODAY_SUMMARY } from './api-routes';
 
 export type TTodaySummaryReward = {
   rewardId: string;
@@ -37,8 +39,10 @@ export type TTodaySummary = {
   updatedAt: string;
 };
 
-export const getTodaySummary = async (): Promise<TTodaySummaryStats> => {
-  const data = await Promise.resolve(mockTodaySummary);
-
-  return getTodaySummaryStats(data);
+export const getTodaySummary = async (): Promise<TTodaySummary> => {
+  return apiRequest(
+    fetch(`${API_URL}${API_ROUTE_TODAY_SUMMARY.report}`, {
+      headers: getAuthHeaders(),
+    }),
+  );
 };
