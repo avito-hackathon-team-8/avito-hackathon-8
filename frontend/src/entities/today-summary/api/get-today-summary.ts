@@ -1,5 +1,5 @@
 import type { TTaskType } from '@/entities/daily-task/api/tasks';
-import type { TRewardCategory } from '@/entities/reward/api/get-rewards';
+import type { TRewardCategory } from '@/entities/reward/api/rewards';
 
 import { getTodaySummaryStats, type TTodaySummaryStats } from '../model/get-today-summary-stats ';
 import { mockTodaySummary } from '../model/mock/mock-today-summary';

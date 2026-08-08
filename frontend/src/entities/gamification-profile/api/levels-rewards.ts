@@ -1,4 +1,4 @@
-import type { TRewardCategory } from '@/entities/reward/api/get-rewards.ts';
+import type { TRewardCategory } from '@/entities/reward/api/rewards.ts';
 import { apiRequest } from '@/shared/api/api-request.ts';
 import { getAuthHeaders } from '@/shared/api/get-auth-headers.tsx';
 import { API_URL } from '@/shared/config/api.ts';

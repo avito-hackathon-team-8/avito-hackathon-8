@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-import type { TRewardCategory } from '@/entities/reward/api/get-rewards';
+import type { TRewardCategory } from '@/entities/reward/api/rewards';
 
 interface TRewardsIconsProps extends SVGProps<SVGSVGElement> {
   variant: TRewardCategory;

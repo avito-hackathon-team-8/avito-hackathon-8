@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { tasksQueryKeys } from '../api/daily-tasks-keys';
+import { dailyTasksQueryKeys } from '../api/daily-tasks-keys';
 import { getTasks, receiveTaskReward, type TTask } from '../api/tasks';
 
 type TTasksData = {
@@ -15,7 +15,7 @@ export type TReceiveTaskRewardVariables = {
 export const useDailyTasks = () => {
   const queryClient = useQueryClient();
 
-  const queryKey = tasksQueryKeys.list();
+  const queryKey = dailyTasksQueryKeys.list();
 
   const tasksQuery = useQuery({
     queryKey,
