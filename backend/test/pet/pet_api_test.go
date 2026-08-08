@@ -35,9 +35,12 @@ type apiResult struct {
 }
 
 type petResponse struct {
-	Name   string `json:"name"`
-	Level  int    `json:"level"`
-	Leaves int64  `json:"leaves"`
+	Name                  string `json:"name"`
+	Level                 int    `json:"level"`
+	Leaves                int64  `json:"leaves"`
+	NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
+	ChestPrice            int64  `json:"chestPrice"`
+	LevelUp               bool   `json:"levelUp"`
 }
 
 type petProgressEvent struct {
@@ -77,7 +80,7 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	}
 	var pet petResponse
 	decode(t, initial.body, &pet)
-	if pet.Name != "" || pet.Level != 1 || pet.Leaves != 0 {
+	if pet.Name != "" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
 		t.Fatalf("initial pet = %+v, want empty level-one pet", pet)
 	}
 
@@ -90,8 +93,11 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	if updated.status != http.StatusOK {
 		t.Fatalf("update name status = %d, body = %s", updated.status, updated.body)
 	}
+	if _, exists := updated.json["targetLeaves"]; exists {
+		t.Fatalf("updated pet response contains removed targetLeaves field: %s", updated.body)
+	}
 	decode(t, updated.body, &pet)
-	if pet.Name != "Листик" || pet.Level != 1 || pet.Leaves != 0 {
+	if pet.Name != "Листик" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
 		t.Fatalf("updated pet = %+v, want renamed level-one pet", pet)
 	}
 
