@@ -26,17 +26,18 @@ const (
 )
 
 type Reward struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	UserID        uuid.UUID      `gorm:"type:uuid;not null;index:idx_rewards_active,priority:1"`
-	User          User           `gorm:"constraint:OnDelete:CASCADE"`
-	LevelRewardID *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
-	LevelReward   *LevelReward   `gorm:"constraint:OnDelete:SET NULL"`
-	Title         string         `gorm:"not null"`
-	Category      RewardCategory `gorm:"type:varchar(32);not null;index"`
-	Source        RewardSource   `gorm:"type:varchar(32);not null"`
-	ExpiresAt     time.Time      `gorm:"not null;index:idx_rewards_active,priority:2"`
-	RedeemedAt    *time.Time     `gorm:"index:idx_rewards_active,priority:3"`
-	CreatedAt     time.Time      `gorm:"not null"`
+	ID              uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	UserID          uuid.UUID      `gorm:"type:uuid;not null;index:idx_rewards_active,priority:1;uniqueIndex:idx_reward_source_ref,priority:1"`
+	User            User           `gorm:"constraint:OnDelete:CASCADE"`
+	LevelRewardID   *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
+	LevelReward     *LevelReward   `gorm:"constraint:OnDelete:SET NULL"`
+	Title           string         `gorm:"not null"`
+	Category        RewardCategory `gorm:"type:varchar(32);not null;index"`
+	Source          RewardSource   `gorm:"type:varchar(32);not null;uniqueIndex:idx_reward_source_ref,priority:2"`
+	SourceReference *string        `gorm:"type:varchar(128);uniqueIndex:idx_reward_source_ref,priority:3"`
+	ExpiresAt       time.Time      `gorm:"not null;index:idx_rewards_active,priority:2"`
+	RedeemedAt      *time.Time     `gorm:"index:idx_rewards_active,priority:3"`
+	CreatedAt       time.Time      `gorm:"not null"`
 }
 
 func (reward *Reward) BeforeCreate(_ *gorm.DB) error {
