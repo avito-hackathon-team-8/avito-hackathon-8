@@ -112,7 +112,7 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 		Date:      dayStart.Format(time.DateOnly),
 		Rewards:   make([]Reward, 0),
 		Tasks:     make([]Task, 0),
-		UpdatedAt: now,
+		UpdatedAt: dayStart,
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -148,17 +148,18 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 				ExpiresAt:  reward.ExpiresAt.UTC(),
 				ReceivedAt: receivedAt,
 			})
+			report.UpdatedAt = latestTime(report.UpdatedAt, receivedAt)
 		}
 
 		var taskRows []completedTaskRow
 
 		err = tx.
-			Table("user_task_progresses AS progress").
-			Select(`tasks.id, tasks.type, tasks.description, tasks.reward_leaves,
-				progress.claimed_at, progress.completed_at`).
-			Joins("JOIN tasks ON tasks.id = progress.task_id").
-			Where("progress.user_id = ? AND progress.completed_at >= ? AND progress.completed_at < ?", userID, dayStart, dayEnd).
-			Order("progress.completed_at ASC, tasks.slot ASC").
+			Table("user_daily_tasks AS assignments").
+			Select(`assignments.id, definitions.type, definitions.title AS description,
+				definitions.reward AS reward_leaves, assignments.claimed_at, assignments.completed_at`).
+			Joins("JOIN daily_task_definitions AS definitions ON definitions.id = assignments.task_definition_id").
+			Where("assignments.user_id = ? AND assignments.completed_at >= ? AND assignments.completed_at < ?", userID, dayStart, dayEnd).
+			Order("assignments.completed_at ASC, definitions.slot ASC").
 			Scan(&taskRows).Error
 
 		if err != nil {
@@ -175,9 +176,9 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 				RewardClaimed: row.ClaimedAt != nil,
 				CompletedAt:   completedAt,
 			})
-
-			if row.ClaimedAt != nil && !row.ClaimedAt.Before(dayStart) && row.ClaimedAt.Before(dayEnd) {
-				report.LeavesEarnedToday += row.RewardLeaves
+			report.UpdatedAt = latestTime(report.UpdatedAt, completedAt)
+			if row.ClaimedAt != nil {
+				report.UpdatedAt = latestTime(report.UpdatedAt, row.ClaimedAt.UTC())
 			}
 		}
 
@@ -189,23 +190,17 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 
 		if err == nil {
 			report.VisitedToday = true
+			report.UpdatedAt = latestTime(report.UpdatedAt, login.CreatedAt.UTC())
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("get activity: %w", err)
 		}
 
-		if report.VisitedToday {
-			var loginClaim models.WeeklyLoginClaim
-
-			err = tx.
-				Where("user_id = ? AND claim_date >= ? AND claim_date < ?", userID, dayStart, dayEnd).
-				First(&loginClaim).Error
-
-			if err == nil {
-				report.LeavesEarnedToday += loginClaim.RewardLeaves
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("get login reward: %w", err)
-			}
+		var leafUpdatedAt time.Time
+		report.LeavesEarnedToday, report.LevelUp, leafUpdatedAt, err = leafActivityForDay(tx, userID, dayStart, dayEnd)
+		if err != nil {
+			return err
 		}
+		report.UpdatedAt = latestTime(report.UpdatedAt, leafUpdatedAt)
 
 		return nil
 	})
@@ -215,6 +210,75 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 	}
 
 	return report, nil
+}
+
+func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Time) (int, *LevelUp, time.Time, error) {
+	var transactions []models.LeafTransaction
+
+	err := tx.
+		Select("amount", "reason", "occurred_at").
+		Where(`user_id = ? AND occurred_at >= ? AND occurred_at < ?
+			AND reason IN (?, ?, ?)`, userID, dayStart, dayEnd,
+			models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonLevelUp).
+		Order("occurred_at ASC, id ASC").
+		Find(&transactions).Error
+
+	if err != nil {
+		return 0, nil, time.Time{}, fmt.Errorf("get leaf activity: %w", err)
+	}
+
+	var earnedLeaves int64
+	var levelUps []models.LeafTransaction
+	var updatedAt time.Time
+
+	for _, transaction := range transactions {
+		switch transaction.Reason {
+		case models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin:
+			if transaction.Amount > 0 {
+				if earnedLeaves > int64(^uint64(0)>>1)-transaction.Amount {
+					return 0, nil, time.Time{}, fmt.Errorf("calculate earned leaves: total overflows int64")
+				}
+				earnedLeaves += transaction.Amount
+				updatedAt = latestTime(updatedAt, transaction.OccurredAt.UTC())
+			}
+		case models.LeafReasonLevelUp:
+			levelUps = append(levelUps, transaction)
+			updatedAt = latestTime(updatedAt, transaction.OccurredAt.UTC())
+		}
+	}
+
+	if earnedLeaves > int64(^uint(0)>>1) {
+		return 0, nil, time.Time{}, fmt.Errorf("calculate earned leaves: total %d overflows int", earnedLeaves)
+	}
+
+	if len(levelUps) == 0 {
+		return int(earnedLeaves), nil, updatedAt, nil
+	}
+
+	var pet models.Pet
+
+	if err := tx.Select("level").Where("user_id = ?", userID).First(&pet).Error; err != nil {
+		return 0, nil, time.Time{}, fmt.Errorf("get pet level: %w", err)
+	}
+
+	fromLevel := pet.Level - len(levelUps)
+	if fromLevel < 1 {
+		return 0, nil, time.Time{}, fmt.Errorf("calculate level up: current level %d is inconsistent with %d level-up transactions", pet.Level, len(levelUps))
+	}
+
+	return int(earnedLeaves), &LevelUp{
+		FromLevel:  fromLevel,
+		ToLevel:    pet.Level,
+		OccurredAt: levelUps[0].OccurredAt.UTC(),
+	}, updatedAt, nil
+}
+
+func latestTime(current, candidate time.Time) time.Time {
+	if candidate.After(current) {
+		return candidate
+	}
+
+	return current
 }
 
 type completedTaskRow struct {
