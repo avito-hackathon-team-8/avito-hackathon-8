@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { gamificationProfileKeys } from '@/entities/gamification-profile/api/gamification-profile-keys';
-import { updatePetName } from '@/entities/gamification-profile/api/get-pet';
+import { updatePetName } from '@/entities/gamification-profile/api/pet';
 import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
 import { Button } from '@/shared/ui/button';
 import { Modal } from '@/shared/ui/modal/modal';
