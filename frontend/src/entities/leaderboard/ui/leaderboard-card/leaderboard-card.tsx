@@ -1,17 +1,17 @@
-import { BottomPanel } from "@/shared/ui/bottom-panel";
-import { GamificationCard } from "@/shared/ui/gamification-card";
+import { BottomPanel } from '@/shared/ui/bottom-panel';
+import { GamificationCard } from '@/shared/ui/gamification-card';
 
-import { useLeaderboard } from "../../model/use-leaderboard";
-import pedestalIcon from "../assets/pedestal-icon.svg";
-import { LeaderboardPanelContent } from "../leaderboard-panel-content/leaderboard-panel-content";
+import { useLeaderboard } from '../../model/use-leaderboard';
+import pedestalIcon from '../assets/pedestal-icon.svg';
+import { LeaderboardPanelContent } from '../leaderboard-panel-content/leaderboard-panel-content';
 
-const TITLE_CARD = "Лидерборд";
+const TITLE_CARD = 'Лидерборд';
 
 export const LeaderboardCard = () => {
-  const { data, refetch } = useLeaderboard();
+  const { data, refetch, isPending } = useLeaderboard();
 
   const handleClick = () => {
-    if (!data) {
+    if (!data && !isPending) {
       refetch();
     }
   };
@@ -20,7 +20,7 @@ export const LeaderboardCard = () => {
     <BottomPanel
       title={TITLE_CARD}
       description="Топ-10 платформы. Обновляется раз в день"
-      disabled={!data}
+      disabled={!data || data.items.length === 0}
       onClick={handleClick}
       renderTrigger={(open) => (
         <GamificationCard
@@ -28,7 +28,7 @@ export const LeaderboardCard = () => {
           description="Ваше место: 18"
           imageProps={{
             src: pedestalIcon,
-            alt: "Пьедестал",
+            alt: 'Пьедестал',
             width: 96,
             height: 65,
           }}
@@ -36,7 +36,7 @@ export const LeaderboardCard = () => {
         />
       )}
     >
-      {data && <LeaderboardPanelContent listUsers={data} />}
+      {data && <LeaderboardPanelContent listUsers={data.items} />}
     </BottomPanel>
   );
 };

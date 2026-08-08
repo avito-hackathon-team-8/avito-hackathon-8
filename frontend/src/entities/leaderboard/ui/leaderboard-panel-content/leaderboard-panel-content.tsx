@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useCurrentUser } from '@/entities/user/model/use-current-user';
 import { Typography } from '@/shared/ui/typography';
 
-import type { TLeaderboardUser } from '../../api/get-leaderboard';
+import type { TLeaderboardUser } from '../../api/leaderboard';
 
 import styles from './leaderboard-panel-content.module.scss';
 
@@ -13,24 +13,24 @@ interface ILeaderboardPanelContentProps {
 
 export const LeaderboardPanelContent = ({ listUsers }: ILeaderboardPanelContentProps) => {
   const { data: user } = useCurrentUser();
-  const hasUserTop = listUsers.some((item) => item.id === user?.id);
+  const hasUserTop = listUsers.some((item) => item.playerId === user?.id);
 
   if (!user) return;
 
   return (
     <ul className={styles.leaderboardPanel}>
-      {listUsers.map(({ id, nickname, position }) => (
+      {listUsers.map(({ playerId, nickname, position }) => (
         <li
           className={clsx(styles.leaderboardPanel__item, {
-            [styles.leaderboardPanel__item_active]: user.id === id,
+            [styles.leaderboardPanel__item_active]: user.id === playerId,
           })}
-          key={id}
+          key={playerId}
         >
           <Typography className={styles.leaderboardPanel__text} variant="caption">
-            {user.id === id ? user.position || 0 : position}
+            {user.id === playerId ? user.position || 0 : position}
           </Typography>
           <Typography className={styles.leaderboardPanel__text} variant="caption">
-            {user.id === id ? 'вы' : nickname}
+            {user.id === playerId ? 'вы' : nickname}
           </Typography>
         </li>
       ))}
