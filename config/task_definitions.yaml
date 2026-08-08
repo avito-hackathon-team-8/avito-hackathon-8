@@ -1,0 +1,73 @@
+tasks:
+  - code: VIEW_LISTINGS_3
+    type: VIEW_LISTINGS
+    title: Посмотреть 3 объявления
+    slot: 1
+    targetCount: 3
+    rewardLeaves: 45
+    unlockLevel: 1
+    categories: [electronics, home]
+    active: true
+  - code: VIEW_LISTINGS_5
+    type: VIEW_LISTINGS
+    title: Посмотреть 5 объявлений
+    slot: 1
+    targetCount: 5
+    rewardLeaves: 45
+    unlockLevel: 1
+    categories: [auto, fashion]
+    active: true
+  - code: FAVORITES_3
+    type: ADD_TO_FAVORITES
+    title: Добавить 3 объявления в избранное
+    slot: 2
+    targetCount: 3
+    rewardLeaves: 45
+    unlockLevel: 1
+    categories: [home, kids]
+    active: true
+  - code: FAVORITES_5
+    type: ADD_TO_FAVORITES
+    title: Добавить 5 объявлений в избранное
+    slot: 2
+    targetCount: 5
+    rewardLeaves: 45
+    unlockLevel: 1
+    categories: [electronics, fashion]
+    active: true
+  - code: PUBLISH_LISTING
+    type: PUBLISH_LISTING
+    title: Опубликовать объявление
+    slot: 3
+    targetCount: 1
+    rewardLeaves: 50
+    unlockLevel: 5
+    categories: [home, services]
+    active: true
+  - code: BOOST_LISTING
+    type: BOOST_LISTING
+    title: Поднять объявление
+    slot: 3
+    targetCount: 1
+    rewardLeaves: 50
+    unlockLevel: 5
+    categories: [auto, electronics]
+    active: true
+  - code: COMPLETE_DEAL
+    type: COMPLETE_DEAL
+    title: Совершить покупку или продажу
+    slot: 4
+    targetCount: 1
+    rewardLeaves: 60
+    unlockLevel: 10
+    categories: [auto, home]
+    active: true
+  - code: ORDER_WITH_DELIVERY
+    type: ORDER_WITH_DELIVERY
+    title: Заказать с Авито Доставкой
+    slot: 4
+    targetCount: 1
+    rewardLeaves: 60
+    unlockLevel: 10
+    categories: [fashion, electronics]
+    active: true
