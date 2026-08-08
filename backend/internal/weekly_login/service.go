@@ -37,13 +37,16 @@ const (
 type Service struct {
 	db          *gorm.DB
 	now         func() time.Time
-	activity    ActivityProvider
 	leaves      *leaves.Service
 	dailyReport DailyReportNotifier
 }
 
-func NewService(db *gorm.DB, dailyReport DailyReportNotifier, activity ActivityProvider, leafService *leaves.Service) *Service {
-	return &Service{db: db, now: time.Now, activity: activity, leaves: leafService, dailyReport: dailyReport}
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, leafService *leaves.Service) *Service {
+	return &Service{db: db, now: time.Now, leaves: leafService, dailyReport: dailyReport}
 }
 
 type ClaimResult struct {
@@ -94,7 +97,7 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 	activityInactive := false
 
 	if shouldCheckTodayActivity(user, claims, today) {
-		activityInactive = service.activityInactive(ctx, userID, today)
+		activityInactive = service.checkLoginDate(service.db.WithContext(ctx), userID, today)
 	}
 
 	return buildCurrentWeek(user, claims, today, activityInactive), nil
@@ -131,7 +134,7 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.T
 			return err
 		}
 
-		if service.activityInactive(ctx, userID, claimDate) {
+		if service.checkLoginDate(tx, userID, claimDate) {
 			return ErrActivityNotConfirmed
 		}
 
@@ -187,18 +190,41 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.T
 	return ClaimResult{Claim: claim, Progress: progress}, nil
 }
 
-func (service *Service) activityInactive(ctx context.Context, userID uuid.UUID, date time.Time) bool {
-	if service.activity == nil {
-		return true
+func (service *Service) RecordToday(ctx context.Context, userID uuid.UUID) error {
+	now := service.now().UTC()
+	activity := models.UserLogin{
+		UserID:       userID,
+		ActivityDate: utcDate(now),
+		CreatedAt:    now,
 	}
 
-	activity, err := service.activity.Get(ctx, userID, date)
+	err := service.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "user_id"},
+				{Name: "activity_date"},
+			},
+			DoNothing: true,
+		}).
+		Create(&activity).Error
 
 	if err != nil {
-		return true
+		return fmt.Errorf("record today's user activity: %w", err)
 	}
 
-	return !activity.Active
+	service.dailyReport.Notify(userID)
+
+	return nil
+}
+
+func (service *Service) checkLoginDate(db *gorm.DB, userID uuid.UUID, date time.Time) bool {
+	var count int64
+
+	err := db.Model(&models.UserLogin{}).
+		Where("user_id = ? AND activity_date = ?", userID, utcDate(date)).
+		Count(&count).Error
+
+	return err != nil || count == 0
 }
 
 func weeklyRewardByIndex(index int) weeklyReward {
@@ -236,12 +262,7 @@ func utcWeekBounds(date time.Time) (time.Time, time.Time) {
 	return weekStart, weekStart.AddDate(0, 0, 7)
 }
 
-func buildCurrentWeek(
-	user models.User,
-	claims []models.WeeklyLoginClaim,
-	today time.Time,
-	activityInactive bool,
-) CurrentWeek {
+func buildCurrentWeek(user models.User, claims []models.WeeklyLoginClaim, today time.Time, activityInactive bool) CurrentWeek {
 	today = utcDate(today)
 	weekStart, _ := utcWeekBounds(today)
 	registrationDate := utcDate(user.CreatedAt)
@@ -277,13 +298,13 @@ func buildCurrentWeek(
 
 		switch {
 		case date.Before(registrationDate):
-			day.Status = models.DayStatusBeforeRegistration
+			day.Status = models.DayStatusMissed
 		case date.Before(today):
 			day.Status = models.DayStatusMissed
 		case date.After(today):
 			day.Status = models.DayStatusFuture
 		case activityInactive:
-			day.Status = models.DayStatusUnconfirmed
+			day.Status = models.DayStatusFuture
 		default:
 			day.Status = models.DayStatusAvailable
 		}

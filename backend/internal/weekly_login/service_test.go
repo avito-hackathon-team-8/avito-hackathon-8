@@ -16,23 +16,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type activityProviderStub struct {
-	day ActivityDay
-	err error
-}
-
-func (stub activityProviderStub) Add(context.Context, uuid.UUID, []ActivityDay) error {
-	return nil
-}
-
-func (stub activityProviderStub) Get(context.Context, uuid.UUID, time.Time) (ActivityDay, error) {
-	return stub.day, stub.err
-}
-
-func (stub activityProviderStub) GetRange(context.Context, uuid.UUID, time.Time, time.Time) ([]ActivityDay, error) {
-	return nil, nil
-}
-
 func TestUTCDate(t *testing.T) {
 	t.Parallel()
 
@@ -139,7 +122,7 @@ func TestBuildCurrentWeek(t *testing.T) {
 	}
 }
 
-func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
+func TestBuildCurrentWeekMarksDaysBeforeRegistrationMissed(t *testing.T) {
 	t.Parallel()
 
 	today := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
@@ -147,9 +130,9 @@ func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
 
 	week := buildCurrentWeek(user, nil, today, false)
 
-	if week.Claims[0].Status != models.DayStatusBeforeRegistration ||
-		week.Claims[1].Status != models.DayStatusBeforeRegistration {
-		t.Fatalf("days before registration = (%q, %q), want BEFORE_REGISTRATION", week.Claims[0].Status, week.Claims[1].Status)
+	if week.Claims[0].Status != models.DayStatusMissed ||
+		week.Claims[1].Status != models.DayStatusMissed {
+		t.Fatalf("days before registration = (%q, %q), want MISSED", week.Claims[0].Status, week.Claims[1].Status)
 	}
 
 	if week.Claims[2].Status != models.DayStatusAvailable || week.Claims[2].RewardLeaves != 10 {
@@ -157,7 +140,7 @@ func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
 	}
 }
 
-func TestBuildCurrentWeekMarksInactiveTodayUnconfirmed(t *testing.T) {
+func TestBuildCurrentWeekMarksInactiveTodayFuture(t *testing.T) {
 	t.Parallel()
 
 	today := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
@@ -165,40 +148,59 @@ func TestBuildCurrentWeekMarksInactiveTodayUnconfirmed(t *testing.T) {
 
 	week := buildCurrentWeek(user, nil, today, true)
 
-	if week.Claims[2].Status != models.DayStatusUnconfirmed || week.Claims[2].RewardLeaves != 0 {
-		t.Fatalf("inactive today = (%q, %d), want (UNCONFIRMED, 0)", week.Claims[2].Status, week.Claims[2].RewardLeaves)
+	if week.Claims[2].Status != models.DayStatusFuture || week.Claims[2].RewardLeaves != 10 {
+		t.Fatalf("inactive today = (%q, %d), want (FUTURE, 10)", week.Claims[2].Status, week.Claims[2].RewardLeaves)
 	}
 
-	if week.Claims[3].Status != models.DayStatusFuture || week.Claims[3].RewardLeaves != 10 {
-		t.Fatalf("next day = (%q, %d), want (FUTURE, 10)", week.Claims[3].Status, week.Claims[3].RewardLeaves)
+	if week.Claims[3].Status != models.DayStatusFuture || week.Claims[3].RewardLeaves != 20 {
+		t.Fatalf("next day = (%q, %d), want (FUTURE, 20)", week.Claims[3].Status, week.Claims[3].RewardLeaves)
 	}
 }
 
-func TestActivityInactive(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		provider ActivityProvider
-		want     bool
-	}{
-		{name: "active", provider: activityProviderStub{day: ActivityDay{Active: true}}, want: false},
-		{name: "inactive", provider: activityProviderStub{day: ActivityDay{Active: false}}, want: true},
-		{name: "provider error is fail closed", provider: activityProviderStub{err: errors.New("unavailable")}, want: true},
-		{name: "provider is not configured", provider: nil, want: true},
+func TestRecordTodayAndReadActivityFromDatabase(t *testing.T) {
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		t.Fatalf("open test database: %v", err)
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	if err := db.AutoMigrate(&models.User{}, &models.UserLogin{}); err != nil {
+		t.Fatalf("migrate test database: %v", err)
+	}
 
-			service := &Service{activity: test.provider}
-			got := service.activityInactive(t.Context(), uuid.New(), time.Now())
+	now := time.Date(2026, time.August, 5, 2, 30, 0, 0, time.FixedZone("UTC+3", 3*60*60))
+	user := models.User{Email: fmt.Sprintf("%s@example.com", uuid.NewString()), CreatedAt: now}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
 
-			if got != test.want {
-				t.Fatalf("activityInactive() = %t, want %t", got, test.want)
-			}
-		})
+	notifier := testutil.DailyReportNotifierMock{}
+	service := NewService(db, notifier, nil)
+	service.now = func() time.Time { return now }
+	wantDate := time.Date(2026, time.August, 4, 0, 0, 0, 0, time.UTC)
+
+	if !service.checkLoginDate(db, user.ID, wantDate) {
+		t.Fatal("checkLoginDate() = false before activity was recorded, want true")
+	}
+
+	if err := service.RecordToday(t.Context(), user.ID); err != nil {
+		t.Fatalf("RecordToday() error = %v", err)
+	}
+	if err := service.RecordToday(t.Context(), user.ID); err != nil {
+		t.Fatalf("second RecordToday() error = %v", err)
+	}
+
+	if service.checkLoginDate(db, user.ID, wantDate) {
+		t.Fatal("checkLoginDate() = true after activity was recorded, want false")
+	}
+
+	var activities []models.UserLogin
+	if err := db.Where("user_id = ?", user.ID).Find(&activities).Error; err != nil {
+		t.Fatalf("load activities: %v", err)
+	}
+
+	if len(activities) != 1 || !utcDate(activities[0].ActivityDate).Equal(wantDate) {
+		t.Fatalf("activities = %+v, want one activity for %s", activities, wantDate)
 	}
 }
 
@@ -208,7 +210,7 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.UserGameState{}, &models.WeeklyLoginClaim{}, &models.LeafTransaction{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.UserGameState{}, &models.UserLogin{}, &models.WeeklyLoginClaim{}, &models.LeafTransaction{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 	now := time.Date(2026, time.August, 7, 12, 0, 0, 0, time.UTC)
@@ -216,10 +218,12 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	// A weekly claim must also work before the lazily-created pet was requested.
+	if err := db.Create(&models.UserLogin{UserID: user.ID, ActivityDate: utcDate(now), CreatedAt: now}).Error; err != nil {
+		t.Fatalf("create user activity: %v", err)
+	}
 	notifier := testutil.DailyReportNotifierMock{}
 	leafService := leaves.NewService(db, notifier)
-	service := NewService(db, notifier, activityProviderStub{day: ActivityDay{Active: true}}, leafService)
+	service := NewService(db, notifier, leafService)
 	service.now = func() time.Time { return now }
 
 	result, err := service.Claim(context.Background(), user.ID, now)

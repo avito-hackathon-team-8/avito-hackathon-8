@@ -1138,36 +1138,15 @@ paths:
 
   /api/v1/weekly-login/activity:
     post:
-      tags: [Внешняя активность]
+      tags: [Еженедельный вход]
       operationId: recordWeeklyLoginActivity
-      summary: Записать дневную активность
+      summary: Засчитать активность за сегодня
       description: |
-        Принимает массив UTC-дат и булевых признаков активности.
-        Повторная передача тех же данных идемпотентна. `active: false` снимает
-        ранее записанную активность за указанную дату.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DailyActivityRequest'
-            examples:
-              default:
-                value:
-                  days:
-                    - date: '2026-08-05'
-                      active: true
-                    - date: '2026-08-06'
-                      active: false
+        Засчитывает авторизованному пользователю активность за текущую дату
+        сервера в UTC. Тело запроса не требуется.
       responses:
         '204':
-          description: Активность сохранена.
-        '400':
-          description: Некорректное тело запроса или дата.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Активность за сегодняшний день засчитана.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -2075,10 +2054,8 @@ components:
       enum:
         - CLAIMED
         - AVAILABLE
-        - UNCONFIRMED
         - MISSED
         - FUTURE
-        - BEFORE_REGISTRATION
 
     WeeklyLoginDay:
       type: object
@@ -2165,27 +2142,6 @@ components:
       properties:
         claim:
           $ref: '#/components/schemas/WeeklyLoginClaim'
-
-    DailyActivityRequest:
-      type: object
-      additionalProperties: false
-      required: [days]
-      properties:
-        days:
-          type: array
-          items:
-            $ref: '#/components/schemas/DailyActivityDay'
-
-    DailyActivityDay:
-      type: object
-      additionalProperties: false
-      required: [date, active]
-      properties:
-        date:
-          type: string
-          format: date
-        active:
-          type: boolean
 
     ExternalActivityStatus:
       type: string
