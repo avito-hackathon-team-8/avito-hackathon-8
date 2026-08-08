@@ -30,10 +30,6 @@ type weeklyLoginResponse struct {
 	Claims           []weeklyLoginDayResponse `json:"claims"`
 }
 
-type weeklyLoginClaimRequest struct {
-	Date string `json:"date"`
-}
-
 type weeklyLoginClaim struct {
 	ID           string `json:"id"`
 	Weekday      int    `json:"weekday"`
@@ -99,23 +95,7 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 		return
 	}
 
-	var body weeklyLoginClaimRequest
-
-	if err := decodeJSON(response, request, &body); err != nil {
-		writeError(response, http.StatusBadRequest, "Invalid request body")
-
-		return
-	}
-
-	date, err := time.Parse(time.DateOnly, body.Date)
-
-	if err != nil {
-		writeError(response, http.StatusBadRequest, "Invalid date")
-
-		return
-	}
-
-	claimResult, err := handler.weeklyLogin.Claim(request.Context(), user.ID, date)
+	claimResult, err := handler.weeklyLogin.Claim(request.Context(), user.ID)
 
 	if errors.Is(err, weekly_login.ErrAlreadyClaimed) {
 		writeJSON(response, http.StatusConflict, map[string]string{

@@ -1158,22 +1158,12 @@ paths:
       operationId: claimWeeklyLogin
       summary: Получить награду за вход
       description: |
-        Получает одну награду за переданную календарную дату в UTC.
-        Награда не выдаётся, если активность за эту дату не подтверждена.
-        Повторный запрос за ту же дату возвращает ошибку.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WeeklyLoginClaimRequest'
-            examples:
-              default:
-                value:
-                  date: '2026-08-05'
+        Получает одну награду за текущую дату сервера в UTC.
+        Награда не выдаётся, если активность за сегодня не подтверждена.
+        Повторный запрос в тот же день возвращает ошибку. Тело запроса не требуется.
       responses:
         '200':
-          description: Награда за выбранный день получена.
+          description: Награда за текущий день получена.
           content:
             application/json:
               schema:
@@ -1188,13 +1178,13 @@ paths:
                       status: CLAIMED
                       rewardLeaves: 30
         '400':
-          description: Передана некорректная дата либо активность за этот день не подтверждена.
+          description: Активность за текущий день не подтверждена.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Награда за вход за переданную дату уже получена.
+          description: Награда за вход за текущую дату уже получена.
           content:
             application/json:
               schema:
@@ -2099,16 +2089,6 @@ components:
           maxItems: 7
           items:
             $ref: '#/components/schemas/WeeklyLoginDay'
-
-    WeeklyLoginClaimRequest:
-      type: object
-      additionalProperties: false
-      required: [date]
-      properties:
-        date:
-          type: string
-          format: date
-          description: UTC-дата, за которую получается награда.
 
     WeeklyLoginClaim:
       type: object

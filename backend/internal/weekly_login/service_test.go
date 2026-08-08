@@ -226,9 +226,12 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	service := NewService(db, notifier, leafService)
 	service.now = func() time.Time { return now }
 
-	result, err := service.Claim(context.Background(), user.ID, now)
+	result, err := service.Claim(context.Background(), user.ID)
 	if err != nil {
 		t.Fatalf("Claim() error = %v", err)
+	}
+	if !result.Claim.ClaimDate.Equal(utcDate(now)) {
+		t.Fatalf("ClaimDate = %s, want current UTC date %s", result.Claim.ClaimDate, utcDate(now))
 	}
 	if result.Claim.RewardLeaves != 10 || result.Progress.Level != 1 || result.Progress.Leaves != 10 || result.Progress.LevelUp {
 		t.Fatalf("claim result = %+v", result)
@@ -240,7 +243,7 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	if len(transactions) != 1 || transactions[0].Reason != models.LeafReasonWeeklyLogin || transactions[0].Amount != 10 {
 		t.Fatalf("ledger = %+v", transactions)
 	}
-	if _, err := service.Claim(context.Background(), user.ID, now); !errors.Is(err, ErrAlreadyClaimed) {
+	if _, err := service.Claim(context.Background(), user.ID); !errors.Is(err, ErrAlreadyClaimed) {
 		t.Fatalf("second Claim() error = %v, want ErrAlreadyClaimed", err)
 	}
 	var count int64
