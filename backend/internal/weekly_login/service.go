@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -37,7 +37,7 @@ const (
 type Service struct {
 	db          *gorm.DB
 	now         func() time.Time
-	leaves      *leaves.Service
+	pets        *pet.Service
 	dailyReport DailyReportNotifier
 }
 
@@ -45,13 +45,13 @@ type DailyReportNotifier interface {
 	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB, dailyReport DailyReportNotifier, leafService *leaves.Service) *Service {
-	return &Service{db: db, now: time.Now, leaves: leafService, dailyReport: dailyReport}
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, petService *pet.Service) *Service {
+	return &Service{db: db, now: time.Now, pets: petService, dailyReport: dailyReport}
 }
 
 type ClaimResult struct {
 	Claim    models.WeeklyLoginClaim
-	Progress leaves.Progress
+	Progress pet.Progress
 }
 
 type WeeklyLoginDay struct {
@@ -106,7 +106,7 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 func (service *Service) Claim(ctx context.Context, userID uuid.UUID) (ClaimResult, error) {
 	claimDate := utcDate(service.now())
 	var claim models.WeeklyLoginClaim
-	var progress leaves.Progress
+	var progress pet.Progress
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user models.User
@@ -163,11 +163,11 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID) (ClaimResul
 			return err
 		}
 
-		if service.leaves == nil {
-			return errors.New("leaves service is not configured")
+		if service.pets == nil {
+			return errors.New("pet service is not configured")
 		}
 
-		progress, err = service.leaves.CreditTx(tx, leaves.Credit{
+		progress, err = service.pets.CreditTx(tx, pet.Credit{
 			UserID: userID, Amount: int64(reward), Reason: models.LeafReasonWeeklyLogin,
 			OperationKey: fmt.Sprintf("weekly-login:%s", claim.ID),
 		})

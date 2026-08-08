@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -49,7 +48,7 @@ func TestPublishProgressNotifiesSubscriber(t *testing.T) {
 	updates, unsubscribe := service.Subscribe(user.ID)
 	defer unsubscribe()
 
-	want := leaves.Progress{Name: "Листик", Level: 2, Leaves: 15, NextLevelTargetLeaves: 130, LevelUp: true}
+	want := Progress{Name: "Листик", Level: 2, Leaves: 15, NextLevelTargetLeaves: 130, LevelUp: true}
 	service.PublishProgress(user.ID, want)
 
 	if got := (<-updates).Progress; got != want {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -16,19 +16,15 @@ import (
 )
 
 const (
-	MinPetLevel = leaves.MinPetLevel
-	MaxPetLevel = leaves.MaxPetLevel
-	maxInt64    = int64(1<<63 - 1)
+	MinPetLevel = 1
+	MaxPetLevel = 10
 )
 
 var (
-	ErrPetNotFound    = errors.New("pet not found")
-	ErrInvalidName    = errors.New("pet name must contain from 1 to 35 characters")
-	ErrInvalidLeaves  = leaves.ErrInvalidAmount
-	ErrLeavesOverflow = leaves.ErrLeavesOverflow
+	ErrPetNotFound   = errors.New("pet not found")
+	ErrInvalidName   = errors.New("pet name must contain from 1 to 35 characters")
+	ErrInvalidLeaves = ErrInvalidAmount
 )
-
-type Progress = leaves.Progress
 
 type Update struct {
 	UserID   uuid.UUID
@@ -40,10 +36,21 @@ type Service struct {
 	subscribersMu sync.Mutex
 	subscribers   map[uuid.UUID]map[chan Update]struct{}
 	levelClaims   *LevelClaimsService
+	dailyReport   DailyReportNotifier
+	now           func() time.Time
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, subscribers: make(map[uuid.UUID]map[chan Update]struct{})}
+func NewService(db *gorm.DB, dailyReport ...DailyReportNotifier) *Service {
+	service := &Service{
+		db:          db,
+		subscribers: make(map[uuid.UUID]map[chan Update]struct{}),
+		now:         time.Now,
+	}
+	if len(dailyReport) > 0 {
+		service.dailyReport = dailyReport[0]
+	}
+
+	return service
 }
 
 func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
@@ -168,81 +175,23 @@ func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name s
 }
 
 func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount int64) (Progress, error) {
-	if amount <= 0 {
-		return Progress{}, ErrInvalidLeaves
-	}
-
-	var progress Progress
-
-	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var err error
-		progress, err = service.addLeavesTx(tx, userID, amount)
-		return err
+	return service.Credit(ctx, Credit{
+		UserID:       userID,
+		Amount:       amount,
+		Reason:       models.LeafReasonTaskReward,
+		OperationKey: fmt.Sprintf("pet:add:%s", uuid.NewString()),
 	})
-
-	if err != nil {
-		return Progress{}, err
-	}
-
-	service.publish(Update{UserID: userID, Progress: progress})
-
-	return progress, nil
 }
 
 func (service *Service) AddLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
-	if amount <= 0 {
-		return Progress{}, ErrInvalidLeaves
-	}
-
-	return service.addLeavesTx(tx, userID, amount)
-}
-
-func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
-	var pet models.Pet
-
-	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("user_id = ?", userID).
-		First(&pet).Error
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return Progress{}, ErrPetNotFound
-	}
-
-	if err != nil {
-		return Progress{}, fmt.Errorf("lock pet: %w", err)
-	}
-
-	if pet.Leaves < 0 || pet.Leaves > maxInt64-amount {
-		return Progress{}, ErrLeavesOverflow
-	}
-
-	newLevel, remainingLeaves := leaves.ApplyLevelUps(pet.Level, pet.Leaves+amount)
-	oldLevel := pet.Level
-
-	pet.Leaves = remainingLeaves
-	pet.Level = newLevel
-
-	err = tx.Model(&pet).Updates(map[string]any{
-		"leaves": pet.Leaves,
-		"level":  newLevel,
-	}).Error
-
-	if err != nil {
-		return Progress{}, fmt.Errorf("save pet progress: %w", err)
-	}
-	if newLevel > oldLevel && service.levelClaims != nil {
-		if err := service.levelClaims.openReachedRewards(tx, userID, newLevel); err != nil {
-			return Progress{}, err
-		}
-	}
-
-	return ProgressForPet(pet, newLevel > oldLevel), nil
+	return service.CreditTx(tx, Credit{
+		UserID:       userID,
+		Amount:       amount,
+		Reason:       models.LeafReasonTaskReward,
+		OperationKey: fmt.Sprintf("pet:add:%s", uuid.NewString()),
+	})
 }
 
 func (service *Service) PublishProgress(userID uuid.UUID, progress Progress) {
 	service.publish(Update{UserID: userID, Progress: progress})
-}
-
-func ProgressForPet(pet models.Pet, levelUp bool) Progress {
-	return leaves.ProgressForPet(pet, levelUp)
 }

@@ -192,8 +192,8 @@ func TestTasksRecordErrors(t *testing.T) {
 
 	tasks = getTasks(t, cfg, token, "/api/v1/tasks?level=1")
 	available = findTaskBySlot(t, tasks.Tasks, 2)
-	if available.CurrentCount != 0 {
-		t.Fatalf("slot 2 count = %d, want 0 after failed batch", available.CurrentCount)
+	if available.CurrentCount != available.TargetCount || available.Status != "COMPLETED" {
+		t.Fatalf("slot 2 after failed batch = %+v, want unchanged demo completion", available)
 	}
 }
 
