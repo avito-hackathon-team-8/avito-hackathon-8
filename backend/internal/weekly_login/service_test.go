@@ -9,6 +9,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -216,8 +217,9 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 		t.Fatalf("create user: %v", err)
 	}
 	// A weekly claim must also work before the lazily-created pet was requested.
-	leafService := leaves.NewService(db)
-	service := NewService(db, activityProviderStub{day: ActivityDay{Active: true}}, leafService)
+	notifier := testutil.DailyReportNotifierMock{}
+	leafService := leaves.NewService(db, notifier)
+	service := NewService(db, notifier, activityProviderStub{day: ActivityDay{Active: true}}, leafService)
 	service.now = func() time.Time { return now }
 
 	result, err := service.Claim(context.Background(), user.ID, now)

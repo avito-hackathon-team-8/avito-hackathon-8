@@ -9,6 +9,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -189,9 +190,10 @@ func levelClaimsTestService(t *testing.T, level int) (*LevelClaimsService, *gorm
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
-	rewardService := rewards.NewService(db)
+	notifier := testutil.DailyReportNotifierMock{}
+	rewardService := rewards.NewService(db, notifier)
 
-	service := NewLevelClaimsService(db, rewardService)
+	service := NewLevelClaimsService(db, notifier, rewardService)
 	service.now = func() time.Time { return now }
 
 	return service, db, user, now
