@@ -1,4 +1,9 @@
-import { mockRewards } from '../model/mock/mockRewards';
+import { apiRequest } from '@/shared/api/api-request';
+import { getAuthHeaders } from '@/shared/api/get-auth-headers';
+import { API_URL } from '@/shared/config/api';
+
+import { API_ROUTE_PROFILE } from './rewards-routes';
+
 export type TRewardCategory =
   'AVITO_BONUS' | 'FREE_DELIVERY' | 'FREE_PROMOTION' | 'PROMOTION_DISCOUNT' | 'DELIVERY_DISCOUNT';
 
@@ -25,6 +30,14 @@ export type TRewardGroup = {
   items: TReward[];
 };
 
-export const getTasks = async (): Promise<TRewardGroup[]> => {
-  return await Promise.resolve(mockRewards);
+type TResponse = {
+  groups: TRewardGroup[];
+};
+
+export const getRewards = async (): Promise<TResponse> => {
+  return await apiRequest(
+    fetch(`${API_URL}${API_ROUTE_PROFILE.rewards}`, {
+      headers: getAuthHeaders(),
+    }),
+  );
 };
