@@ -7,6 +7,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
 )
 
@@ -14,6 +15,7 @@ type weeklyLoginHandler struct {
 	auth        *auth.Service
 	activity    weekly_login.ActivityProvider
 	weeklyLogin *weekly_login.Service
+	pets        *pet.Service
 }
 
 type weeklyLoginDayResponse struct {
@@ -157,7 +159,7 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 		return
 	}
 
-	claim, err := handler.weeklyLogin.Claim(request.Context(), user.ID, date)
+	claimResult, err := handler.weeklyLogin.Claim(request.Context(), user.ID, date)
 
 	if errors.Is(err, weekly_login.ErrAlreadyClaimed) {
 		writeJSON(response, http.StatusConflict, map[string]string{
@@ -186,7 +188,8 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 		return
 	}
 
-	writeJSON(response, http.StatusOK, weeklyLoginClaimResponse{Claim: responseWeeklyLoginClaim(claim)})
+	handler.pets.PublishProgress(user.ID, claimResult.Progress)
+	writeJSON(response, http.StatusOK, weeklyLoginClaimResponse{Claim: responseWeeklyLoginClaim(claimResult.Claim)})
 }
 
 func responseWeeklyLogin(weeklyLogin weekly_login.CurrentWeek) weeklyLoginResponse {

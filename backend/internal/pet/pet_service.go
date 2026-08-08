@@ -8,6 +8,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -15,27 +16,16 @@ import (
 )
 
 const (
-	MinPetLevel = 1
-	MaxPetLevel = 10
-	maxInt64    = int64(1<<63 - 1)
+	MinPetLevel = leaves.MinPetLevel
+	MaxPetLevel = leaves.MaxPetLevel
 )
 
 var (
-	ErrPetNotFound    = errors.New("pet not found")
-	ErrInvalidName    = errors.New("pet name must contain from 1 to 35 characters")
-	ErrInvalidLeaves  = errors.New("leaves amount must be positive")
-	ErrLeavesOverflow = errors.New("leaves amount overflows int64")
+	ErrPetNotFound = errors.New("pet not found")
+	ErrInvalidName = errors.New("pet name must contain from 1 to 35 characters")
 )
 
-var levelTargets = [...]int64{0, 0, 100, 230, 390, 580, 810, 1090, 1430, 1850, 2400}
-
-type Progress struct {
-	Name                  string
-	Level                 int
-	Leaves                int64
-	NextLevelTargetLeaves int64
-	LevelUp               bool
-}
+type Progress = leaves.Progress
 
 type Update struct {
 	UserID   uuid.UUID
@@ -163,118 +153,10 @@ func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name s
 	return pet, nil
 }
 
-func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount int64) (Progress, error) {
-	if amount <= 0 {
-		return Progress{}, ErrInvalidLeaves
-	}
-
-	var progress Progress
-
-	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var err error
-		progress, err = service.addLeavesTx(tx, userID, amount)
-		return err
-	})
-
-	if err != nil {
-		return Progress{}, err
-	}
-
-	service.publish(Update{UserID: userID, Progress: progress})
-
-	return progress, nil
-}
-
-func (service *Service) AddLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
-	if amount <= 0 {
-		return Progress{}, ErrInvalidLeaves
-	}
-
-	return service.addLeavesTx(tx, userID, amount)
-}
-
-func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
-	var pet models.Pet
-
-	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("user_id = ?", userID).
-		First(&pet).Error
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return Progress{}, ErrPetNotFound
-	}
-
-	if err != nil {
-		return Progress{}, fmt.Errorf("lock pet: %w", err)
-	}
-
-	if pet.Leaves < 0 || pet.Leaves > maxInt64-amount {
-		return Progress{}, ErrLeavesOverflow
-	}
-
-	newLevel, remainingLeaves := applyLevelUps(pet.Level, pet.Leaves+amount)
-	oldLevel := pet.Level
-
-	pet.Leaves = remainingLeaves
-	pet.Level = newLevel
-
-	err = tx.Model(&pet).Updates(map[string]any{
-		"leaves": pet.Leaves,
-		"level":  newLevel,
-	}).Error
-
-	if err != nil {
-		return Progress{}, fmt.Errorf("save pet progress: %w", err)
-	}
-
-	return progressFor(pet, newLevel > oldLevel), nil
-}
-
 func (service *Service) PublishProgress(userID uuid.UUID, progress Progress) {
 	service.publish(Update{UserID: userID, Progress: progress})
 }
 
-func levelCost(level int) int64 {
-	if level < MinPetLevel || level >= MaxPetLevel {
-		return 0
-	}
-
-	return levelTargets[level+1] - levelTargets[level]
-}
-
-func applyLevelUps(level int, leaves int64) (int, int64) {
-	for level < MaxPetLevel {
-		cost := levelCost(level)
-		if leaves < cost {
-			break
-		}
-		leaves -= cost
-		level++
-	}
-
-	return level, leaves
-}
-
 func ProgressForPet(pet models.Pet, levelUp bool) Progress {
-	return progressFor(pet, levelUp)
-}
-
-func progressFor(pet models.Pet, levelUp bool) Progress {
-	if pet.Level >= MaxPetLevel {
-		return Progress{
-			Name:                  pet.Name,
-			Level:                 MaxPetLevel,
-			Leaves:                pet.Leaves,
-			NextLevelTargetLeaves: 0,
-			LevelUp:               levelUp,
-		}
-	}
-
-	return Progress{
-		Name:                  pet.Name,
-		Level:                 pet.Level,
-		Leaves:                pet.Leaves,
-		NextLevelTargetLeaves: levelCost(pet.Level),
-		LevelUp:               levelUp,
-	}
+	return leaves.ProgressForPet(pet, levelUp)
 }

@@ -92,7 +92,9 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	}
 
 	connection := openPetWebSocket(t, cfg, token)
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 
 	initialEvent := readPetEvent(t, connection)
 	if initialEvent.Event != "PET_PROGRESS_UPDATED" || initialEvent.Data.Name != "Листик" ||
@@ -147,7 +149,9 @@ func TestPetWebSocketReportsLevelUp(t *testing.T) {
 	seedPetLeaves(t, cfg, userID, 70)
 
 	connection := openPetWebSocket(t, cfg, token)
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 	initial := readPetEvent(t, connection)
 	if initial.Data.Level != 1 || initial.Data.Leaves != 70 || initial.Data.NextLevelTargetLeaves != 100 {
 		t.Fatalf("initial level-up snapshot = %+v, want level 1 with 70 leaves", initial)
@@ -202,13 +206,11 @@ func getFirstTask(t *testing.T, cfg testConfig, token string) taskItem {
 
 func seedCompletedTask(t *testing.T, cfg testConfig, userID uuid.UUID, taskID string, targetCount int) {
 	t.Helper()
-	progressID := uuid.New()
 	statement := fmt.Sprintf(
-		"INSERT INTO user_task_progresses (id, task_id, user_id, current_count, completed_at, created_at, updated_at) VALUES (%s, %s, %s, %d, NOW(), NOW(), NOW());",
-		sqlUUID(progressID),
+		"UPDATE user_daily_tasks SET current_count = %d, completed_at = NOW(), status = 'COMPLETED', updated_at = NOW() WHERE id = %s AND user_id = %s;",
+		targetCount,
 		sqlString(taskID),
 		sqlUUID(userID),
-		targetCount,
 	)
 	if err := runSQL(cfg, statement); err != nil {
 		t.Fatalf("seed completed task: %v", err)
@@ -283,7 +285,18 @@ func createUser(t *testing.T, cfg testConfig) uuid.UUID {
 		t.Fatalf("create e2e user: %v", err)
 	}
 	t.Cleanup(func() {
-		_ = runSQL(cfg, fmt.Sprintf("DELETE FROM users WHERE id = %s;", sqlUUID(userID)))
+		statement := fmt.Sprintf(`
+DELETE FROM external_events WHERE user_id = %s;
+DELETE FROM user_daily_tasks WHERE user_id = %s;
+DELETE FROM leaf_transactions WHERE user_id = %s;
+DELETE FROM user_game_states WHERE user_id = %s;
+DELETE FROM leaderboard_entries WHERE user_id = %s;
+DELETE FROM rewards WHERE user_id = %s;
+DELETE FROM otps WHERE user_id = %s;
+DELETE FROM pets WHERE user_id = %s;
+DELETE FROM users WHERE id = %s;
+`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
+		_ = runSQL(cfg, statement)
 	})
 	return userID
 }
@@ -328,7 +341,9 @@ func request(t *testing.T, cfg testConfig, token, method, path string, body any)
 	if err != nil {
 		t.Fatalf("request %s %s: %v", method, path, err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		t.Fatalf("read response: %v", err)
@@ -351,15 +366,20 @@ func decode(t *testing.T, body []byte, target any) {
 
 func websocketURL(t *testing.T, cfg testConfig, token string) string {
 	t.Helper()
+
 	parsed, err := url.Parse(cfg.apiURL + "/api/v1/pet/ws")
+
 	if err != nil {
 		t.Fatalf("parse API URL: %v", err)
 	}
-	if parsed.Scheme == "http" {
+
+	switch parsed.Scheme {
+	case "http":
 		parsed.Scheme = "ws"
-	} else if parsed.Scheme == "https" {
+	case "https":
 		parsed.Scheme = "wss"
 	}
+
 	if token != "" {
 		query := parsed.Query()
 		query.Set("token", token)
