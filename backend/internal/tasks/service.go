@@ -27,6 +27,10 @@ type AssignmentEnsurer interface {
 	EnsureDailyTasks(context.Context, uuid.UUID) error
 }
 
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
 type DailyTask struct {
 	ID            uuid.UUID
 	Slot          int
@@ -57,13 +61,14 @@ type Event struct {
 }
 
 type Service struct {
-	db      *gorm.DB
-	now     func() time.Time
-	ensurer AssignmentEnsurer
+	db          *gorm.DB
+	dailyReport DailyReportNotifier
+	now         func() time.Time
+	ensurer     AssignmentEnsurer
 }
 
-func NewService(db *gorm.DB, ensurer ...AssignmentEnsurer) *Service {
-	service := &Service{db: db, now: time.Now}
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, ensurer ...AssignmentEnsurer) *Service {
+	service := &Service{db: db, dailyReport: dailyReport, now: time.Now}
 	if len(ensurer) > 0 {
 		service.ensurer = ensurer[0]
 	}
@@ -105,6 +110,40 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 	}
 
 	return result, nil
+}
+
+// AutoCompleteFirstTask is a temporary demo shortcut for the first user session.
+func (service *Service) AutoCompleteFirstTask(ctx context.Context, userID uuid.UUID) error {
+	rows, err := service.rows(ctx, userID, service.today())
+	if err != nil {
+		return err
+	}
+	if len(rows) != TotalDailyTasks {
+		return ErrTasksNotReady
+	}
+
+	return service.autoCompleteFirstTask(ctx, userID, service.today(), rows[0])
+}
+
+func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.UUID, day time.Time, row taskRow) error {
+	if row.Status == models.CompletedTaskStatus || row.Status == models.ClaimedTaskStatus {
+		return nil
+	}
+
+	now := service.now().UTC()
+	result := service.db.WithContext(ctx).
+		Model(&models.UserDailyTask{}).
+		Where("id = ? AND user_id = ? AND day = ? AND claimed_at IS NULL AND completed_at IS NULL", row.AssignmentID, userID, utcDate(day)).
+		Updates(map[string]any{
+			"current_count": row.TargetCount,
+			"status":        models.CompletedTaskStatus,
+			"completed_at":  now,
+		})
+	if result.Error != nil {
+		return fmt.Errorf("complete first daily task: %w", result.Error)
+	}
+
+	return nil
 }
 
 func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLevel int) (DailyProgress, error) {
@@ -224,6 +263,8 @@ func (service *Service) ClaimWithReward(ctx context.Context, userID, taskID uuid
 	if err != nil {
 		return ClaimResult{}, err
 	}
+
+	service.dailyReport.Notify(userID)
 
 	return result, nil
 }

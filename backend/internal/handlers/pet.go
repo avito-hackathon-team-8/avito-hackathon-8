@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -35,6 +36,7 @@ type petProgressResponse struct {
 	Level                 int    `json:"level"`
 	Leaves                int64  `json:"leaves"`
 	NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
+	ChestPrice            int64  `json:"chestPrice"`
 	LevelUp               bool   `json:"levelUp"`
 }
 
@@ -42,6 +44,13 @@ type petProgressUpdatedEvent struct {
 	Event string              `json:"event"`
 	Data  petProgressResponse `json:"data"`
 }
+
+type petSocketRequest struct {
+	Action string `json:"action"`
+	Type   string `json:"type"`
+}
+
+const getChestPriceAction = "GET_CHEST_PRICE"
 
 type petLevelRewardResponse struct {
 	ID          string                `json:"id"`
@@ -253,13 +262,30 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	}
 
 	done := make(chan struct{})
+	requests := make(chan petSocketRequest, 1)
 
 	go func() {
 		defer close(done)
 
 		for {
-			if _, _, err := connection.ReadMessage(); err != nil {
+			_, payload, err := connection.ReadMessage()
+			if err != nil {
 				return
+			}
+
+			var socketRequest petSocketRequest
+			if json.Unmarshal(payload, &socketRequest) == nil {
+				action := socketRequest.Action
+				if action == "" {
+					action = socketRequest.Type
+				}
+				if !strings.EqualFold(action, getChestPriceAction) {
+					continue
+				}
+				select {
+				case requests <- socketRequest:
+				default:
+				}
 			}
 		}
 	}()
@@ -268,6 +294,11 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 		select {
 		case update, isOpen := <-updates:
 			if !isOpen || writePetProgressEvent(connection, update.Progress) != nil {
+				return
+			}
+		case <-requests:
+			currentPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
+			if err != nil || writePetProgressEvent(connection, pet.ProgressForPet(currentPet, false)) != nil {
 				return
 			}
 		case <-done:
@@ -296,15 +327,20 @@ func websocketToken(request *http.Request) string {
 	return request.URL.Query().Get("token")
 }
 
-func responsePet(pet models.Pet) petResponse {
+func responsePet(userPet models.Pet) petResponse {
 	return petResponse{
-		Name:   pet.Name,
-		Level:  pet.Level,
-		Leaves: pet.Leaves,
+		Name:   userPet.Name,
+		Level:  userPet.Level,
+		Leaves: userPet.Leaves,
 	}
 }
 
 func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) error {
+	chestPrice := progress.ChestPrice
+	if chestPrice == 0 {
+		chestPrice = models.ChestOpeningLeavesCost
+	}
+
 	return connection.WriteJSON(petProgressUpdatedEvent{
 		Event: "PET_PROGRESS_UPDATED",
 		Data: petProgressResponse{
@@ -312,6 +348,7 @@ func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) er
 			Level:                 progress.Level,
 			Leaves:                progress.Leaves,
 			NextLevelTargetLeaves: progress.NextLevelTargetLeaves,
+			ChestPrice:            chestPrice,
 			LevelUp:               progress.LevelUp,
 		},
 	})

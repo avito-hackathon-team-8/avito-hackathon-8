@@ -28,13 +28,18 @@ type ActivityDay struct {
 	Active bool
 }
 
-type ActivityService struct {
-	db  *gorm.DB
-	now func() time.Time
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewLoginService(db *gorm.DB) *ActivityService {
-	return &ActivityService{db: db, now: time.Now}
+type ActivityService struct {
+	db          *gorm.DB
+	now         func() time.Time
+	dailyReport DailyReportNotifier
+}
+
+func NewLoginService(db *gorm.DB, dailyReport DailyReportNotifier) *ActivityService {
+	return &ActivityService{db: db, now: time.Now, dailyReport: dailyReport}
 }
 
 func (service *ActivityService) Add(ctx context.Context, userID uuid.UUID, days []ActivityDay) error {
@@ -83,6 +88,8 @@ func (service *ActivityService) Add(ctx context.Context, userID uuid.UUID, days 
 	if err != nil {
 		return fmt.Errorf("record user activities: %w", err)
 	}
+
+	service.dailyReport.Notify(userID)
 
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -67,6 +68,37 @@ func TestListSynchronouslyEnsuresMissingAssignments(t *testing.T) {
 	}
 	if called != 1 || len(items) != TotalDailyTasks {
 		t.Fatalf("ensure calls = %d, tasks = %d", called, len(items))
+	}
+}
+
+func TestAutoCompleteFirstTaskIsIdempotent(t *testing.T) {
+	service, db, userID, assignments := testTaskService(t, true)
+
+	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
+		t.Fatalf("AutoCompleteFirstTask() error = %v", err)
+	}
+
+	var first models.UserDailyTask
+	if err := db.First(&first, "id = ?", assignments[0].ID).Error; err != nil {
+		t.Fatalf("load first assignment: %v", err)
+	}
+	if first.Status != models.CompletedTaskStatus || first.CurrentCount != 3 || first.CompletedAt == nil {
+		t.Fatalf("first assignment = %+v, want completed at target count", first)
+	}
+
+	var secondBefore models.UserDailyTask
+	if err := db.First(&secondBefore, "id = ?", assignments[1].ID).Error; err != nil {
+		t.Fatalf("load second assignment: %v", err)
+	}
+	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
+		t.Fatalf("second AutoCompleteFirstTask() error = %v", err)
+	}
+	var secondAfter models.UserDailyTask
+	if err := db.First(&secondAfter, "id = ?", assignments[1].ID).Error; err != nil {
+		t.Fatalf("reload second assignment: %v", err)
+	}
+	if secondAfter.Status != secondBefore.Status || secondAfter.CurrentCount != secondBefore.CurrentCount || secondAfter.CompletedAt != secondBefore.CompletedAt {
+		t.Fatalf("second assignment changed: before=%+v after=%+v", secondBefore, secondAfter)
 	}
 }
 
@@ -194,7 +226,7 @@ func testTaskService(t *testing.T, withAssignments bool) (*Service, *gorm.DB, uu
 	if err := db.AutoMigrate(&models.DailyTaskDefinition{}, &models.UserDailyTask{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
-	service := NewService(db)
+	service := NewService(db, testutil.DailyReportNotifierMock{})
 	service.now = func() time.Time { return taskTestNow }
 	userID := uuid.New()
 	var assignments []models.UserDailyTask

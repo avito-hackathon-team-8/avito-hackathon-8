@@ -42,16 +42,22 @@ type Progress struct {
 	Level                 int
 	Leaves                int64
 	NextLevelTargetLeaves int64
+	ChestPrice            int64
 	LevelUp               bool
 }
 
-type Service struct {
-	db  *gorm.DB
-	now func() time.Time
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, now: time.Now}
+type Service struct {
+	db          *gorm.DB
+	now         func() time.Time
+	dailyReport DailyReportNotifier
+}
+
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier) *Service {
+	return &Service{db: db, now: time.Now, dailyReport: dailyReport}
 }
 
 func (service *Service) Credit(ctx context.Context, credit Credit) (Progress, error) {
@@ -65,7 +71,13 @@ func (service *Service) Credit(ctx context.Context, credit Credit) (Progress, er
 		return err
 	})
 
-	return progress, err
+	if err != nil {
+		return Progress{}, err
+	}
+
+	service.dailyReport.Notify(credit.UserID)
+
+	return progress, nil
 }
 
 func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
@@ -178,7 +190,13 @@ func ApplyLevelUps(level int, balance int64) (int, int64) {
 }
 
 func ProgressForPet(pet models.Pet, levelUp bool) Progress {
-	progress := Progress{Name: pet.Name, Level: pet.Level, Leaves: pet.Leaves, LevelUp: levelUp}
+	progress := Progress{
+		Name:       pet.Name,
+		Level:      pet.Level,
+		Leaves:     pet.Leaves,
+		ChestPrice: models.ChestOpeningLeavesCost,
+		LevelUp:    levelUp,
+	}
 
 	if pet.Level < MaxPetLevel {
 		progress.NextLevelTargetLeaves = LevelCost(pet.Level)

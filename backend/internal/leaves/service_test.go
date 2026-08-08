@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -41,8 +42,8 @@ func TestCreditRecordsLedgerAndMultipleLevelUps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Credit() error = %v", err)
 	}
-	if result.Level != 4 || result.Leaves != 0 || !result.LevelUp {
-		t.Fatalf("progress = %+v, want level 4 with zero leaves", result)
+	if result.Level != 4 || result.Leaves != 0 || result.NextLevelTargetLeaves != 190 || result.ChestPrice != models.ChestOpeningLeavesCost || !result.LevelUp {
+		t.Fatalf("progress = %+v, want level 4 with target 190 and chest price %d", result, models.ChestOpeningLeavesCost)
 	}
 
 	var transactions []models.LeafTransaction
@@ -153,5 +154,5 @@ func testLeavesService(t *testing.T, withState bool) (*Service, *gorm.DB, models
 	if err := db.Create(&models.Pet{UserID: user.ID, Level: 1}).Error; err != nil {
 		t.Fatalf("create pet: %v", err)
 	}
-	return NewService(db), db, user
+	return NewService(db, testutil.DailyReportNotifierMock{}), db, user
 }
