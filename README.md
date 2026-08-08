@@ -170,12 +170,11 @@ RFC3339 и UTC.
 | Метод | Endpoint | Описание |
 |---|---|---|
 | `GET` | `/api/v1/weekly-login` | Получает состояние наград за вход в текущей календарной неделе. |
-| `POST` | `/api/v1/weekly-login/activity` | Записывает подтверждённую активность пользователя за указанные даты. |
+| `POST` | `/api/v1/weekly-login/activity` | Засчитывает активность пользователя за текущий день в UTC. |
 | `POST` | `/api/v1/weekly-login/claim` | Забирает доступную награду за вход в указанный день. |
 
-Метод `POST /api/v1/weekly-login/activity` принимает список дней с полями `date`
-и `active`, а `POST /api/v1/weekly-login/claim` принимает дату в формате
-`YYYY-MM-DD`.
+Метод `POST /api/v1/weekly-login/activity` вызывается без тела запроса, а
+`POST /api/v1/weekly-login/claim` принимает дату в формате `YYYY-MM-DD`.
 
 ### Лидерборд
 

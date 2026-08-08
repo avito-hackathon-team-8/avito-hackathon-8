@@ -13,7 +13,6 @@ import (
 
 type weeklyLoginHandler struct {
 	auth        *auth.Service
-	activity    weekly_login.ActivityProvider
 	weeklyLogin *weekly_login.Service
 	pets        *pet.Service
 }
@@ -47,15 +46,6 @@ type weeklyLoginClaimResponse struct {
 	Claim weeklyLoginClaim `json:"claim"`
 }
 
-type dailyActivityRequest struct {
-	Days *[]dailyActivityDayRequest `json:"days"`
-}
-
-type dailyActivityDayRequest struct {
-	Date   string `json:"date"`
-	Active *bool  `json:"active"`
-}
-
 func (handler *weeklyLoginHandler) addActivity(response http.ResponseWriter, request *http.Request) {
 	user, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
 
@@ -65,41 +55,7 @@ func (handler *weeklyLoginHandler) addActivity(response http.ResponseWriter, req
 		return
 	}
 
-	var body dailyActivityRequest
-
-	if err := decodeJSON(response, request, &body); err != nil {
-		writeError(response, http.StatusBadRequest, "Invalid request body")
-
-		return
-	}
-
-	if body.Days == nil {
-		writeError(response, http.StatusBadRequest, "Invalid request body")
-
-		return
-	}
-
-	days := make([]weekly_login.ActivityDay, 0, len(*body.Days))
-
-	for _, item := range *body.Days {
-		if item.Active == nil {
-			writeError(response, http.StatusBadRequest, "Invalid request body")
-
-			return
-		}
-
-		date, err := time.Parse(time.DateOnly, item.Date)
-
-		if err != nil {
-			writeError(response, http.StatusBadRequest, "Invalid activity date")
-
-			return
-		}
-
-		days = append(days, weekly_login.ActivityDay{Date: date, Active: *item.Active})
-	}
-
-	if err := handler.activity.Add(request.Context(), user.ID, days); err != nil {
+	if err := handler.weeklyLogin.RecordToday(request.Context(), user.ID); err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not record daily activity")
 
 		return

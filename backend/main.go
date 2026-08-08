@@ -45,13 +45,12 @@ func main() {
 	petService := pet.NewService(db)
 	petService.SetLevelClaimsService(levelClaimsService)
 	chestService := chest.NewService(db, dailyReportService, petService, rewardService)
-	activityService := weekly_login.NewLoginService(db, dailyReportService)
-	weeklyLoginService := weekly_login.NewService(db, dailyReportService, activityService, leafService)
+	weeklyLoginService := weekly_login.NewService(db, dailyReportService, leafService)
 	eventService := activityevents.NewService(db, dailyReportService, taskService)
 	router := handlers.NewRouter(db, authService, rewardService,
 		taskService, leafService, petService, levelClaimsService,
 		weeklyLoginService, eventService, dailyReportService,
-		cfg.InternalServiceToken, activityService, chestService)
+		cfg.InternalServiceToken, chestService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

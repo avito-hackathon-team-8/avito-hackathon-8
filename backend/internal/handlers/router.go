@@ -47,8 +47,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	taskService *tasks.Service, leafService *leaves.Service, petService *pet.Service,
 	levelClaimsService *pet.LevelClaimsService, weeklyLoginService *weekly_login.Service,
 	eventService *activityevents.Service, dailyReportService *daily_report.Service,
-	internalToken string, activityService weekly_login.ActivityProvider,
-	chestService *chest.Service,
+	internalToken string, chestService *chest.Service,
 ) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
@@ -67,7 +66,6 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	}
 	weeklyLoginHandler := &weeklyLoginHandler{
 		auth:        authService,
-		activity:    activityService,
 		weeklyLogin: weeklyLoginService,
 		pets:        petService,
 	}
