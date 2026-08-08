@@ -21,6 +21,7 @@ import (
 
 type authHandler struct {
 	service *auth.Service
+	db      *gorm.DB
 }
 
 type otpRequest struct {
@@ -33,9 +34,10 @@ type otpVerification struct {
 }
 
 type userResponse struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Verified bool   `json:"verified"`
+	ID          string                 `json:"id"`
+	Email       string                 `json:"email"`
+	Verified    bool                   `json:"verified"`
+	Leaderboard *leaderboardMeResponse `json:"leaderboard,omitempty"`
 }
 
 type errorResponse struct {
@@ -49,7 +51,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	eventService *activityevents.Service, dailyReportService *daily_report.Service,
 	internalToken string, chestService *chest.Service,
 ) http.Handler {
-	handler := &authHandler{service: authService}
+	handler := &authHandler{service: authService, db: db}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{
 		auth: authService, tasks: taskService, leaves: leafService, pets: petService,
@@ -103,7 +105,6 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux.HandleFunc("GET /api/v1/daily-report", dailyReportHandler.get)
 	mux.HandleFunc("GET /api/v1/daily-report/ws", dailyReportHandler.ws)
 	mux.HandleFunc("GET /api/v1/leaderboard", leaderboardHandler.list)
-	mux.HandleFunc("GET /api/v1/leaderboard/me", leaderboardHandler.me)
 	mux.HandleFunc("POST /api/internal/v1/users/{userId}/events", internalEvents.record)
 
 	return withCORS(mux)
@@ -122,16 +123,19 @@ func (handler *authHandler) requestOTP(response http.ResponseWriter, request *ht
 
 	if err := decodeJSON(response, request, &body); err != nil {
 		writeError(response, http.StatusBadRequest, "Invalid request body")
+
 		return
 	}
 
 	if err := handler.service.RequestOTP(request.Context(), body.Email); err != nil {
 		if errors.Is(err, auth.ErrInvalidEmail) {
 			writeError(response, http.StatusBadRequest, err.Error())
+
 			return
 		}
 
 		writeError(response, http.StatusInternalServerError, "Could not send the sign-in code")
+
 		return
 	}
 
@@ -143,6 +147,7 @@ func (handler *authHandler) verifyOTP(response http.ResponseWriter, request *htt
 
 	if err := decodeJSON(response, request, &body); err != nil {
 		writeError(response, http.StatusBadRequest, "Invalid request body")
+
 		return
 	}
 
@@ -151,13 +156,16 @@ func (handler *authHandler) verifyOTP(response http.ResponseWriter, request *htt
 		body.Email,
 		body.Code,
 	)
+
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidOTP) {
 			writeError(response, http.StatusBadRequest, err.Error())
+
 			return
 		}
 
 		writeError(response, http.StatusInternalServerError, "Could not verify the sign-in code")
+
 		return
 	}
 
@@ -172,17 +180,30 @@ func (handler *authHandler) me(response http.ResponseWriter, request *http.Reque
 		request.Context(),
 		request.Header.Get("Authorization"),
 	)
+
 	if err != nil {
 		if errors.Is(err, auth.ErrUnauthorized) {
 			writeError(response, http.StatusUnauthorized, err.Error())
+
 			return
 		}
 
 		writeError(response, http.StatusInternalServerError, "Could not load the user")
+
 		return
 	}
 
-	writeJSON(response, http.StatusOK, responseUser(user))
+	leaderboard, err := loadLeaderboardMe(request.Context(), handler.db, user, time.Now().UTC())
+
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, "Could not load leaderboard position")
+		return
+	}
+
+	currentUser := responseUser(user)
+	currentUser.Leaderboard = leaderboard
+
+	writeJSON(response, http.StatusOK, currentUser)
 }
 
 func responseUser(user models.User) userResponse {
