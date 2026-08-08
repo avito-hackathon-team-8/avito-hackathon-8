@@ -1,11 +1,10 @@
-module github.com/avito-hackathon-team-8/avito-hackathon-8/backend
+module github.com/avito-hackathon-team-8/avito-hackathon-8/puppeteer
 
 go 1.25.0
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.3
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1

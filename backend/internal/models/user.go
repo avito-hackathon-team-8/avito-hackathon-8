@@ -11,6 +11,7 @@ type User struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Email     string    `gorm:"uniqueIndex;not null"`
 	Verified  bool      `gorm:"not null;default:false"`
+	Interests string    `gorm:"type:jsonb;not null;default:'{}'"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

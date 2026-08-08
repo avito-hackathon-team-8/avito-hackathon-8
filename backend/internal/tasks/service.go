@@ -2,8 +2,6 @@ package tasks
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -20,9 +18,14 @@ var (
 	ErrTaskLocked           = errors.New("task is locked")
 	ErrTaskNotCompleted     = errors.New("task is not completed")
 	ErrRewardAlreadyClaimed = errors.New("task reward already claimed")
+	ErrTasksNotReady        = errors.New("daily tasks are not ready")
 )
 
 const TotalDailyTasks = 4
+
+type AssignmentEnsurer interface {
+	EnsureDailyTasks(context.Context, uuid.UUID) error
+}
 
 type DailyTask struct {
 	ID            uuid.UUID
@@ -48,397 +51,216 @@ type ClaimResult struct {
 }
 
 type Event struct {
-	Type  models.TaskType
-	Count int
+	TaskID uuid.UUID
+	Type   models.TaskType
+	Count  int
 }
 
 type Service struct {
-	db          *gorm.DB
-	now         func() time.Time
-	definitions []Definition
+	db      *gorm.DB
+	now     func() time.Time
+	ensurer AssignmentEnsurer
 }
 
-func NewService(db *gorm.DB, definitions []Definition) *Service {
-	return &Service{
-		db:          db,
-		now:         time.Now,
-		definitions: append([]Definition(nil), definitions...),
+func NewService(db *gorm.DB, ensurer ...AssignmentEnsurer) *Service {
+	service := &Service{db: db, now: time.Now}
+	if len(ensurer) > 0 {
+		service.ensurer = ensurer[0]
 	}
+
+	return service
 }
 
 func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel int) ([]DailyTask, error) {
-	date := service.today()
-
-	if err := service.ensureTasks(ctx, date); err != nil {
+	rows, err := service.rows(ctx, userID, service.today())
+	if err != nil {
 		return nil, err
 	}
-
-	var tasks []models.Task
-
-	if err := service.db.WithContext(ctx).
-		Where("date = ?", date).
-		Order("slot ASC").
-		Find(&tasks).Error; err != nil {
-		return nil, fmt.Errorf("list daily tasks: %w", err)
-	}
-
-	var progress []models.UserTaskProgress
-
-	if err := service.db.WithContext(ctx).
-		Where("user_id = ? AND task_id IN (?)", userID, taskIDs(tasks)).
-		Find(&progress).Error; err != nil {
-		return nil, fmt.Errorf("list daily task progress: %w", err)
-	}
-
-	dailyTasks := make([]DailyTask, 0, len(tasks))
-
-	for _, task := range tasks {
-		var taskProgress *models.UserTaskProgress
-		currentCount := 0
-
-		for i := range progress {
-			if progress[i].TaskID == task.ID {
-				taskProgress = &progress[i]
-				currentCount = min(progress[i].CurrentCount, task.TargetCount)
-				break
-			}
+	if len(rows) < TotalDailyTasks && service.ensurer != nil {
+		if err := service.ensurer.EnsureDailyTasks(ctx, userID); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrTasksNotReady, err)
 		}
+		rows, err = service.rows(ctx, userID, service.today())
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(rows) != TotalDailyTasks {
+		return nil, ErrTasksNotReady
+	}
 
-		dailyTasks = append(dailyTasks, DailyTask{
-			ID:            task.ID,
-			Slot:          task.Slot,
-			Type:          task.Type,
-			Description:   task.Description,
-			CurrentCount:  currentCount,
-			TargetCount:   task.TargetCount,
-			RewardLeaves:  task.RewardLeaves,
-			RequiredLevel: task.RequiredLevel,
-			Status:        StatusFor(task, taskProgress, userLevel),
+	result := make([]DailyTask, 0, len(rows))
+	for _, row := range rows {
+		status := models.TaskStatus(row.Status)
+		if userLevel < row.UnlockLevel {
+			status = models.LockedTaskStatus
+		} else if status == models.LockedTaskStatus {
+			status = models.InProgressTaskStatus
+		}
+		result = append(result, DailyTask{
+			ID: row.AssignmentID, Slot: row.Slot, Type: row.Type, Description: row.Description,
+			CurrentCount: min(row.CurrentCount, row.TargetCount), TargetCount: row.TargetCount,
+			RewardLeaves: row.Reward, RequiredLevel: row.UnlockLevel, Status: status,
 		})
 	}
 
-	return dailyTasks, nil
+	return result, nil
 }
 
 func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLevel int) (DailyProgress, error) {
-	tasks, err := service.List(ctx, userID, userLevel)
+	dailyTasks, err := service.List(ctx, userID, userLevel)
 	if err != nil {
 		return DailyProgress{}, err
 	}
 
-	completedCount := 0
-	for _, task := range tasks {
+	completed := 0
+	for _, task := range dailyTasks {
 		if task.Status == models.CompletedTaskStatus || task.Status == models.ClaimedTaskStatus {
-			completedCount++
+			completed++
 		}
 	}
 
-	return DailyProgress{
-		CompletedCount: completedCount,
-		TotalCount:     TotalDailyTasks,
-	}, nil
+	return DailyProgress{CompletedCount: completed, TotalCount: TotalDailyTasks}, nil
 }
 
-func (service *Service) RecordEvent(
-	ctx context.Context,
-	userID uuid.UUID,
-	taskType models.TaskType,
-	userLevel int,
-) error {
-	return service.RecordEvents(ctx, userID, []Event{{Type: taskType, Count: 1}}, userLevel)
-}
-
-func (service *Service) RecordEvents(
-	ctx context.Context,
-	userID uuid.UUID,
-	events []Event,
-	userLevel int,
-) error {
-	if len(events) == 0 {
-		return nil
-	}
-
-	date := service.today()
-
-	if err := service.ensureTasks(ctx, date); err != nil {
-		return err
-	}
-
+func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, events []Event, userLevel int) error {
 	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, event := range events {
-			if event.Count < 1 {
-				event.Count = 1
-			}
+		return service.RecordEventsTx(tx, userID, events, userLevel, service.today())
+	})
+}
 
-			var task models.Task
-			err := tx.Where("date = ? AND type = ?", date, event.Type).First(&task).Error
+func (service *Service) RecordEventsTx(tx *gorm.DB, userID uuid.UUID, events []Event, userLevel int, day time.Time) error {
+	for _, event := range events {
+		if event.TaskID == uuid.Nil && !models.IsKnownTaskType(event.Type) {
+			return ErrInvalidTaskType
+		}
 
+		var assignment models.UserDailyTask
+		query := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ? AND day = ?", userID, utcDate(day))
+		if event.TaskID != uuid.Nil {
+			query = query.Where("id = ?", event.TaskID)
+		} else {
+			query = query.Where("task_definition_id IN (SELECT id FROM daily_task_definitions WHERE type = ?)", event.Type)
+		}
+		if err := query.First(&assignment).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				if !IsKnownTaskType(event.Type) {
-					return ErrInvalidTaskType
-				}
-
 				return ErrTaskNotFound
 			}
-
-			if err != nil {
-				return fmt.Errorf("find task: %w", err)
-			}
-
-			if userLevel < task.RequiredLevel {
-				return ErrTaskLocked
-			}
-
-			var progress models.UserTaskProgress
-			err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-				Where("user_id = ? AND task_id = ?", userID, task.ID).
-				First(&progress).Error
-
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				progress = models.UserTaskProgress{
-					UserID:       userID,
-					TaskID:       task.ID,
-					CurrentCount: 0,
-				}
-
-				if task.TargetCount <= event.Count {
-					progress.CurrentCount = task.TargetCount
-					now := service.now().UTC()
-					progress.CompletedAt = &now
-				} else {
-					progress.CurrentCount = event.Count
-				}
-
-				err = tx.Create(&progress).Error
-
-				if err != nil {
-					return err
-				}
-
-				continue
-			}
-
-			if err != nil {
-				return err
-			}
-
-			if progress.CompletedAt != nil && progress.CurrentCount >= task.TargetCount {
-				continue
-			}
-
-			newCount := progress.CurrentCount + event.Count
-			if newCount > task.TargetCount {
-				newCount = task.TargetCount
-			}
-			progress.CurrentCount = newCount
-
-			if progress.CurrentCount == task.TargetCount && progress.CompletedAt == nil {
-				now := service.now().UTC()
-				progress.CompletedAt = &now
-			}
-
-			err = tx.Save(&progress).Error
-
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (service *Service) Claim(ctx context.Context, userID uuid.UUID, taskID uuid.UUID, userLevel int) (ClaimResult, error) {
-	return service.claim(ctx, userID, taskID, userLevel, nil)
-}
-
-func (service *Service) ClaimWithReward(
-	ctx context.Context,
-	userID uuid.UUID,
-	taskID uuid.UUID,
-	userLevel int,
-	applyReward func(*gorm.DB, int) error,
-) (ClaimResult, error) {
-	return service.claim(ctx, userID, taskID, userLevel, applyReward)
-}
-
-func (service *Service) claim(
-	ctx context.Context,
-	userID uuid.UUID,
-	taskID uuid.UUID,
-	userLevel int,
-	applyReward func(*gorm.DB, int) error,
-) (ClaimResult, error) {
-	date := service.today()
-
-	if err := service.ensureTasks(ctx, date); err != nil {
-		return ClaimResult{}, err
-	}
-
-	var claimResult ClaimResult
-
-	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var task models.Task
-
-		err := tx.Where("id = ? AND date = ?", taskID, date).First(&task).Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrTaskNotFound
-		}
-
-		if err != nil {
 			return err
 		}
 
-		if userLevel < task.RequiredLevel {
+		var definition models.DailyTaskDefinition
+		if err := tx.First(&definition, "id = ?", assignment.TaskDefinitionID).Error; err != nil {
+			return err
+		}
+		if userLevel < definition.UnlockLevel {
 			return ErrTaskLocked
 		}
-
-		var progress models.UserTaskProgress
-
-		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("user_id = ? AND task_id = ?", userID, task.ID).
-			First(&progress).Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrTaskNotCompleted
+		if assignment.ClaimedAt != nil || assignment.CompletedAt != nil {
+			continue
 		}
 
-		if err != nil {
+		count := event.Count
+		if count < 1 {
+			count = 1
+		}
+		remaining := definition.TargetCount - assignment.CurrentCount
+		if remaining <= 0 || count >= remaining {
+			assignment.CurrentCount = definition.TargetCount
+		} else {
+			assignment.CurrentCount += count
+		}
+		if assignment.CurrentCount >= definition.TargetCount {
+			now := service.now().UTC()
+			assignment.CompletedAt = &now
+			assignment.Status = models.CompletedTaskStatus
+		}
+		if err := tx.Save(&assignment).Error; err != nil {
 			return err
 		}
-
-		if progress.ClaimedAt != nil {
-			return ErrRewardAlreadyClaimed
-		}
-
-		if progress.CompletedAt == nil || progress.CurrentCount < task.TargetCount {
-			return ErrTaskNotCompleted
-		}
-
-		now := service.now().UTC()
-		err = tx.Model(&progress).Update("claimed_at", now).Error
-
-		if err != nil {
-			return err
-		}
-
-		claimResult = ClaimResult{
-			TaskID:       task.ID,
-			RewardLeaves: task.RewardLeaves,
-			Status:       models.ClaimedTaskStatus,
-		}
-
-		if applyReward != nil {
-			err := applyReward(tx, claimResult.RewardLeaves)
-
-			if err != nil {
-				return fmt.Errorf("apply task reward: %w", err)
-			}
-		}
-
-		return nil
-	})
-
-	if errors.Is(err, ErrTaskNotFound) ||
-		errors.Is(err, ErrTaskLocked) ||
-		errors.Is(err, ErrTaskNotCompleted) ||
-		errors.Is(err, ErrRewardAlreadyClaimed) {
-		return ClaimResult{}, err
-	}
-
-	if err != nil {
-		return ClaimResult{}, fmt.Errorf("claim task reward: %w", err)
-	}
-
-	return claimResult, nil
-}
-
-func StatusFor(task models.Task, progress *models.UserTaskProgress, userLevel int) models.TaskStatus {
-	if userLevel < task.RequiredLevel {
-		return models.LockedTaskStatus
-	}
-
-	if progress == nil {
-		return models.InProgressTaskStatus
-	}
-
-	if progress.ClaimedAt != nil {
-		return models.ClaimedTaskStatus
-	}
-
-	if progress.CompletedAt != nil || progress.CurrentCount == task.TargetCount {
-		return models.CompletedTaskStatus
-	}
-
-	return models.InProgressTaskStatus
-}
-
-func (service *Service) ensureTasks(ctx context.Context, date time.Time) error {
-	definitions := service.definitionsForDate(date)
-	tasks := make([]models.Task, 0, len(definitions))
-
-	for _, definition := range definitions {
-		tasks = append(tasks, models.Task{
-			Date:          date,
-			Slot:          definition.Slot,
-			Type:          definition.Type,
-			Description:   definition.Description,
-			TargetCount:   definition.TargetCount,
-			RewardLeaves:  definition.RewardLeaves,
-			RequiredLevel: definition.RequiredLevel,
-		})
-	}
-
-	err := service.db.WithContext(ctx).
-		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "date"}, {Name: "slot"}},
-			DoNothing: true,
-		}).
-		Create(&tasks).Error
-
-	if err != nil {
-		return fmt.Errorf("ensure daily tasks: %w", err)
 	}
 
 	return nil
 }
 
-func (service *Service) definitionsForDate(date time.Time) []Definition {
-	definitions := make([]Definition, 0, TotalDailyTasks)
-
-	for _, slot := range dailyTaskSlots {
-		candidates := make([]Definition, 0)
-		for _, definition := range service.definitions {
-			if definition.Slot == slot {
-				candidates = append(candidates, definition)
+func (service *Service) ClaimWithReward(ctx context.Context, userID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
+	var result ClaimResult
+	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var assignment models.UserDailyTask
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND user_id = ? AND day = ?", taskID, userID, service.today()).First(&assignment).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTaskNotFound
 			}
+			return err
 		}
 
-		definitions = append(definitions, candidates[definitionIndex(date, slot, len(candidates))])
+		var definition models.DailyTaskDefinition
+		if err := tx.First(&definition, "id = ?", assignment.TaskDefinitionID).Error; err != nil {
+			return err
+		}
+		if userLevel < definition.UnlockLevel {
+			return ErrTaskLocked
+		}
+		if assignment.ClaimedAt != nil {
+			return ErrRewardAlreadyClaimed
+		}
+		if assignment.CompletedAt == nil || assignment.CurrentCount < definition.TargetCount {
+			return ErrTaskNotCompleted
+		}
+
+		now := service.now().UTC()
+		assignment.ClaimedAt = &now
+		assignment.Status = models.ClaimedTaskStatus
+		if err := tx.Save(&assignment).Error; err != nil {
+			return err
+		}
+
+		result = ClaimResult{TaskID: taskID, RewardLeaves: definition.Reward, Status: models.ClaimedTaskStatus}
+		if applyReward != nil {
+			return applyReward(tx, definition.Reward)
+		}
+		return nil
+	})
+	if err != nil {
+		return ClaimResult{}, err
 	}
 
-	return definitions
+	return result, nil
 }
 
-func definitionIndex(date time.Time, slot, candidatesCount int) int {
-	source := fmt.Sprintf("%s:%d", date.UTC().Format(time.DateOnly), slot)
-	digest := sha256.Sum256([]byte(source))
-	value := binary.BigEndian.Uint64(digest[:8])
+type taskRow struct {
+	AssignmentID uuid.UUID `gorm:"column:assignment_id"`
+	Slot         int
+	Type         models.TaskType
+	Description  string
+	TargetCount  int
+	Reward       int
+	UnlockLevel  int
+	Status       models.TaskStatus
+	CurrentCount int
+}
 
-	return int(value % uint64(candidatesCount))
+func (service *Service) rows(ctx context.Context, userID uuid.UUID, day time.Time) ([]taskRow, error) {
+	var rows []taskRow
+	err := service.db.WithContext(ctx).Table("user_daily_tasks AS assignments").Select(`
+		assignments.id AS assignment_id, definitions.slot, definitions.type,
+		definitions.title AS description, definitions.target_count, definitions.reward,
+		definitions.unlock_level, assignments.status, assignments.current_count`).
+		Joins("JOIN daily_task_definitions AS definitions ON definitions.id = assignments.task_definition_id").
+		Where("assignments.user_id = ? AND assignments.day = ?", userID, utcDate(day)).
+		Order("definitions.slot ASC").Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("list assigned tasks: %w", err)
+	}
+
+	return rows, nil
 }
 
 func (service *Service) today() time.Time {
-	now := service.now().UTC()
-	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	return utcDate(service.now())
 }
 
-func taskIDs(tasks []models.Task) []uuid.UUID {
-	taskIDs := make([]uuid.UUID, 0, len(tasks))
-
-	for _, task := range tasks {
-		taskIDs = append(taskIDs, task.ID)
-	}
-
-	return taskIDs
+func utcDate(value time.Time) time.Time {
+	value = value.UTC()
+	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, time.UTC)
 }

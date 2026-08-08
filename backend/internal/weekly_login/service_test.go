@@ -3,11 +3,16 @@ package weekly_login
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/google/uuid"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type activityProviderStub struct {
@@ -178,8 +183,8 @@ func TestActivityInactive(t *testing.T) {
 	}{
 		{name: "active", provider: activityProviderStub{day: ActivityDay{Active: true}}, want: false},
 		{name: "inactive", provider: activityProviderStub{day: ActivityDay{Active: false}}, want: true},
-		{name: "provider error is fail open", provider: activityProviderStub{err: errors.New("unavailable")}, want: false},
-		{name: "provider is not configured", provider: nil, want: false},
+		{name: "provider error is fail closed", provider: activityProviderStub{err: errors.New("unavailable")}, want: true},
+		{name: "provider is not configured", provider: nil, want: true},
 	}
 
 	for _, test := range tests {
@@ -193,5 +198,47 @@ func TestActivityInactive(t *testing.T) {
 				t.Fatalf("activityInactive() = %t, want %t", got, test.want)
 			}
 		})
+	}
+}
+
+func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		t.Fatalf("open test database: %v", err)
+	}
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.UserGameState{}, &models.WeeklyLoginClaim{}, &models.LeafTransaction{}); err != nil {
+		t.Fatalf("migrate test database: %v", err)
+	}
+	now := time.Date(2026, time.August, 7, 12, 0, 0, 0, time.UTC)
+	user := models.User{Email: fmt.Sprintf("%s@example.com", uuid.NewString()), Verified: true, CreatedAt: now.AddDate(0, 0, -1)}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	// A weekly claim must also work before the lazily-created pet was requested.
+	leafService := leaves.NewService(db)
+	service := NewService(db, activityProviderStub{day: ActivityDay{Active: true}}, leafService)
+	service.now = func() time.Time { return now }
+
+	result, err := service.Claim(context.Background(), user.ID, now)
+	if err != nil {
+		t.Fatalf("Claim() error = %v", err)
+	}
+	if result.Claim.RewardLeaves != 10 || result.Progress.Level != 1 || result.Progress.Leaves != 10 || result.Progress.LevelUp {
+		t.Fatalf("claim result = %+v", result)
+	}
+	var transactions []models.LeafTransaction
+	if err := db.Order("created_at").Find(&transactions).Error; err != nil {
+		t.Fatalf("load ledger: %v", err)
+	}
+	if len(transactions) != 1 || transactions[0].Reason != models.LeafReasonWeeklyLogin || transactions[0].Amount != 10 {
+		t.Fatalf("ledger = %+v", transactions)
+	}
+	if _, err := service.Claim(context.Background(), user.ID, now); !errors.Is(err, ErrAlreadyClaimed) {
+		t.Fatalf("second Claim() error = %v, want ErrAlreadyClaimed", err)
+	}
+	var count int64
+	if err := db.Model(&models.LeafTransaction{}).Count(&count).Error; err != nil || count != 1 {
+		t.Fatalf("ledger count after replay = %d, error = %v", count, err)
 	}
 }

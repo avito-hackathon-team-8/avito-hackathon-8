@@ -206,13 +206,11 @@ func getFirstTask(t *testing.T, cfg testConfig, token string) taskItem {
 
 func seedCompletedTask(t *testing.T, cfg testConfig, userID uuid.UUID, taskID string, targetCount int) {
 	t.Helper()
-	progressID := uuid.New()
 	statement := fmt.Sprintf(
-		"INSERT INTO user_task_progresses (id, task_id, user_id, current_count, completed_at, created_at, updated_at) VALUES (%s, %s, %s, %d, NOW(), NOW(), NOW());",
-		sqlUUID(progressID),
+		"UPDATE user_daily_tasks SET current_count = %d, completed_at = NOW(), status = 'COMPLETED', updated_at = NOW() WHERE id = %s AND user_id = %s;",
+		targetCount,
 		sqlString(taskID),
 		sqlUUID(userID),
-		targetCount,
 	)
 	if err := runSQL(cfg, statement); err != nil {
 		t.Fatalf("seed completed task: %v", err)
@@ -287,7 +285,18 @@ func createUser(t *testing.T, cfg testConfig) uuid.UUID {
 		t.Fatalf("create e2e user: %v", err)
 	}
 	t.Cleanup(func() {
-		_ = runSQL(cfg, fmt.Sprintf("DELETE FROM users WHERE id = %s;", sqlUUID(userID)))
+		statement := fmt.Sprintf(`
+DELETE FROM external_events WHERE user_id = %s;
+DELETE FROM user_daily_tasks WHERE user_id = %s;
+DELETE FROM leaf_transactions WHERE user_id = %s;
+DELETE FROM user_game_states WHERE user_id = %s;
+DELETE FROM leaderboard_entries WHERE user_id = %s;
+DELETE FROM rewards WHERE user_id = %s;
+DELETE FROM otps WHERE user_id = %s;
+DELETE FROM pets WHERE user_id = %s;
+DELETE FROM users WHERE id = %s;
+`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
+		_ = runSQL(cfg, statement)
 	})
 	return userID
 }
@@ -357,7 +366,9 @@ func decode(t *testing.T, body []byte, target any) {
 
 func websocketURL(t *testing.T, cfg testConfig, token string) string {
 	t.Helper()
+
 	parsed, err := url.Parse(cfg.apiURL + "/api/v1/pet/ws")
+
 	if err != nil {
 		t.Fatalf("parse API URL: %v", err)
 	}
@@ -367,6 +378,7 @@ func websocketURL(t *testing.T, cfg testConfig, token string) string {
 	case "https":
 		parsed.Scheme = "wss"
 	}
+
 	if token != "" {
 		query := parsed.Query()
 		query.Set("token", token)

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
@@ -13,9 +15,10 @@ import (
 )
 
 type taskHandler struct {
-	auth  *auth.Service
-	pets  *pet.Service
-	tasks *tasks.Service
+	auth   *auth.Service
+	leaves *leaves.Service
+	pets   *pet.Service
+	tasks  *tasks.Service
 }
 
 type dailyTaskResponse struct {
@@ -44,8 +47,9 @@ type dailyTaskRecordRequest struct {
 }
 
 type EventItem struct {
-	Type  models.TaskType `json:"type"`
-	Count int             `json:"count"`
+	TaskID string          `json:"taskId,omitempty"`
+	Type   models.TaskType `json:"type"`
+	Count  int             `json:"count"`
 }
 
 type dailyTaskClaimResponse struct {
@@ -74,6 +78,10 @@ func (handler *taskHandler) list(response http.ResponseWriter, request *http.Req
 
 	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, userLevel)
 
+	if errors.Is(err, tasks.ErrTasksNotReady) {
+		writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+		return
+	}
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 
@@ -104,6 +112,10 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 
 	progress, err := handler.tasks.Progress(request.Context(), user.ID, userLevel)
 
+	if errors.Is(err, tasks.ErrTasksNotReady) {
+		writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+		return
+	}
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 
@@ -148,7 +160,15 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 			count = 1
 		}
 
-		events = append(events, tasks.Event{Type: event.Type, Count: count})
+		var taskID uuid.UUID
+		if event.TaskID != "" {
+			taskID, err = uuid.Parse(event.TaskID)
+			if err != nil {
+				writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректный taskId.")
+				return
+			}
+		}
+		events = append(events, tasks.Event{TaskID: taskID, Type: event.Type, Count: count})
 	}
 
 	err = handler.tasks.RecordEvents(request.Context(), user.ID, events, userLevel)
@@ -193,7 +213,10 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 	claimResult, err := handler.tasks.ClaimWithReward(request.Context(), user.ID, taskID, userLevel, func(tx *gorm.DB, amount int) error {
 		var err error
 
-		progress, err = handler.pets.AddLeavesTx(tx, user.ID, int64(amount))
+		progress, err = handler.leaves.CreditTx(tx, leaves.Credit{
+			UserID: user.ID, Amount: int64(amount), Reason: models.LeafReasonTaskReward,
+			OperationKey: fmt.Sprintf("task:%s", taskID),
+		})
 
 		return err
 	})

@@ -12,11 +12,13 @@ import (
 )
 
 type Config struct {
-	HTTPAddress       string
-	ReadHeaderTimeout time.Duration
-	DatabaseURL       string
-	Auth              auth.Config
-	Email             email.Config
+	HTTPAddress          string
+	ReadHeaderTimeout    time.Duration
+	DatabaseURL          string
+	Auth                 auth.Config
+	Email                email.Config
+	InternalServiceToken string
+	PuppeteerInternalURL string
 }
 
 func Load() (Config, error) {
@@ -56,6 +58,8 @@ func Load() (Config, error) {
 			Username: os.Getenv("SMTP_USERNAME"),
 			Password: os.Getenv("SMTP_PASSWORD"),
 		},
+		InternalServiceToken: os.Getenv("INTERNAL_SERVICE_TOKEN"),
+		PuppeteerInternalURL: env("PUPPETEER_INTERNAL_URL", "http://puppeteer:8091"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -68,6 +72,9 @@ func Load() (Config, error) {
 
 	if cfg.Auth.OTPLength < 6 || cfg.Auth.OTPLength > 10 {
 		return Config{}, errors.New("OTP_LENGTH must be between 6 and 10")
+	}
+	if len(cfg.InternalServiceToken) < 32 {
+		return Config{}, errors.New("INTERNAL_SERVICE_TOKEN must be at least 32 characters")
 	}
 
 	return cfg, nil

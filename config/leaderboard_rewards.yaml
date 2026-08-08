@@ -1,0 +1,13 @@
+rewards:
+  - rank: 1
+    title: Главный приз сезона
+    category: AVITO_BONUS
+    validFor: 720h
+  - rank: 2
+    title: Приз за второе место
+    category: FREE_DELIVERY
+    validFor: 720h
+  - rank: 3
+    title: Приз за третье место
+    category: PROMOTION_DISCOUNT
+    validFor: 720h

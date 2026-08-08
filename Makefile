@@ -31,7 +31,7 @@ build:
 	docker compose build
 
 logs:
-	docker compose logs -f
+	docker compose logs --since=1m -f
 
 ps:
 	docker compose ps

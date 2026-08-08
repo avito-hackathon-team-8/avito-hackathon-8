@@ -29,6 +29,8 @@ var (
 
 const maxOTPAttempts = 3
 
+var defaultInterests = `{"electronics":0.5,"home":0.5,"fashion":0.5,"auto":0.5}`
+
 type Config struct {
 	JWTSecret  string
 	SessionTTL time.Duration
@@ -63,7 +65,7 @@ func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
 	var otp models.OTP
 
 	err = service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		candidate := models.User{Email: normalizedEmail}
+		candidate := models.User{Email: normalizedEmail, Interests: defaultInterests}
 
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&candidate).Error; err != nil {
 			return fmt.Errorf("find or create user: %w", err)
@@ -113,6 +115,7 @@ func (service *Service) VerifyOTP(ctx context.Context, rawEmail, code string) (m
 	}
 
 	var user models.User
+
 	valid := false
 
 	err = service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
