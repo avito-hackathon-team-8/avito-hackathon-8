@@ -1,8 +1,9 @@
 .header {
   display: grid;
-  grid-template-areas: "backButton name notificationButton";
+  grid-template-areas: 'backButton name notificationButton';
   grid-template-columns: auto 1fr auto;
   align-items: center;
+  padding-bottom: 12px;
 
   .header__backButton {
     grid-area: backButton;

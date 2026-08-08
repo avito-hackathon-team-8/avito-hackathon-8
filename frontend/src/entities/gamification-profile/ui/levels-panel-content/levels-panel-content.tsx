@@ -2,19 +2,22 @@ import clsx from 'clsx';
 
 import { Typography } from '@/shared/ui/typography';
 
-import { useLevelsProfile } from '../../model/use-levels-profile';
+import type { TLevelRewardItem } from '../../api/levels-rewards';
+import type { TReceiveRewardVariables } from '../../model/use-levels-profile';
 
 import styles from './levels-panel-content.module.scss';
 
 interface IGamificationProfilePanelContentProps {
   classname?: string;
+  levelsList: TLevelRewardItem[];
+  handleReceiveReward: (id: TReceiveRewardVariables) => void;
 }
 
-export const LevelsPanelContent = ({ classname }: IGamificationProfilePanelContentProps) => {
-  const { data: levelsList } = useLevelsProfile();
-
-  if (!levelsList) return;
-
+export const LevelsPanelContent = ({
+  classname,
+  levelsList,
+  handleReceiveReward,
+}: IGamificationProfilePanelContentProps) => {
   return (
     <ul className={clsx(styles.panel, classname)}>
       {levelsList.map(({ level, status, reward, expiresAt }) => {
@@ -65,6 +68,9 @@ export const LevelsPanelContent = ({ classname }: IGamificationProfilePanelConte
               aria-label="Збрать награду"
               className={styles.panel__button}
               disabled={!isUnopened}
+              onClick={
+                isUnopened ? () => handleReceiveReward({ rewardId: reward.id, level }) : undefined
+              }
             />
           </li>
         );

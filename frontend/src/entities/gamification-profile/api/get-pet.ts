@@ -1,22 +1,18 @@
+import { getAuthHeaders } from '@/shared/api/get-auth-headers.tsx';
 import { API_URL } from '@/shared/config/api.ts';
-import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
-import { API_ROUTE_PROFILE } from '../model/api-routes.ts';
+import { API_ROUTE_PROFILE } from './api-routes.ts';
 
 export type TPet = {
   name: string;
   level: number;
   leaves: number;
-};
-
-const getAuthHeaders = (): HeadersInit => {
-  const token = getSessionStorageValue(sessionStorageKeysMap.authToken);
-
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  nextLevelTargetLeaves?: number;
+  levelUp?: boolean;
 };
 
 export const getPetName = async (): Promise<TPet> => {
-  const response = await fetch(`${API_URL}${API_ROUTE_PROFILE.petName}`, {
+  const response = await fetch(`${API_URL}/${API_ROUTE_PROFILE.petName}`, {
     headers: getAuthHeaders(),
   });
 
@@ -24,11 +20,11 @@ export const getPetName = async (): Promise<TPet> => {
     throw new Error(`Ошибка запроса getPetName: ${response.status}`);
   }
 
-  return response.json();
+  return await response.json();
 };
 
 export const updatePetName = async (name: string): Promise<TPet> => {
-  const response = await fetch(`${API_URL}${API_ROUTE_PROFILE.petName}`, {
+  const response = await fetch(`${API_URL}/${API_ROUTE_PROFILE.petName}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
