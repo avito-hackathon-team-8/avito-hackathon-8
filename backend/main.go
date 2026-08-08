@@ -9,9 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
-	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
@@ -20,19 +18,16 @@ import (
 
 func main() {
 	cfg, err := config.Load()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	db, err := database.Open(cfg.DatabaseURL)
-
 	if err != nil {
 		log.Fatalf("connect to database: %v", err)
 	}
 
 	mailer, err := email.NewSender(cfg.Email)
-
 	if err != nil {
 		log.Fatalf("configure email: %v", err)
 	}
@@ -40,14 +35,21 @@ func main() {
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
 	levelClaimsService := pet.NewLevelClaimsService(db, rewardService)
-	taskAssigner := tasks.NewPuppeteerAssigner(cfg.PuppeteerInternalURL, cfg.InternalServiceToken)
-	taskService := tasks.NewService(db, taskAssigner)
-	leafService := leaves.NewService(db)
+
+	taskDefinitions, err := tasks.LoadDefaultDefinitions()
+	if err != nil {
+		log.Fatalf("load task definitions: %v", err)
+	}
+
+	taskService := tasks.NewService(db, taskDefinitions)
 	petService := pet.NewService(db)
 	petService.SetLevelClaimsService(levelClaimsService)
+
 	chestService := chest.NewService(db, petService, rewardService)
+
 	activityService := weekly_login.NewLoginService(db)
 	weeklyLoginService := weekly_login.NewService(db, activityService)
+
 	router := handlers.NewRouter(
 		authService,
 		rewardService,
