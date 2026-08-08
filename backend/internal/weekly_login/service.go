@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -37,10 +38,16 @@ type Service struct {
 	db       *gorm.DB
 	now      func() time.Time
 	activity ActivityProvider
+	leaves   *leaves.Service
 }
 
-func NewService(db *gorm.DB, activity ActivityProvider) *Service {
-	return &Service{db: db, now: time.Now, activity: activity}
+func NewService(db *gorm.DB, activity ActivityProvider, leafService *leaves.Service) *Service {
+	return &Service{db: db, now: time.Now, activity: activity, leaves: leafService}
+}
+
+type ClaimResult struct {
+	Claim    models.WeeklyLoginClaim
+	Progress leaves.Progress
 }
 
 type WeeklyLoginDay struct {
@@ -92,9 +99,10 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 	return buildCurrentWeek(user, claims, today, activityInactive), nil
 }
 
-func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.Time) (models.WeeklyLoginClaim, error) {
+func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.Time) (ClaimResult, error) {
 	claimDate := utcDate(date)
 	var claim models.WeeklyLoginClaim
+	var progress leaves.Progress
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user models.User
@@ -147,31 +155,44 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.T
 			RewardLeaves: int(reward),
 		}
 
-		return tx.Create(&claim).Error
+		if err := tx.Create(&claim).Error; err != nil {
+			return err
+		}
+
+		if service.leaves == nil {
+			return errors.New("leaves service is not configured")
+		}
+
+		progress, err = service.leaves.CreditTx(tx, leaves.Credit{
+			UserID: userID, Amount: int64(reward), Reason: models.LeafReasonWeeklyLogin,
+			OperationKey: fmt.Sprintf("weekly-login:%s", claim.ID),
+		})
+
+		return err
 	})
 
 	if errors.Is(err, ErrUserNotFound) ||
 		errors.Is(err, ErrAlreadyClaimed) ||
 		errors.Is(err, ErrActivityNotConfirmed) {
-		return models.WeeklyLoginClaim{}, err
+		return ClaimResult{}, err
 	}
 
 	if err != nil {
-		return models.WeeklyLoginClaim{}, fmt.Errorf("claim weekly login reward: %w", err)
+		return ClaimResult{}, fmt.Errorf("claim weekly login reward: %w", err)
 	}
 
-	return claim, nil
+	return ClaimResult{Claim: claim, Progress: progress}, nil
 }
 
 func (service *Service) activityInactive(ctx context.Context, userID uuid.UUID, date time.Time) bool {
 	if service.activity == nil {
-		return false
+		return true
 	}
 
 	activity, err := service.activity.Get(ctx, userID, date)
 
 	if err != nil {
-		return false
+		return true
 	}
 
 	return !activity.Active

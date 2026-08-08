@@ -10,3 +10,4 @@ dist
 .git
 .idea
 *.cover
+TODO.md

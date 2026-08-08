@@ -1,14 +1,14 @@
 package database
 
 import (
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/puppeteer/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func Open(databaseURL string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
-
+	
 	if err != nil {
 		return nil, err
 	}
@@ -18,21 +18,13 @@ func Open(databaseURL string) (*gorm.DB, error) {
 	}
 
 	if err := db.AutoMigrate(
-		&models.User{},
-		&models.Pet{},
-		&models.OTP{},
-		&models.LevelReward{},
-		&models.ChestOpening{},
-		&models.Reward{},
-		&models.WeeklyLoginClaim{},
-		&models.UserLogin{},
-		&models.ExternalEvent{},
 		&models.UserGameState{},
-		&models.LeafTransaction{},
 		&models.DailyTaskDefinition{},
 		&models.UserDailyTask{},
+		&models.LeafTransaction{},
 		&models.LeaderboardEntry{},
 		&models.LeaderboardSeason{},
+		&models.Reward{},
 		&models.JobRun{},
 	); err != nil {
 		return nil, err

@@ -22,6 +22,8 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      PUPPETEER_INTERNAL_URL: ${PUPPETEER_INTERNAL_URL:-http://puppeteer:8091}
     ports:
       - "8090:8090"
     depends_on:
@@ -29,6 +31,29 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8090/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  puppeteer:
+    build:
+      context: ./puppeteer
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      TASK_DEFINITIONS_CONFIG: /app/config/task_definitions.yaml
+      LEADERBOARD_REWARDS_CONFIG: /app/config/leaderboard_rewards.yaml
+    volumes:
+      - ./config:/app/config:ro
+    ports:
+      - "8091:8091"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8091/health"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -41,6 +66,8 @@ services:
       - "3000:80"
     depends_on:
       backend:
+        condition: service_healthy
+      puppeteer:
         condition: service_healthy
 
 volumes:

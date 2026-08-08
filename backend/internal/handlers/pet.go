@@ -68,19 +68,23 @@ type claimLevelRewardResponse struct {
 var petWebSocketUpgrader = websocket.Upgrader{
 	CheckOrigin: func(request *http.Request) bool {
 		origin := request.Header.Get("Origin")
+
 		if origin == "" {
 			return true
 		}
 
 		parsed, err := url.Parse(origin)
+
 		if err != nil {
 			return false
 		}
 
 		requestHost := request.Host
+
 		if host, _, splitErr := net.SplitHostPort(requestHost); splitErr == nil {
 			requestHost = host
 		}
+
 		return strings.EqualFold(parsed.Hostname(), requestHost)
 	},
 }
@@ -249,8 +253,10 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	}
 
 	done := make(chan struct{})
+
 	go func() {
 		defer close(done)
+
 		for {
 			if _, _, err := connection.ReadMessage(); err != nil {
 				return
