@@ -8,7 +8,6 @@ import (
 )
 
 type TaskStatus string
-
 type TaskType string
 
 const (
@@ -16,6 +15,7 @@ const (
 	ClaimedTaskStatus    TaskStatus = "CLAIMED"
 	InProgressTaskStatus TaskStatus = "IN_PROGRESS"
 	CompletedTaskStatus  TaskStatus = "COMPLETED"
+	ExpiredTaskStatus    TaskStatus = "EXPIRED"
 )
 
 const (
@@ -28,43 +28,53 @@ const (
 	OrderWithDeliveryTaskType TaskType = "ORDER_WITH_DELIVERY"
 )
 
-type Task struct {
-	ID            uuid.UUID          `gorm:"type:uuid;primaryKey"`
-	Date          time.Time          `gorm:"type:date;not null;uniqueIndex:idx_tasks_date_slot,priority:1"`
-	Slot          int                `gorm:"not null;uniqueIndex:idx_tasks_date_slot,priority:2"`
-	Type          TaskType           `gorm:"type:varchar(64);not null;index"`
-	Description   string             `gorm:"type:text;not null"`
-	TargetCount   int                `gorm:"not null"`
-	RewardLeaves  int                `gorm:"not null"`
-	RequiredLevel int                `gorm:"not null"`
-	UserProgress  []UserTaskProgress `gorm:"foreignKey:TaskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+func IsKnownTaskType(taskType TaskType) bool {
+	switch taskType {
+	case ViewListingsTaskType, AddToFavoritesTaskType, PublishListingTaskType,
+		BoostListingTaskType, LeaveReviewTaskType, CompleteDealTaskType, OrderWithDeliveryTaskType:
+		return true
+	default:
+		return false
+	}
 }
 
-type UserTaskProgress struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	TaskID       uuid.UUID  `gorm:"type:uuid;not null;index:idx_user_task_progress_user_task,unique"`
-	UserID       uuid.UUID  `gorm:"type:uuid;not null;index:idx_user_task_progress_user_task,unique"`
-	CurrentCount int        `gorm:"not null;default:0"`
-	CompletedAt  *time.Time `gorm:"index"`
-	ClaimedAt    *time.Time `gorm:"index"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+type DailyTaskDefinition struct {
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Code        string    `gorm:"type:varchar(64);not null;uniqueIndex"`
+	Title       string    `gorm:"not null"`
+	Slot        int       `gorm:"not null;index"`
+	Type        TaskType  `gorm:"type:varchar(64);not null;index"`
+	TargetCount int       `gorm:"not null"`
+	Reward      int       `gorm:"not null"`
+	UnlockLevel int       `gorm:"not null"`
+	Categories  string    `gorm:"type:jsonb;not null;default:'[]'"`
+	Active      bool      `gorm:"not null;default:true"`
 }
 
-func (task *Task) BeforeCreate(_ *gorm.DB) error {
+func (task *DailyTaskDefinition) BeforeCreate(_ *gorm.DB) error {
 	if task.ID == uuid.Nil {
 		task.ID = uuid.New()
 	}
-
 	return nil
 }
 
-func (progress *UserTaskProgress) BeforeCreate(_ *gorm.DB) error {
-	if progress.ID == uuid.Nil {
-		progress.ID = uuid.New()
-	}
+type UserDailyTask struct {
+	ID               uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID           uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_user_daily_task,priority:1"`
+	TaskDefinitionID uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_user_daily_task,priority:3"`
+	Day              time.Time  `gorm:"type:date;not null;uniqueIndex:idx_user_daily_task,priority:2"`
+	Status           TaskStatus `gorm:"type:varchar(16);not null"`
+	CurrentCount     int        `gorm:"not null;default:0"`
+	CompletedAt      *time.Time `gorm:"index"`
+	ClaimedAt        *time.Time `gorm:"index"`
+	ExpiresAt        time.Time  `gorm:"not null;index"`
+	CreatedAt        time.Time  `gorm:"not null"`
+	UpdatedAt        time.Time  `gorm:"not null"`
+}
 
+func (task *UserDailyTask) BeforeCreate(_ *gorm.DB) error {
+	if task.ID == uuid.Nil {
+		task.ID = uuid.New()
+	}
 	return nil
 }
