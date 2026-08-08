@@ -19,8 +19,9 @@ type PuppeteerAssigner struct {
 
 func NewPuppeteerAssigner(baseURL, token string) *PuppeteerAssigner {
 	return &PuppeteerAssigner{
-		baseURL: strings.TrimRight(baseURL, "/"), token: token,
-		client: &http.Client{Timeout: 2 * time.Second},
+		baseURL: strings.TrimRight(baseURL, "/"),
+		token:   token,
+		client:  &http.Client{Timeout: 2 * time.Second},
 	}
 }
 
@@ -30,12 +31,12 @@ func (assigner *PuppeteerAssigner) EnsureDailyTasks(ctx context.Context, userID 
 	for attempt := 0; attempt < 2; attempt++ {
 		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("create daily task request: %w", err)
 		}
 		request.Header.Set("X-Service-Token", assigner.token)
 		response, err := assigner.client.Do(request)
 		if err != nil {
-			lastErr = err
+			lastErr = fmt.Errorf("call puppeteer: %w", err)
 			continue
 		}
 		_, _ = io.Copy(io.Discard, response.Body)

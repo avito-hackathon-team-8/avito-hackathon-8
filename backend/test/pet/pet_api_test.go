@@ -80,7 +80,12 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	}
 	var pet petResponse
 	decode(t, initial.body, &pet)
-	if pet.Name != "" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
+	if pet.Name != "" ||
+		pet.Level != 1 ||
+		pet.Leaves != 0 ||
+		pet.NextLevelTargetLeaves != 100 ||
+		pet.ChestPrice != 200 ||
+		pet.LevelUp {
 		t.Fatalf("initial pet = %+v, want empty level-one pet", pet)
 	}
 
@@ -97,7 +102,12 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 		t.Fatalf("updated pet response contains removed targetLeaves field: %s", updated.body)
 	}
 	decode(t, updated.body, &pet)
-	if pet.Name != "Листик" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
+	if pet.Name != "Листик" ||
+		pet.Level != 1 ||
+		pet.Leaves != 0 ||
+		pet.NextLevelTargetLeaves != 100 ||
+		pet.ChestPrice != 200 ||
+		pet.LevelUp {
 		t.Fatalf("updated pet = %+v, want renamed level-one pet", pet)
 	}
 

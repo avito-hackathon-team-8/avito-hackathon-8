@@ -43,7 +43,10 @@ type Service struct {
 }
 
 func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, subscribers: make(map[uuid.UUID]map[chan Update]struct{})}
+	return &Service{
+		db:          db,
+		subscribers: make(map[uuid.UUID]map[chan Update]struct{}),
+	}
 }
 
 func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
@@ -103,14 +106,16 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 	var pet models.Pet
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		newPet := models.Pet{UserID: userID}
+		newPet := models.Pet{
+			UserID: userID,
+		}
 
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&newPet).Error; err != nil {
-			return fmt.Errorf("create pet: %w", err)
+			return err
 		}
 
 		if err := tx.Where("user_id = ?", userID).First(&pet).Error; err != nil {
-			return fmt.Errorf("load pet: %w", err)
+			return err
 		}
 
 		if service.levelClaims != nil {
@@ -122,8 +127,12 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 		return nil
 	})
 
-	if err != nil {
+	if errors.Is(err, ErrPetNotFound) {
 		return models.Pet{}, err
+	}
+
+	if err != nil {
+		return models.Pet{}, fmt.Errorf("get or create pet: %w", err)
 	}
 
 	return pet, nil
@@ -148,11 +157,11 @@ func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name s
 		}
 
 		if err != nil {
-			return fmt.Errorf("lock pet: %w", err)
+			return err
 		}
 
 		if err := tx.Model(&pet).Update("name", name).Error; err != nil {
-			return fmt.Errorf("update pet name: %w", err)
+			return err
 		}
 
 		pet.Name = name
@@ -160,8 +169,12 @@ func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name s
 		return nil
 	})
 
-	if err != nil {
+	if errors.Is(err, ErrPetNotFound) {
 		return models.Pet{}, err
+	}
+
+	if err != nil {
+		return models.Pet{}, fmt.Errorf("update pet name: %w", err)
 	}
 
 	return pet, nil
@@ -173,15 +186,21 @@ func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount 
 	}
 
 	var progress Progress
-
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var err error
-		progress, err = service.addLeavesTx(tx, userID, amount)
+		transactionProgress, err := service.addLeavesTx(tx, userID, amount)
+		progress = transactionProgress
+
 		return err
 	})
 
-	if err != nil {
+	if errors.Is(err, ErrInvalidLeaves) ||
+		errors.Is(err, ErrPetNotFound) ||
+		errors.Is(err, ErrLeavesOverflow) {
 		return Progress{}, err
+	}
+
+	if err != nil {
+		return Progress{}, fmt.Errorf("add leaves: %w", err)
 	}
 
 	service.publish(Update{UserID: userID, Progress: progress})
@@ -209,7 +228,7 @@ func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64)
 	}
 
 	if err != nil {
-		return Progress{}, fmt.Errorf("lock pet: %w", err)
+		return Progress{}, err
 	}
 
 	if pet.Leaves < 0 || pet.Leaves > maxInt64-amount {
@@ -222,13 +241,11 @@ func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64)
 	pet.Leaves = remainingLeaves
 	pet.Level = newLevel
 
-	err = tx.Model(&pet).Updates(map[string]any{
+	if err := tx.Model(&pet).Updates(map[string]any{
 		"leaves": pet.Leaves,
 		"level":  newLevel,
-	}).Error
-
-	if err != nil {
-		return Progress{}, fmt.Errorf("save pet progress: %w", err)
+	}).Error; err != nil {
+		return Progress{}, err
 	}
 	if newLevel > oldLevel && service.levelClaims != nil {
 		if err := service.levelClaims.openReachedRewards(tx, userID, newLevel); err != nil {

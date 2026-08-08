@@ -12,8 +12,8 @@ import (
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
-func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
-	return function(request)
+func (fn roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return fn(request)
 }
 
 func TestPuppeteerAssignerRetriesOneServerFailure(t *testing.T) {

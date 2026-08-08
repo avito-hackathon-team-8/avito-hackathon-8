@@ -67,7 +67,12 @@ func TestOpenChestIssuesRewardAndSpendsLeaves(t *testing.T) {
 
 	var reward rewardResponse
 	decode(t, opened.body, &reward)
-	if reward.ID == "" || reward.Source != "CHEST" || !reward.Active || reward.Status != "ACTIVE" || reward.Title == "" || reward.Category == "" {
+	if reward.ID == "" ||
+		reward.Source != "CHEST" ||
+		!reward.Active ||
+		reward.Status != "ACTIVE" ||
+		reward.Title == "" ||
+		reward.Category == "" {
 		t.Fatalf("open chest reward = %+v, want active chest reward", reward)
 	}
 

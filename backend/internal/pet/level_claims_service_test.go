@@ -56,7 +56,9 @@ func TestClaimIssuesOneRewardAndMarksLevelClaimed(t *testing.T) {
 	if result.Level != 1 || result.Status != models.LevelRewardStatusClaimed {
 		t.Fatalf("Claim() result = %+v, want level 1 CLAIMED", result)
 	}
-	if result.Reward.Source != models.RewardSourceLevel || result.Reward.LevelRewardID == nil || *result.Reward.LevelRewardID != levels[0].Reward.ID {
+	if result.Reward.Source != models.RewardSourceLevel ||
+		result.Reward.LevelRewardID == nil ||
+		*result.Reward.LevelRewardID != levels[0].Reward.ID {
 		t.Fatalf("issued reward = %+v, want LEVEL source linked to level reward", result.Reward)
 	}
 
@@ -99,7 +101,9 @@ func TestClaimRejectsLockedFrozenAndForeignRewards(t *testing.T) {
 		t.Fatalf("GetLevels() after level up error = %v", err)
 	}
 	expiredAt := now.Add(-time.Second)
-	if err := db.Model(&models.LevelReward{}).Where("id = ?", levels[1].Reward.ID).Update("claim_expires_at", expiredAt).Error; err != nil {
+	if err := db.Model(&models.LevelReward{}).
+		Where("id = ?", levels[1].Reward.ID).
+		Update("claim_expires_at", expiredAt).Error; err != nil {
 		t.Fatalf("expire level reward: %v", err)
 	}
 	if _, err := service.Claim(context.Background(), user.ID, levels[1].Reward.ID); !errors.Is(err, ErrLevelRewardFrozen) {
@@ -180,11 +184,16 @@ func levelClaimsTestService(t *testing.T, level int) (*LevelClaimsService, *gorm
 		t.Fatalf("migrate test database: %v", err)
 	}
 
-	user := models.User{Email: fmt.Sprintf("%s@example.com", uuid.NewString())}
+	user := models.User{
+		Email: fmt.Sprintf("%s@example.com", uuid.NewString()),
+	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	if err := db.Create(&models.Pet{UserID: user.ID, Level: level}).Error; err != nil {
+	if err := db.Create(&models.Pet{
+		UserID: user.ID,
+		Level:  level,
+	}).Error; err != nil {
 		t.Fatalf("create pet: %v", err)
 	}
 

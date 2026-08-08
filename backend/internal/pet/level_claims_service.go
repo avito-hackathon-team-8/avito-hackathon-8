@@ -33,16 +33,66 @@ type LevelRewardDefinition struct {
 }
 
 var defaultLevelRewardDefinitions = [...]LevelRewardDefinition{
-	{Level: 1, Title: "100 бонусов Авито", Description: "100 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 2, Title: "Скидка 20% на продвижение объявления", Description: "Скидка 20% на продвижение объявления", Category: models.RewardCategoryPromotionDiscount},
-	{Level: 3, Title: "Скидка 20% на Авито Доставку", Description: "Скидка 20% на Авито Доставку", Category: models.RewardCategoryDeliveryDiscount},
-	{Level: 4, Title: "Бесплатное продвижение объявления на 1 день", Description: "Бесплатное продвижение объявления на 1 день", Category: models.RewardCategoryFreePromotion},
-	{Level: 5, Title: "300 бонусов Авито", Description: "300 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 6, Title: "Скидка 50% на Авито Доставку", Description: "Скидка 50% на Авито Доставку", Category: models.RewardCategoryDeliveryDiscount},
-	{Level: 7, Title: "Бесплатная доставка для одного заказа", Description: "Бесплатная доставка для одного заказа", Category: models.RewardCategoryFreeDelivery},
-	{Level: 8, Title: "500 бонусов Авито", Description: "500 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 9, Title: "Бесплатное продвижение объявления на 7 дней", Description: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
-	{Level: 10, Title: "Бесплатная доставка для двух заказов", Description: "Бесплатная доставка для двух заказов", Category: models.RewardCategoryFreeDelivery},
+	{
+		Level:       1,
+		Title:       "100 бонусов Авито",
+		Description: "100 бонусов Авито",
+		Category:    models.RewardCategoryAvitoBonus,
+	},
+	{
+		Level:       2,
+		Title:       "Скидка 20% на продвижение объявления",
+		Description: "Скидка 20% на продвижение объявления",
+		Category:    models.RewardCategoryPromotionDiscount,
+	},
+	{
+		Level:       3,
+		Title:       "Скидка 20% на Авито Доставку",
+		Description: "Скидка 20% на Авито Доставку",
+		Category:    models.RewardCategoryDeliveryDiscount,
+	},
+	{
+		Level:       4,
+		Title:       "Бесплатное продвижение объявления на 1 день",
+		Description: "Бесплатное продвижение объявления на 1 день",
+		Category:    models.RewardCategoryFreePromotion,
+	},
+	{
+		Level:       5,
+		Title:       "300 бонусов Авито",
+		Description: "300 бонусов Авито",
+		Category:    models.RewardCategoryAvitoBonus,
+	},
+	{
+		Level:       6,
+		Title:       "Скидка 50% на Авито Доставку",
+		Description: "Скидка 50% на Авито Доставку",
+		Category:    models.RewardCategoryDeliveryDiscount,
+	},
+	{
+		Level:       7,
+		Title:       "Бесплатная доставка для одного заказа",
+		Description: "Бесплатная доставка для одного заказа",
+		Category:    models.RewardCategoryFreeDelivery,
+	},
+	{
+		Level:       8,
+		Title:       "500 бонусов Авито",
+		Description: "500 бонусов Авито",
+		Category:    models.RewardCategoryAvitoBonus,
+	},
+	{
+		Level:       9,
+		Title:       "Бесплатное продвижение объявления на 7 дней",
+		Description: "Бесплатное продвижение объявления на 7 дней",
+		Category:    models.RewardCategoryFreePromotion,
+	},
+	{
+		Level:       10,
+		Title:       "Бесплатная доставка для двух заказов",
+		Description: "Бесплатная доставка для двух заказов",
+		Category:    models.RewardCategoryFreeDelivery,
+	},
 }
 
 type LevelRewardItem struct {
@@ -112,8 +162,13 @@ func (service *LevelClaimsService) GetLevels(ctx context.Context, userID uuid.UU
 
 		return nil
 	})
-	if err != nil {
+
+	if errors.Is(err, ErrPetNotFound) {
 		return nil, err
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("get level rewards: %w", err)
 	}
 
 	return items, nil
@@ -153,7 +208,7 @@ func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewar
 			return ErrLevelRewardNotFound
 		}
 		if err != nil {
-			return fmt.Errorf("lock level reward: %w", err)
+			return err
 		}
 
 		switch levelRewardStatus(levelReward, userPet.Level, now) {
@@ -174,11 +229,11 @@ func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewar
 			LevelRewardID: &levelReward.ID,
 		})
 		if err != nil {
-			return fmt.Errorf("issue level reward: %w", err)
+			return err
 		}
 
 		if err := tx.Model(&levelReward).Update("claimed_at", now).Error; err != nil {
-			return fmt.Errorf("mark level reward claimed: %w", err)
+			return err
 		}
 
 		result = LevelClaimResult{
@@ -188,14 +243,28 @@ func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewar
 		}
 		return nil
 	})
-	if err != nil {
+
+	if errors.Is(err, ErrPetNotFound) ||
+		errors.Is(err, ErrLevelRewardNotFound) ||
+		errors.Is(err, ErrLevelRewardLocked) ||
+		errors.Is(err, ErrLevelRewardFrozen) ||
+		errors.Is(err, ErrLevelRewardAlreadyClaimed) {
 		return LevelClaimResult{}, err
+	}
+
+	if err != nil {
+		return LevelClaimResult{}, fmt.Errorf("claim level reward: %w", err)
 	}
 
 	return result, nil
 }
 
-func (service *LevelClaimsService) ensureLevelRewards(tx *gorm.DB, userID uuid.UUID, userLevel int, now time.Time) ([]models.LevelReward, error) {
+func (service *LevelClaimsService) ensureLevelRewards(
+	tx *gorm.DB,
+	userID uuid.UUID,
+	userLevel int,
+	now time.Time,
+) ([]models.LevelReward, error) {
 	for _, definition := range defaultLevelRewardDefinitions {
 		levelReward := models.LevelReward{
 			UserID:      userID,
@@ -210,13 +279,13 @@ func (service *LevelClaimsService) ensureLevelRewards(tx *gorm.DB, userID uuid.U
 		}
 
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&levelReward).Error; err != nil {
-			return nil, fmt.Errorf("create level reward: %w", err)
+			return nil, err
 		}
 	}
 
 	var levelRewards []models.LevelReward
 	if err := tx.Where("user_id = ?", userID).Order("level ASC").Find(&levelRewards).Error; err != nil {
-		return nil, fmt.Errorf("list level rewards: %w", err)
+		return nil, err
 	}
 
 	for i := range levelRewards {
@@ -227,7 +296,7 @@ func (service *LevelClaimsService) ensureLevelRewards(tx *gorm.DB, userID uuid.U
 
 		expiresAt := now.Add(service.claimWindow)
 		if err := tx.Model(levelReward).Update("claim_expires_at", expiresAt).Error; err != nil {
-			return nil, fmt.Errorf("open level reward: %w", err)
+			return nil, err
 		}
 		levelReward.ClaimExpiresAt = &expiresAt
 	}
@@ -242,7 +311,7 @@ func levelClaimsPet(tx *gorm.DB, userID uuid.UUID) (models.Pet, error) {
 		return models.Pet{}, ErrPetNotFound
 	}
 	if err != nil {
-		return models.Pet{}, fmt.Errorf("lock pet: %w", err)
+		return models.Pet{}, err
 	}
 
 	return userPet, nil

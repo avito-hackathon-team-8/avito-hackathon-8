@@ -76,27 +76,41 @@ func TestOpenRejectsUnavailableChestWithoutChangingBalance(t *testing.T) {
 		leaves int64
 		want   error
 	}{
-		{name: "level is below 10", level: pet.MaxPetLevel - 1, leaves: models.ChestOpeningLeavesCost, want: ErrChestLevelRequired},
-		{name: "not enough leaves", level: pet.MaxPetLevel, leaves: models.ChestOpeningLeavesCost - 1, want: ErrInsufficientLeaves},
+		{
+			name:   "level is below 10",
+			level:  pet.MaxPetLevel - 1,
+			leaves: models.ChestOpeningLeavesCost,
+			want:   ErrChestLevelRequired,
+		},
+		{
+			name:   "not enough leaves",
+			level:  pet.MaxPetLevel,
+			leaves: models.ChestOpeningLeavesCost - 1,
+			want:   ErrInsufficientLeaves,
+		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			service, db, user, _ := testService(t)
-			if err := db.Create(&models.Pet{UserID: user.ID, Level: test.level, Leaves: test.leaves}).Error; err != nil {
+			if err := db.Create(&models.Pet{
+				UserID: user.ID,
+				Level:  testCase.level,
+				Leaves: testCase.leaves,
+			}).Error; err != nil {
 				t.Fatalf("create pet: %v", err)
 			}
 
-			if _, err := service.Open(context.Background(), user.ID); !errors.Is(err, test.want) {
-				t.Fatalf("Open() error = %v, want %v", err, test.want)
+			if _, err := service.Open(context.Background(), user.ID); !errors.Is(err, testCase.want) {
+				t.Fatalf("Open() error = %v, want %v", err, testCase.want)
 			}
 
 			var storedPet models.Pet
 			if err := db.Where("user_id = ?", user.ID).First(&storedPet).Error; err != nil {
 				t.Fatalf("load pet: %v", err)
 			}
-			if storedPet.Leaves != test.leaves {
-				t.Fatalf("stored leaves = %d, want %d", storedPet.Leaves, test.leaves)
+			if storedPet.Leaves != testCase.leaves {
+				t.Fatalf("stored leaves = %d, want %d", storedPet.Leaves, testCase.leaves)
 			}
 
 			var openings int64

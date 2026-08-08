@@ -49,7 +49,13 @@ func TestPublishProgressNotifiesSubscriber(t *testing.T) {
 	updates, unsubscribe := service.Subscribe(user.ID)
 	defer unsubscribe()
 
-	want := leaves.Progress{Name: "Листик", Level: 2, Leaves: 15, NextLevelTargetLeaves: 130, LevelUp: true}
+	want := leaves.Progress{
+		Name:                  "Листик",
+		Level:                 2,
+		Leaves:                15,
+		NextLevelTargetLeaves: 130,
+		LevelUp:               true,
+	}
 	service.PublishProgress(user.ID, want)
 
 	if got := (<-updates).Progress; got != want {
@@ -67,7 +73,9 @@ func testService(t *testing.T) (*Service, models.User) {
 	if err := db.AutoMigrate(&models.User{}, &models.Pet{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
-	user := models.User{Email: fmt.Sprintf("%s@example.com", uuid.NewString())}
+	user := models.User{
+		Email: fmt.Sprintf("%s@example.com", uuid.NewString()),
+	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create test user: %v", err)
 	}

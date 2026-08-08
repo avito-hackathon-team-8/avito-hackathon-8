@@ -30,9 +30,18 @@ type RewardDefinition struct {
 }
 
 var defaultRewardDefinitions = [...]RewardDefinition{
-	{Title: "1000 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Title: "Бесплатная доставка для трёх заказов", Category: models.RewardCategoryFreeDelivery},
-	{Title: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
+	{
+		Title:    "1000 бонусов Авито",
+		Category: models.RewardCategoryAvitoBonus,
+	},
+	{
+		Title:    "Бесплатная доставка для трёх заказов",
+		Category: models.RewardCategoryFreeDelivery,
+	},
+	{
+		Title:    "Бесплатное продвижение объявления на 7 дней",
+		Category: models.RewardCategoryFreePromotion,
+	},
 }
 
 type Service struct {
@@ -72,7 +81,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 		}
 
 		if err != nil {
-			return fmt.Errorf("lock pet: %w", err)
+			return err
 		}
 
 		if userPet.Level < pet.MaxPetLevel {
@@ -85,7 +94,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 
 		userPet.Leaves -= models.ChestOpeningLeavesCost
 		if err := tx.Model(&userPet).Update("leaves", userPet.Leaves).Error; err != nil {
-			return fmt.Errorf("spend leaves: %w", err)
+			return err
 		}
 
 		now := service.now().UTC()
@@ -95,12 +104,12 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			OpenedAt:    now,
 		}
 		if err := tx.Create(&opening).Error; err != nil {
-			return fmt.Errorf("create chest opening: %w", err)
+			return err
 		}
 
 		definition, err := service.selectReward()
 		if err != nil {
-			return fmt.Errorf("select chest reward: %w", err)
+			return err
 		}
 
 		issuedReward, err = service.rewards.GrantTx(ctx, tx, userID, rewards.Grant{
@@ -111,15 +120,22 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			ChestOpeningID: &opening.ID,
 		})
 		if err != nil {
-			return fmt.Errorf("issue chest reward: %w", err)
+			return err
 		}
 
 		progress = pet.ProgressForPet(userPet, false)
 
 		return nil
 	})
-	if err != nil {
+
+	if errors.Is(err, ErrPetNotFound) ||
+		errors.Is(err, ErrChestLevelRequired) ||
+		errors.Is(err, ErrInsufficientLeaves) {
 		return models.Reward{}, err
+	}
+
+	if err != nil {
+		return models.Reward{}, fmt.Errorf("open chest: %w", err)
 	}
 
 	service.pets.PublishProgress(userID, progress)
@@ -130,7 +146,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 func randomReward() (RewardDefinition, error) {
 	index, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(defaultRewardDefinitions))))
 	if err != nil {
-		return RewardDefinition{}, err
+		return RewardDefinition{}, fmt.Errorf("generate reward index: %w", err)
 	}
 
 	return defaultRewardDefinitions[index.Int64()], nil

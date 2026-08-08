@@ -18,8 +18,8 @@ var taskTestNow = time.Date(2026, time.August, 7, 12, 0, 0, 0, time.UTC)
 
 type ensurerFunc func(context.Context, uuid.UUID) error
 
-func (function ensurerFunc) EnsureDailyTasks(ctx context.Context, userID uuid.UUID) error {
-	return function(ctx, userID)
+func (fn ensurerFunc) EnsureDailyTasks(ctx context.Context, userID uuid.UUID) error {
+	return fn(ctx, userID)
 }
 
 func TestListUsesCanonicalAssignmentsAndLevelAvailability(t *testing.T) {
@@ -70,34 +70,38 @@ func TestListSynchronouslyEnsuresMissingAssignments(t *testing.T) {
 	}
 }
 
-func TestAutoCompleteFirstTaskIsIdempotent(t *testing.T) {
+func TestAutoCompleteFirstTasksIsIdempotent(t *testing.T) {
 	service, db, userID, assignments := testTaskService(t, true)
 
-	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
-		t.Fatalf("AutoCompleteFirstTask() error = %v", err)
+	if err := service.AutoCompleteFirstTasks(context.Background(), userID); err != nil {
+		t.Fatalf("AutoCompleteFirstTasks() error = %v", err)
 	}
 
-	var first models.UserDailyTask
-	if err := db.First(&first, "id = ?", assignments[0].ID).Error; err != nil {
-		t.Fatalf("load first assignment: %v", err)
-	}
-	if first.Status != models.CompletedTaskStatus || first.CurrentCount != 3 || first.CompletedAt == nil {
-		t.Fatalf("first assignment = %+v, want completed at target count", first)
+	for index := 0; index < DemoCompletedTaskCount; index++ {
+		var assignment models.UserDailyTask
+		if err := db.First(&assignment, "id = ?", assignments[index].ID).Error; err != nil {
+			t.Fatalf("load assignment %d: %v", index+1, err)
+		}
+		if assignment.Status != models.CompletedTaskStatus || assignment.CurrentCount != 3 || assignment.CompletedAt == nil {
+			t.Fatalf("assignment %d = %+v, want completed at target count", index+1, assignment)
+		}
 	}
 
-	var secondBefore models.UserDailyTask
-	if err := db.First(&secondBefore, "id = ?", assignments[1].ID).Error; err != nil {
-		t.Fatalf("load second assignment: %v", err)
+	var thirdBefore models.UserDailyTask
+	if err := db.First(&thirdBefore, "id = ?", assignments[2].ID).Error; err != nil {
+		t.Fatalf("load third assignment: %v", err)
 	}
-	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
-		t.Fatalf("second AutoCompleteFirstTask() error = %v", err)
+	if err := service.AutoCompleteFirstTasks(context.Background(), userID); err != nil {
+		t.Fatalf("second AutoCompleteFirstTasks() error = %v", err)
 	}
-	var secondAfter models.UserDailyTask
-	if err := db.First(&secondAfter, "id = ?", assignments[1].ID).Error; err != nil {
-		t.Fatalf("reload second assignment: %v", err)
+	var thirdAfter models.UserDailyTask
+	if err := db.First(&thirdAfter, "id = ?", assignments[2].ID).Error; err != nil {
+		t.Fatalf("reload third assignment: %v", err)
 	}
-	if secondAfter.Status != secondBefore.Status || secondAfter.CurrentCount != secondBefore.CurrentCount || secondAfter.CompletedAt != secondBefore.CompletedAt {
-		t.Fatalf("second assignment changed: before=%+v after=%+v", secondBefore, secondAfter)
+	if thirdAfter.Status != thirdBefore.Status ||
+		thirdAfter.CurrentCount != thirdBefore.CurrentCount ||
+		thirdAfter.CompletedAt != thirdBefore.CompletedAt {
+		t.Fatalf("third assignment changed: before=%+v after=%+v", thirdBefore, thirdAfter)
 	}
 }
 
@@ -125,7 +129,12 @@ func TestRecordEventsCompletesOnlyAssignedCurrentTask(t *testing.T) {
 	if assignment.CurrentCount != 2 || assignment.CompletedAt != nil {
 		t.Fatalf("assignment after first event = %+v", assignment)
 	}
-	if err := service.RecordEvents(context.Background(), userID, []Event{{Type: models.ViewListingsTaskType, Count: int(^uint(0) >> 1)}}, 1); err != nil {
+	if err := service.RecordEvents(
+		context.Background(),
+		userID,
+		[]Event{{Type: models.ViewListingsTaskType, Count: int(^uint(0) >> 1)}},
+		1,
+	); err != nil {
 		t.Fatalf("complete task: %v", err)
 	}
 	if err := db.First(&assignment, "id = ?", assignments[0].ID).Error; err != nil {
@@ -136,7 +145,12 @@ func TestRecordEventsCompletesOnlyAssignedCurrentTask(t *testing.T) {
 	}
 
 	service.now = func() time.Time { return taskTestNow.AddDate(0, 0, 1) }
-	if err := service.RecordEvents(context.Background(), userID, []Event{{Type: models.ViewListingsTaskType, Count: 1}}, 1); !errors.Is(err, ErrTaskNotFound) {
+	if err := service.RecordEvents(
+		context.Background(),
+		userID,
+		[]Event{{Type: models.ViewListingsTaskType, Count: 1}},
+		1,
+	); !errors.Is(err, ErrTaskNotFound) {
 		t.Fatalf("next-day event error = %v, want ErrTaskNotFound", err)
 	}
 }
@@ -161,7 +175,12 @@ func TestRecordEventsRollsBackBatchWhenOneTaskIsLocked(t *testing.T) {
 
 func TestRecordEventsRejectsUnknownType(t *testing.T) {
 	service, _, userID, _ := testTaskService(t, true)
-	if err := service.RecordEvents(context.Background(), userID, []Event{{Type: models.TaskType("UNKNOWN"), Count: 1}}, 10); !errors.Is(err, ErrInvalidTaskType) {
+	if err := service.RecordEvents(
+		context.Background(),
+		userID,
+		[]Event{{Type: models.TaskType("UNKNOWN"), Count: 1}},
+		10,
+	); !errors.Is(err, ErrInvalidTaskType) {
 		t.Fatalf("RecordEvents() error = %v, want ErrInvalidTaskType", err)
 	}
 }
@@ -172,7 +191,13 @@ func TestClaimWithRewardIsAtomicAndIdempotent(t *testing.T) {
 		t.Fatalf("complete task: %v", err)
 	}
 	rewardErr := errors.New("reward failed")
-	if _, err := service.ClaimWithReward(context.Background(), userID, assignments[0].ID, 1, func(*gorm.DB, int) error { return rewardErr }); !errors.Is(err, rewardErr) {
+	if _, err := service.ClaimWithReward(
+		context.Background(),
+		userID,
+		assignments[0].ID,
+		1,
+		func(*gorm.DB, int) error { return rewardErr },
+	); !errors.Is(err, rewardErr) {
 		t.Fatalf("ClaimWithReward() error = %v, want reward error", err)
 	}
 	var assignment models.UserDailyTask
@@ -200,10 +225,21 @@ func TestClaimWithRewardIsAtomicAndIdempotent(t *testing.T) {
 func TestProgressCountsCompletedAndClaimed(t *testing.T) {
 	service, db, userID, assignments := testTaskService(t, true)
 	now := taskTestNow
-	if err := db.Model(&models.UserDailyTask{}).Where("id = ?", assignments[0].ID).Updates(map[string]any{"status": models.CompletedTaskStatus, "completed_at": now}).Error; err != nil {
+	if err := db.Model(&models.UserDailyTask{}).
+		Where("id = ?", assignments[0].ID).
+		Updates(map[string]any{
+			"status":       models.CompletedTaskStatus,
+			"completed_at": now,
+		}).Error; err != nil {
 		t.Fatalf("complete assignment: %v", err)
 	}
-	if err := db.Model(&models.UserDailyTask{}).Where("id = ?", assignments[1].ID).Updates(map[string]any{"status": models.ClaimedTaskStatus, "completed_at": now, "claimed_at": now}).Error; err != nil {
+	if err := db.Model(&models.UserDailyTask{}).
+		Where("id = ?", assignments[1].ID).
+		Updates(map[string]any{
+			"status":       models.ClaimedTaskStatus,
+			"completed_at": now,
+			"claimed_at":   now,
+		}).Error; err != nil {
 		t.Fatalf("claim assignment: %v", err)
 	}
 	progress, err := service.Progress(context.Background(), userID, 10)
@@ -237,7 +273,12 @@ func testTaskService(t *testing.T, withAssignments bool) (*Service, *gorm.DB, uu
 
 func seedTaskAssignments(t *testing.T, db *gorm.DB, userID uuid.UUID) []models.UserDailyTask {
 	t.Helper()
-	types := []models.TaskType{models.ViewListingsTaskType, models.AddToFavoritesTaskType, models.PublishListingTaskType, models.BoostListingTaskType}
+	types := []models.TaskType{
+		models.ViewListingsTaskType,
+		models.AddToFavoritesTaskType,
+		models.PublishListingTaskType,
+		models.BoostListingTaskType,
+	}
 	assignments := make([]models.UserDailyTask, 0, TotalDailyTasks)
 	for index, taskType := range types {
 		level := 1
@@ -247,7 +288,17 @@ func seedTaskAssignments(t *testing.T, db *gorm.DB, userID uuid.UUID) []models.U
 		case 3:
 			level = 10
 		}
-		definition := models.DailyTaskDefinition{Code: fmt.Sprintf("task-%d", index+1), Title: fmt.Sprintf("Task %d", index+1), Slot: index + 1, Type: taskType, TargetCount: 3, Reward: 45, UnlockLevel: level, Categories: "[]", Active: true}
+		definition := models.DailyTaskDefinition{
+			Code:        fmt.Sprintf("task-%d", index+1),
+			Title:       fmt.Sprintf("Task %d", index+1),
+			Slot:        index + 1,
+			Type:        taskType,
+			TargetCount: 3,
+			Reward:      45,
+			UnlockLevel: level,
+			Categories:  "[]",
+			Active:      true,
+		}
 		if err := db.Create(&definition).Error; err != nil {
 			t.Fatalf("create definition: %v", err)
 		}
@@ -255,7 +306,13 @@ func seedTaskAssignments(t *testing.T, db *gorm.DB, userID uuid.UUID) []models.U
 		if level > 1 {
 			status = models.LockedTaskStatus
 		}
-		assignment := models.UserDailyTask{UserID: userID, TaskDefinitionID: definition.ID, Day: utcDate(taskTestNow), Status: status, ExpiresAt: utcDate(taskTestNow).AddDate(0, 0, 1)}
+		assignment := models.UserDailyTask{
+			UserID:           userID,
+			TaskDefinitionID: definition.ID,
+			Day:              utcDate(taskTestNow),
+			Status:           status,
+			ExpiresAt:        utcDate(taskTestNow).AddDate(0, 0, 1),
+		}
 		if err := db.Create(&assignment).Error; err != nil {
 			t.Fatalf("create assignment: %v", err)
 		}

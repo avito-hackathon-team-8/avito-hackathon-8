@@ -21,7 +21,10 @@ var (
 	ErrTasksNotReady        = errors.New("daily tasks are not ready")
 )
 
-const TotalDailyTasks = 4
+const (
+	TotalDailyTasks        = 4
+	DemoCompletedTaskCount = 2
+)
 
 type AssignmentEnsurer interface {
 	EnsureDailyTasks(context.Context, uuid.UUID) error
@@ -63,7 +66,10 @@ type Service struct {
 }
 
 func NewService(db *gorm.DB, ensurer ...AssignmentEnsurer) *Service {
-	service := &Service{db: db, now: time.Now}
+	service := &Service{
+		db:  db,
+		now: time.Now,
+	}
 	if len(ensurer) > 0 {
 		service.ensurer = ensurer[0]
 	}
@@ -74,15 +80,15 @@ func NewService(db *gorm.DB, ensurer ...AssignmentEnsurer) *Service {
 func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel int) ([]DailyTask, error) {
 	rows, err := service.rows(ctx, userID, service.today())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list daily tasks: %w", err)
 	}
 	if len(rows) < TotalDailyTasks && service.ensurer != nil {
 		if err := service.ensurer.EnsureDailyTasks(ctx, userID); err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrTasksNotReady, err)
+			return nil, fmt.Errorf("%w: ensure daily tasks: %w", ErrTasksNotReady, err)
 		}
 		rows, err = service.rows(ctx, userID, service.today())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("list daily tasks: %w", err)
 		}
 	}
 	if len(rows) != TotalDailyTasks {
@@ -98,35 +104,55 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 			status = models.InProgressTaskStatus
 		}
 		result = append(result, DailyTask{
-			ID: row.AssignmentID, Slot: row.Slot, Type: row.Type, Description: row.Description,
-			CurrentCount: min(row.CurrentCount, row.TargetCount), TargetCount: row.TargetCount,
-			RewardLeaves: row.Reward, RequiredLevel: row.UnlockLevel, Status: status,
+			ID:            row.AssignmentID,
+			Slot:          row.Slot,
+			Type:          row.Type,
+			Description:   row.Description,
+			CurrentCount:  min(row.CurrentCount, row.TargetCount),
+			TargetCount:   row.TargetCount,
+			RewardLeaves:  row.Reward,
+			RequiredLevel: row.UnlockLevel,
+			Status:        status,
 		})
 	}
 
 	return result, nil
 }
 
-// AutoCompleteFirstTask is a temporary demo shortcut for the first user session.
-func (service *Service) AutoCompleteFirstTask(ctx context.Context, userID uuid.UUID) error {
-	rows, err := service.rows(ctx, userID, service.today())
+// AutoCompleteFirstTasks completes the first two daily tasks for the demo.
+func (service *Service) AutoCompleteFirstTasks(ctx context.Context, userID uuid.UUID) error {
+	today := service.today()
+	rows, err := service.rows(ctx, userID, today)
 	if err != nil {
-		return err
+		return fmt.Errorf("load daily tasks for demo completion: %w", err)
 	}
 	if len(rows) != TotalDailyTasks {
 		return ErrTasksNotReady
 	}
 
-	return service.autoCompleteFirstTask(ctx, userID, service.today(), rows[0])
+	transactionErr := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, row := range rows[:DemoCompletedTaskCount] {
+			if err := service.autoCompleteTaskTx(tx, userID, today, row); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if transactionErr != nil {
+		return fmt.Errorf("complete demo tasks: %w", transactionErr)
+	}
+
+	return nil
 }
 
-func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.UUID, day time.Time, row taskRow) error {
+func (service *Service) autoCompleteTaskTx(tx *gorm.DB, userID uuid.UUID, day time.Time, row taskRow) error {
 	if row.Status == models.CompletedTaskStatus || row.Status == models.ClaimedTaskStatus {
 		return nil
 	}
 
 	now := service.now().UTC()
-	result := service.db.WithContext(ctx).
+	result := tx.
 		Model(&models.UserDailyTask{}).
 		Where("id = ? AND user_id = ? AND day = ? AND claimed_at IS NULL AND completed_at IS NULL", row.AssignmentID, userID, utcDate(day)).
 		Updates(map[string]any{
@@ -135,7 +161,7 @@ func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.U
 			"completed_at":  now,
 		})
 	if result.Error != nil {
-		return fmt.Errorf("complete first daily task: %w", result.Error)
+		return result.Error
 	}
 
 	return nil
@@ -143,8 +169,11 @@ func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.U
 
 func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLevel int) (DailyProgress, error) {
 	dailyTasks, err := service.List(ctx, userID, userLevel)
-	if err != nil {
+	if errors.Is(err, ErrTasksNotReady) {
 		return DailyProgress{}, err
+	}
+	if err != nil {
+		return DailyProgress{}, fmt.Errorf("calculate daily task progress: %w", err)
 	}
 
 	completed := 0
@@ -158,9 +187,20 @@ func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLeve
 }
 
 func (service *Service) RecordEvents(ctx context.Context, userID uuid.UUID, events []Event, userLevel int) error {
-	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return service.RecordEventsTx(tx, userID, events, userLevel, service.today())
 	})
+
+	if errors.Is(err, ErrInvalidTaskType) ||
+		errors.Is(err, ErrTaskNotFound) ||
+		errors.Is(err, ErrTaskLocked) {
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("record task events: %w", err)
+	}
+
+	return nil
 }
 
 func (service *Service) RecordEventsTx(tx *gorm.DB, userID uuid.UUID, events []Event, userLevel int, day time.Time) error {
@@ -217,11 +257,18 @@ func (service *Service) RecordEventsTx(tx *gorm.DB, userID uuid.UUID, events []E
 	return nil
 }
 
-func (service *Service) ClaimWithReward(ctx context.Context, userID, taskID uuid.UUID, userLevel int, applyReward func(*gorm.DB, int) error) (ClaimResult, error) {
+func (service *Service) ClaimWithReward(
+	ctx context.Context,
+	userID, taskID uuid.UUID,
+	userLevel int,
+	applyReward func(*gorm.DB, int) error,
+) (ClaimResult, error) {
 	var result ClaimResult
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var assignment models.UserDailyTask
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND user_id = ? AND day = ?", taskID, userID, service.today()).First(&assignment).Error; err != nil {
+		query := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND user_id = ? AND day = ?", taskID, userID, service.today())
+		if err := query.First(&assignment).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTaskNotFound
 			}
@@ -249,14 +296,25 @@ func (service *Service) ClaimWithReward(ctx context.Context, userID, taskID uuid
 			return err
 		}
 
-		result = ClaimResult{TaskID: taskID, RewardLeaves: definition.Reward, Status: models.ClaimedTaskStatus}
+		result = ClaimResult{
+			TaskID:       taskID,
+			RewardLeaves: definition.Reward,
+			Status:       models.ClaimedTaskStatus,
+		}
 		if applyReward != nil {
 			return applyReward(tx, definition.Reward)
 		}
 		return nil
 	})
-	if err != nil {
+
+	if errors.Is(err, ErrTaskNotFound) ||
+		errors.Is(err, ErrTaskLocked) ||
+		errors.Is(err, ErrTaskNotCompleted) ||
+		errors.Is(err, ErrRewardAlreadyClaimed) {
 		return ClaimResult{}, err
+	}
+	if err != nil {
+		return ClaimResult{}, fmt.Errorf("claim task reward: %w", err)
 	}
 
 	return result, nil
@@ -274,7 +332,11 @@ type taskRow struct {
 	CurrentCount int
 }
 
-func (service *Service) rows(ctx context.Context, userID uuid.UUID, day time.Time) ([]taskRow, error) {
+func (service *Service) rows(
+	ctx context.Context,
+	userID uuid.UUID,
+	day time.Time,
+) ([]taskRow, error) {
 	var rows []taskRow
 	err := service.db.WithContext(ctx).Table("user_daily_tasks AS assignments").Select(`
 		assignments.id AS assignment_id, definitions.slot, definitions.type,
@@ -284,7 +346,7 @@ func (service *Service) rows(ctx context.Context, userID uuid.UUID, day time.Tim
 		Where("assignments.user_id = ? AND assignments.day = ?", userID, utcDate(day)).
 		Order("definitions.slot ASC").Scan(&rows).Error
 	if err != nil {
-		return nil, fmt.Errorf("list assigned tasks: %w", err)
+		return nil, err
 	}
 
 	return rows, nil
