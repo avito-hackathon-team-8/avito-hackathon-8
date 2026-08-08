@@ -10,7 +10,6 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/daily_report"
 	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
@@ -46,7 +45,7 @@ type errorResponse struct {
 }
 
 func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Service,
-	taskService *tasks.Service, leafService *leaves.Service, petService *pet.Service,
+	taskService *tasks.Service, petService *pet.Service,
 	levelClaimsService *pet.LevelClaimsService, weeklyLoginService *weekly_login.Service,
 	eventService *activityevents.Service, dailyReportService *daily_report.Service,
 	internalToken string, chestService *chest.Service,
@@ -54,7 +53,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	handler := &authHandler{service: authService, db: db}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{
-		auth: authService, tasks: taskService, leaves: leafService, pets: petService,
+		auth: authService, tasks: taskService, pets: petService,
 	}
 	petHandler := &petHandler{
 		auth:        authService,

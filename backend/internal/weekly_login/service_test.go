@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
@@ -222,8 +222,8 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 		t.Fatalf("create user activity: %v", err)
 	}
 	notifier := testutil.DailyReportNotifierMock{}
-	leafService := leaves.NewService(db, notifier)
-	service := NewService(db, notifier, leafService)
+	petService := pet.NewService(db, notifier)
+	service := NewService(db, notifier, petService)
 	service.now = func() time.Time { return now }
 
 	result, err := service.Claim(context.Background(), user.ID)

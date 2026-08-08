@@ -177,7 +177,14 @@ func levelClaimsTestService(t *testing.T, level int) (*LevelClaimsService, *gorm
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.LevelReward{}, &models.Reward{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.Pet{},
+		&models.LevelReward{},
+		&models.Reward{},
+		&models.LeafTransaction{},
+		&models.UserGameState{},
+	); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 

@@ -1,0 +1,41 @@
+rewards:
+  - level: 1
+    title: 100 бонусов Авито
+    description: 100 бонусов Авито
+    category: AVITO_BONUS
+  - level: 2
+    title: Скидка 20% на продвижение объявления
+    description: Скидка 20% на продвижение объявления
+    category: PROMOTION_DISCOUNT
+  - level: 3
+    title: Скидка 20% на Авито Доставку
+    description: Скидка 20% на Авито Доставку
+    category: DELIVERY_DISCOUNT
+  - level: 4
+    title: Бесплатное продвижение объявления на 1 день
+    description: Бесплатное продвижение объявления на 1 день
+    category: FREE_PROMOTION
+  - level: 5
+    title: 300 бонусов Авито
+    description: 300 бонусов Авито
+    category: AVITO_BONUS
+  - level: 6
+    title: Скидка 50% на Авито Доставку
+    description: Скидка 50% на Авито Доставку
+    category: DELIVERY_DISCOUNT
+  - level: 7
+    title: Бесплатная доставка для одного заказа
+    description: Бесплатная доставка для одного заказа
+    category: FREE_DELIVERY
+  - level: 8
+    title: 500 бонусов Авито
+    description: 500 бонусов Авито
+    category: AVITO_BONUS
+  - level: 9
+    title: Бесплатное продвижение объявления на 7 дней
+    description: Бесплатное продвижение объявления на 7 дней
+    category: FREE_PROMOTION
+  - level: 10
+    title: Бесплатная доставка для двух заказов
+    description: Бесплатная доставка для двух заказов
+    category: FREE_DELIVERY

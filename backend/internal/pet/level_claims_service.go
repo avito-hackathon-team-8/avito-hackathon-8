@@ -58,10 +58,6 @@ type LevelClaimResult struct {
 	Reward models.Reward
 }
 
-type DailyReportNotifier interface {
-	Notify(userID uuid.UUID)
-}
-
 type LevelClaimsService struct {
 	db             *gorm.DB
 	rewards        *rewards.Service

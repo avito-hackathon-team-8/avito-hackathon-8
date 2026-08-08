@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
@@ -15,10 +14,9 @@ import (
 )
 
 type taskHandler struct {
-	auth   *auth.Service
-	leaves *leaves.Service
-	pets   *pet.Service
-	tasks  *tasks.Service
+	auth  *auth.Service
+	pets  *pet.Service
+	tasks *tasks.Service
 }
 
 type dailyTaskResponse struct {
@@ -233,7 +231,7 @@ func (handler *taskHandler) claim(response http.ResponseWriter, request *http.Re
 	claimResult, err := handler.tasks.ClaimWithReward(request.Context(), user.ID, taskID, userLevel, func(tx *gorm.DB, amount int) error {
 		var err error
 
-		progress, err = handler.leaves.CreditTx(tx, leaves.Credit{
+		progress, err = handler.pets.CreditTx(tx, pet.Credit{
 			UserID: user.ID, Amount: int64(amount), Reason: models.LeafReasonTaskReward,
 			OperationKey: fmt.Sprintf("task:%s", taskID),
 		})

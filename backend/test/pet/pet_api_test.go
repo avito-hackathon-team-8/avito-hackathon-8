@@ -453,7 +453,10 @@ func readEnv(paths ...string) map[string]string {
 			}
 			key, value, ok := strings.Cut(line, "=")
 			if ok {
-				values[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"'`)
+				key = strings.TrimSpace(key)
+				if _, exists := values[key]; !exists {
+					values[key] = strings.Trim(strings.TrimSpace(value), `"'`)
+				}
 			}
 		}
 	}
