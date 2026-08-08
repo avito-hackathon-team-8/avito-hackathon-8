@@ -8,11 +8,14 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
+	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
+	"gorm.io/gorm"
 )
 
 type authHandler struct {
@@ -39,22 +42,11 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func NewRouter(
-	authService *auth.Service,
-	rewardService *rewards.Service,
-	taskService *tasks.Service,
-	petService *pet.Service,
-	levelClaimsService *pet.LevelClaimsService,
-	weeklyLoginService *weekly_login.Service,
-	activityService weekly_login.ActivityProvider,
-	chestService *chest.Service,
-) http.Handler {
+func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, leafService *leaves.Service, petService *pet.Service, levelClaimsService *pet.LevelClaimsService, weeklyLoginService *weekly_login.Service, eventService *activityevents.Service, internalToken string, activityService weekly_login.ActivityProvider, chestService *chest.Service) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{
-		auth:  authService,
-		tasks: taskService,
-		pets:  petService,
+		auth: authService, tasks: taskService, leaves: leafService, pets: petService,
 	}
 	petHandler := &petHandler{
 		auth:        authService,
@@ -70,7 +62,10 @@ func NewRouter(
 		auth:        authService,
 		activity:    activityService,
 		weeklyLogin: weeklyLoginService,
+		pets:        petService,
 	}
+	leaderboardHandler := &leaderboardHandler{auth: authService, db: db}
+	internalEvents := &internalEventHandler{token: internalToken, events: eventService}
 
 	mux := http.NewServeMux()
 
@@ -99,6 +94,9 @@ func NewRouter(
 	mux.HandleFunc("POST /api/v1/weekly-login/activity", weeklyLoginHandler.addActivity)
 	mux.HandleFunc("GET /api/v1/weekly-login", weeklyLoginHandler.get)
 	mux.HandleFunc("POST /api/v1/weekly-login/claim", weeklyLoginHandler.claim)
+	mux.HandleFunc("GET /api/v1/leaderboard", leaderboardHandler.list)
+	mux.HandleFunc("GET /api/v1/leaderboard/me", leaderboardHandler.me)
+	mux.HandleFunc("POST /api/internal/v1/users/{userId}/events", internalEvents.record)
 
 	return withCORS(mux)
 }

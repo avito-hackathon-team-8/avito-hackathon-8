@@ -1533,8 +1533,11 @@ components:
 
     AuthErrorResponse:
       type: object
-      required: [message]
+      required: [code, message]
       properties:
+        code:
+          type: string
+          description: Стабильный машиночитаемый код ошибки.
         message:
           type: string
           description: Текст ошибки.
