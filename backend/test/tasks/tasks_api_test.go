@@ -88,7 +88,7 @@ func TestTasksHappyPath(t *testing.T) {
 	slotOne := findTaskBySlot(t, tasks.Tasks, 1)
 	if slotOne.RewardLeaves != 45 ||
 		slotOne.RequiredLevel != 1 ||
-		slotOne.Status != "IN_PROGRESS" {
+		slotOne.Status != "COMPLETED" || slotOne.CurrentCount != slotOne.TargetCount {
 		t.Fatalf("unexpected slot 1 task: %+v", slotOne)
 	}
 
@@ -203,7 +203,7 @@ func TestTasksClaimErrors(t *testing.T) {
 	token := makeToken(t, cfg, userID)
 
 	tasks := getTasks(t, cfg, token, "/api/v1/tasks?level=10")
-	incompleteTask := findTaskBySlot(t, tasks.Tasks, 1)
+	incompleteTask := findTaskBySlot(t, tasks.Tasks, 2)
 	lockedTask := findTaskBySlot(t, tasks.Tasks, 3)
 
 	badID := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/not-a-uuid/claim", map[string]any{
@@ -250,8 +250,8 @@ func TestTasksRecordNoOpAndBadJSON(t *testing.T) {
 	}
 
 	progress := getProgress(t, cfg, token)
-	if progress.CompletedCount != 0 || progress.TotalCount != 4 {
-		t.Fatalf("progress = %+v, want 0/4 after no-op records", progress)
+	if progress.CompletedCount != 1 || progress.TotalCount != 4 {
+		t.Fatalf("progress = %+v, want 1/4 after no-op records and demo completion", progress)
 	}
 
 	badJSON := rawRequest(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", "{")

@@ -42,8 +42,8 @@ func TestCreditRecordsLedgerAndMultipleLevelUps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Credit() error = %v", err)
 	}
-	if result.Level != 4 || result.Leaves != 0 || !result.LevelUp {
-		t.Fatalf("progress = %+v, want level 4 with zero leaves", result)
+	if result.Level != 4 || result.Leaves != 0 || result.NextLevelTargetLeaves != 190 || result.ChestPrice != models.ChestOpeningLeavesCost || !result.LevelUp {
+		t.Fatalf("progress = %+v, want level 4 with target 190 and chest price %d", result, models.ChestOpeningLeavesCost)
 	}
 
 	var transactions []models.LeafTransaction
