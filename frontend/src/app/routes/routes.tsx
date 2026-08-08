@@ -1,14 +1,14 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter } from 'react-router';
 
-import { AppShell } from "@/app/layouts/app-shell/app-shell";
-import { MainLayout } from "@/app/layouts/main-layout";
-import { TanstackQueryProvider } from "@/app/providers/tanstack-query.provider";
-import { MainPage } from "@/pages/main-page/main.page";
-import { RegisterPage } from "@/pages/register-page";
-import { APP_ROUTES } from "@/shared/config/routes";
+import { AppShell } from '@/app/layouts/app-shell/app-shell';
+import { MainLayout } from '@/app/layouts/main-layout';
+import { TanstackQueryProvider } from '@/app/providers/tanstack-query';
+import { MainPage } from '@/pages/main-page/main.page';
+import { RegisterPage } from '@/pages/register-page';
+import { APP_ROUTES } from '@/shared/config/routes';
 
-import { GuestOnly } from "./guards/guest-only";
-import { RequireAuth } from "./guards/require-auth";
+import { GuestOnly } from './guards/guest-only';
+import { RequireAuth } from './guards/require-auth';
 
 export const browserRouter = createBrowserRouter([
   {

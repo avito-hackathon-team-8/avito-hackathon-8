@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 
+import { usePetProfile } from './use-pet-profile';
+
 interface IUseSceneParams {
   backgroundSrc: string;
   characterSrc: string;
   boxSrc: string;
-  level: number;
 }
 
 const loadImage = (src: string): Promise<HTMLImageElement> => {
@@ -18,10 +19,14 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
   });
 };
 
-export const useScene = ({ backgroundSrc, characterSrc, boxSrc, level }: IUseSceneParams) => {
+export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParams) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { data } = usePetProfile();
+  const level = data?.level;
 
   useEffect(() => {
+    if (!level) return;
+
     const canvas = canvasRef.current;
 
     if (!canvas) {

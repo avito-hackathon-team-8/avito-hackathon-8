@@ -29,6 +29,10 @@ type RewardDefinition struct {
 	Category models.RewardCategory
 }
 
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
 var defaultRewardDefinitions = [...]RewardDefinition{
 	{
 		Title:    "1000 бонусов Авито",
@@ -50,11 +54,13 @@ type Service struct {
 	rewards      *rewards.Service
 	now          func() time.Time
 	selectReward func() (RewardDefinition, error)
+	dailyReport  DailyReportNotifier
 }
 
-func NewService(db *gorm.DB, petService *pet.Service, rewardService *rewards.Service) *Service {
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, petService *pet.Service, rewardService *rewards.Service) *Service {
 	return &Service{
 		db:           db,
+		dailyReport:  dailyReport,
 		pets:         petService,
 		rewards:      rewardService,
 		now:          time.Now,
@@ -139,6 +145,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 	}
 
 	service.pets.PublishProgress(userID, progress)
+	service.dailyReport.Notify(userID)
 
 	return issuedReward, nil
 }

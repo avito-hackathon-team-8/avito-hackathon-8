@@ -1,9 +1,10 @@
 import { type SubmitEvent, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { gamificationProfileKeys } from '@/entities/gamification-profile/api/gamification-profile-keys';
-import { updatePetName } from '@/entities/gamification-profile/api/get-pet';
+import { updatePetName } from '@/entities/gamification-profile/api/pet';
 import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
 import { Button } from '@/shared/ui/button';
 import { Modal } from '@/shared/ui/modal/modal';
@@ -14,6 +15,8 @@ import styles from './pet-name-modal.module.scss';
 type PetNameModalProps = {
   isOpen: boolean;
 };
+
+const TEXT_ERROR = 'Не удалось сохранить имя питомца';
 
 export const PetNameModal = ({ isOpen }: PetNameModalProps) => {
   const queryClient = useQueryClient();
@@ -29,9 +32,9 @@ export const PetNameModal = ({ isOpen }: PetNameModalProps) => {
       setError('');
     },
     onError: (submitError) => {
-      setError(
-        submitError instanceof Error ? submitError.message : 'Не удалось сохранить имя питомца',
-      );
+      queryClient.setQueryData(gamificationProfileKeys.pet(), null);
+      toast.error(TEXT_ERROR);
+      setError(submitError instanceof Error ? submitError.message : TEXT_ERROR);
     },
   });
 

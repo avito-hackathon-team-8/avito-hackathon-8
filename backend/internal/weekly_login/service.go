@@ -35,14 +35,15 @@ const (
 )
 
 type Service struct {
-	db       *gorm.DB
-	now      func() time.Time
-	activity ActivityProvider
-	leaves   *leaves.Service
+	db          *gorm.DB
+	now         func() time.Time
+	activity    ActivityProvider
+	leaves      *leaves.Service
+	dailyReport DailyReportNotifier
 }
 
-func NewService(db *gorm.DB, activity ActivityProvider, leafService *leaves.Service) *Service {
-	return &Service{db: db, now: time.Now, activity: activity, leaves: leafService}
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, activity ActivityProvider, leafService *leaves.Service) *Service {
+	return &Service{db: db, now: time.Now, activity: activity, leaves: leafService, dailyReport: dailyReport}
 }
 
 type ClaimResult struct {
@@ -180,6 +181,8 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.T
 	if err != nil {
 		return ClaimResult{}, fmt.Errorf("claim weekly login reward: %w", err)
 	}
+
+	service.dailyReport.Notify(userID)
 
 	return ClaimResult{Claim: claim, Progress: progress}, nil
 }

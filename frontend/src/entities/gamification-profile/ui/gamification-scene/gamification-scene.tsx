@@ -6,7 +6,7 @@ import characterSrc from '../assets/pet.webp';
 import styles from './gamification-scene.module.scss';
 
 export const GamificationScene = () => {
-  const canvasRef = useScene({ backgroundSrc, characterSrc, boxSrc, level: 0 });
+  const canvasRef = useScene({ backgroundSrc, characterSrc, boxSrc });
 
   return <canvas className={styles.scene} ref={canvasRef} />;
 };

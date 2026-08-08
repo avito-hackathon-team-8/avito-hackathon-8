@@ -1,15 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { getCurrentUser } from "@/features/auth/api/auth";
-import {
-  getSessionStorageValue,
-  sessionStorageKeysMap,
-} from "@/shared/lib/session-storage";
+import { getCurrentUser } from '@/features/auth/api/auth';
+import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
-export const userQueryKeys = {
-  all: ["user"] as const,
-  current: () => [...userQueryKeys.all, "current"] as const,
-};
+import { userQueryKeys } from '../api/user-query-keys';
 
 export const useCurrentUser = () => {
   const token = getSessionStorageValue(sessionStorageKeysMap.authToken);

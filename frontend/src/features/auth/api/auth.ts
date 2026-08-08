@@ -1,9 +1,7 @@
-import {
-  removeSessionStorageValue,
-  sessionStorageKeysMap,
-} from "@/shared/lib/session-storage";
+import { apiRequest } from '@/shared/api/api-request';
+import { removeSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
-const AUTH_API = "/api/app/auth";
+const AUTH_API = '/api/app/auth';
 
 export type User = {
   id: string;
@@ -17,60 +15,32 @@ export type AuthResponse = {
   record: User;
 };
 
-type APIError = {
-  message?: string;
-};
+export const requestOtp = (email: string): Promise<{ sent: boolean }> =>
+  apiRequest(
+    fetch(`${AUTH_API}/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }),
+  );
 
-const getErrorMessage = async (response: Response) => {
-  const fallback = "Something went wrong. Please try again.";
+export const verifyOtp = async (email: string, code: string): Promise<AuthResponse> =>
+  apiRequest(
+    fetch(`${AUTH_API}/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    }),
+  );
 
-  try {
-    const error = (await response.json()) as APIError;
-
-    return error.message || fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(path, init);
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
-  }
-
-  return response.json() as Promise<T>;
-};
-
-export const requestOtp = (email: string) =>
-  request<{ sent: boolean }>(`${AUTH_API}/request-otp`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-export const verifyOtp = async (email: string, code: string) => {
-  return request<AuthResponse>(`${AUTH_API}/verify-otp`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, code }),
-  });
-};
-
-export const getCurrentUser = async (token: string | null) => {
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return await request<User>(`${AUTH_API}/me`, {
+export const getCurrentUser = async (token: string | null): Promise<User> => {
+  return await apiRequest(
+    fetch(`${AUTH_API}/me`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
-    removeSessionStorageValue(sessionStorageKeysMap.authToken);
-    return null;
-  }
+    }),
+    'Ошибка получения данных getCurrentUser',
+    () => removeSessionStorageValue(sessionStorageKeysMap.authToken),
+  );
 };
 
 export const logout = () => {

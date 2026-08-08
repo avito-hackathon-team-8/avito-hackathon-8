@@ -1,4 +1,4 @@
-import { type MouseEvent, type PropsWithChildren, useEffect } from 'react';
+import { type MouseEvent, type PropsWithChildren, useEffect, useState } from 'react';
 
 import { createPortal } from 'react-dom';
 
@@ -11,6 +11,8 @@ interface IModalProps extends PropsWithChildren {
 }
 
 export const Modal = ({ isOpen, onClose, className, children }: IModalProps) => {
+  const [portalRoot] = useState(() => document.getElementById('app-modal-root'));
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -33,22 +35,27 @@ export const Modal = ({ isOpen, onClose, className, children }: IModalProps) => 
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       onClose();
     }
   };
 
+  if (!isOpen || !portalRoot) {
+    return null;
+  }
+
   return createPortal(
-    <div className={styles.overlay} onMouseDown={handleOverlayClick} role="presentation">
-      <div className={`${styles.modal} ${className ?? ''}`} role="dialog" aria-modal="true">
+    <div className={styles.overlay}>
+      <div
+        className={`${styles.modal} ${className ?? ''}`}
+        role="dialog"
+        aria-modal="true"
+        onClick={handleOverlayClick}
+      >
         {children}
       </div>
     </div>,
-    document.body,
+    portalRoot,
   );
 };

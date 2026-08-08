@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -153,5 +154,5 @@ func testLeavesService(t *testing.T, withState bool) (*Service, *gorm.DB, models
 	if err := db.Create(&models.Pet{UserID: user.ID, Level: 1}).Error; err != nil {
 		t.Fatalf("create pet: %v", err)
 	}
-	return NewService(db), db, user
+	return NewService(db, testutil.DailyReportNotifierMock{}), db, user
 }

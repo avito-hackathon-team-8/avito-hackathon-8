@@ -1,4 +1,4 @@
-import type { TTaskType } from '@/entities/daily-task/api/get-tasks';
+import type { TTaskType } from '@/entities/daily-task/api/tasks';
 import type { TRewardCategory } from '@/entities/reward/api/get-rewards';
 
 import { getTodaySummaryStats, type TTodaySummaryStats } from '../model/get-today-summary-stats ';

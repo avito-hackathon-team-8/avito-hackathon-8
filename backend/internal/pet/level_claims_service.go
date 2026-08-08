@@ -108,17 +108,22 @@ type LevelClaimResult struct {
 	Reward models.Reward
 }
 
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
 type LevelClaimsService struct {
 	db             *gorm.DB
 	rewards        *rewards.Service
 	now            func() time.Time
 	claimWindow    time.Duration
 	rewardLifetime time.Duration
+	dailyReport    DailyReportNotifier
 }
 
-func NewLevelClaimsService(db *gorm.DB, rewardService *rewards.Service) *LevelClaimsService {
+func NewLevelClaimsService(db *gorm.DB, dailyReport DailyReportNotifier, rewardService *rewards.Service) *LevelClaimsService {
 	if rewardService == nil {
-		rewardService = rewards.NewService(db)
+		rewardService = rewards.NewService(db, dailyReport)
 	}
 
 	return &LevelClaimsService{
@@ -127,6 +132,7 @@ func NewLevelClaimsService(db *gorm.DB, rewardService *rewards.Service) *LevelCl
 		now:            time.Now,
 		claimWindow:    LevelRewardClaimWindow,
 		rewardLifetime: DefaultLevelRewardLifetime,
+		dailyReport:    dailyReport,
 	}
 }
 
@@ -252,9 +258,7 @@ func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewar
 		return LevelClaimResult{}, err
 	}
 
-	if err != nil {
-		return LevelClaimResult{}, fmt.Errorf("claim level reward: %w", err)
-	}
+	service.dailyReport.Notify(userID)
 
 	return result, nil
 }
