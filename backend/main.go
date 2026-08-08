@@ -36,16 +36,16 @@ func main() {
 	}
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
-	rewardService := rewards.NewService(db)
+	dailyReportService := daily_report.NewService(db)
+	rewardService := rewards.NewService(db, dailyReportService)
 	taskDefinitions, err := tasks.LoadDefaultDefinitions()
 	if err != nil {
 		log.Fatalf("load task definitions: %v", err)
 	}
-	dailyReportService := daily_report.NewService(db)
 	taskService := tasks.NewService(db, taskDefinitions, dailyReportService)
 	petService := pet.NewService(db)
 	activityService := weekly_login.NewLoginService(db)
-	weeklyLoginService := weekly_login.NewService(db, activityService)
+	weeklyLoginService := weekly_login.NewService(db, activityService, dailyReportService)
 	router := handlers.NewRouter(authService, rewardService, taskService, petService, weeklyLoginService,
 		activityService, dailyReportService)
 

@@ -101,7 +101,6 @@ func (s *Service) Notify(userID uuid.UUID) {
 }
 
 func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error) {
-	// TODO: рассчет прогресса уровня
 	if userID == uuid.Nil {
 		return DailyReport{}, ErrUserNotFound
 	}

@@ -34,13 +34,23 @@ const (
 )
 
 type Service struct {
-	db       *gorm.DB
-	now      func() time.Time
-	activity ActivityProvider
+	db                  *gorm.DB
+	now                 func() time.Time
+	activity            ActivityProvider
+	dailyReportNotifier DailyReportNotifier
 }
 
-func NewService(db *gorm.DB, activity ActivityProvider) *Service {
-	return &Service{db: db, now: time.Now, activity: activity}
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
+func NewService(db *gorm.DB, activity ActivityProvider, dailyReportNotifier DailyReportNotifier) *Service {
+	return &Service{
+		db:                  db,
+		now:                 time.Now,
+		activity:            activity,
+		dailyReportNotifier: dailyReportNotifier,
+	}
 }
 
 type WeeklyLoginDay struct {
@@ -159,6 +169,8 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.T
 	if err != nil {
 		return models.WeeklyLoginClaim{}, fmt.Errorf("claim weekly login reward: %w", err)
 	}
+
+	service.dailyReportNotifier.Notify(userID)
 
 	return claim, nil
 }

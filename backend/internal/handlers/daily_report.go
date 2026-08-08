@@ -56,7 +56,6 @@ type dailyReportHandler struct {
 	dailyReport *daily_report.Service
 }
 
-// TODO: Вынести дубликат
 var dailyReportsWebSocketUpgrader = websocket.Upgrader{
 	CheckOrigin: func(request *http.Request) bool {
 		origin := request.Header.Get("Origin")
@@ -77,21 +76,99 @@ var dailyReportsWebSocketUpgrader = websocket.Upgrader{
 	},
 }
 
-func (h *dailyReportHandler) get(response http.ResponseWriter, request *http.Request) {
-	user, err := h.auth.Authenticate(request.Context(), request.Header.Get("Authorization"))
+func (h *dailyReportHandler) get(w http.ResponseWriter, r *http.Request) {
+	user, err := h.auth.Authenticate(r.Context(), r.Header.Get("Authorization"))
 	if err != nil {
-		writeError(response, http.StatusUnauthorized, err.Error())
+		writeError(w, http.StatusUnauthorized, err.Error())
 	}
 
-	dailyReport, err := h.dailyReport.Get(request.Context(), user.ID)
+	dailyReport, err := h.dailyReport.Get(r.Context(), user.ID)
 	if err != nil {
-		writeError(response, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 	}
 
-	writeJSON(response, http.StatusOK, responseDailyReport(dailyReport))
+	writeJSON(w, http.StatusOK, responseDailyReport(dailyReport))
 }
 
-func (h *dailyReportHandler) ws(response http.ResponseWriter, request *http.Request) {
+func (h *dailyReportHandler) ws(w http.ResponseWriter, r *http.Request) {
+	user, err := h.auth.Authenticate(r.Context(), websocketToken(r))
+	if err != nil {
+		writeAuthenticationError(w, err)
+		return
+	}
+
+	updates, unsubscribe := h.dailyReport.Subscribe(user.ID)
+	defer unsubscribe()
+
+	report, err := h.dailyReport.Get(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ws, err := dailyReportsWebSocketUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = ws.Close()
+	}()
+
+	if err := writeDailyReportEvent(ws, report); err != nil {
+		return
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			if _, _, err := ws.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}()
+
+	dayTimer := time.NewTimer(untilNextUTCDay(time.Now()))
+	defer dayTimer.Stop()
+
+	writeCurrentReport := func() error {
+		report, err := h.dailyReport.Get(r.Context(), user.ID)
+		if err != nil {
+			return err
+		}
+
+		return writeDailyReportEvent(ws, report)
+	}
+
+	for {
+		select {
+		case _, isOpen := <-updates:
+			if !isOpen || writeCurrentReport() != nil {
+				return
+			}
+		case <-dayTimer.C:
+			if writeCurrentReport() != nil {
+				return
+			}
+			dayTimer.Reset(untilNextUTCDay(time.Now()))
+		case <-done:
+			return
+		}
+	}
+}
+
+func writeDailyReportEvent(connection *websocket.Conn, report daily_report.DailyReport) error {
+	return connection.WriteJSON(dailyReportUpdatedEvent{
+		Event: "DAILY_REPORT_UPDATED",
+		Data:  responseDailyReport(report),
+	})
+}
+
+func untilNextUTCDay(now time.Time) time.Duration {
+	now = now.UTC()
+	nextDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1)
+
+	return nextDay.Sub(now)
 }
 
 func responseDailyReport(report daily_report.DailyReport) dailyReportResponse {

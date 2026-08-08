@@ -39,13 +39,18 @@ type Grant struct {
 	ExpiresAt time.Time
 }
 
-type Service struct {
-	db  *gorm.DB
-	now func() time.Time
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, now: time.Now}
+type Service struct {
+	db                  *gorm.DB
+	now                 func() time.Time
+	dailyReportNotifier DailyReportNotifier
+}
+
+func NewService(db *gorm.DB, dailyReportNotifier DailyReportNotifier) *Service {
+	return &Service{db: db, now: time.Now, dailyReportNotifier: dailyReportNotifier}
 }
 
 func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant) (models.Reward, error) {
@@ -67,6 +72,8 @@ func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant
 	if err := service.db.WithContext(ctx).Create(&reward).Error; err != nil {
 		return models.Reward{}, fmt.Errorf("grant reward: %w", err)
 	}
+
+	service.dailyReportNotifier.Notify(userID)
 
 	return reward, nil
 }
