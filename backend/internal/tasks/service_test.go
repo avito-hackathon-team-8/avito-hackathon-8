@@ -70,6 +70,37 @@ func TestListSynchronouslyEnsuresMissingAssignments(t *testing.T) {
 	}
 }
 
+func TestAutoCompleteFirstTaskIsIdempotent(t *testing.T) {
+	service, db, userID, assignments := testTaskService(t, true)
+
+	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
+		t.Fatalf("AutoCompleteFirstTask() error = %v", err)
+	}
+
+	var first models.UserDailyTask
+	if err := db.First(&first, "id = ?", assignments[0].ID).Error; err != nil {
+		t.Fatalf("load first assignment: %v", err)
+	}
+	if first.Status != models.CompletedTaskStatus || first.CurrentCount != 3 || first.CompletedAt == nil {
+		t.Fatalf("first assignment = %+v, want completed at target count", first)
+	}
+
+	var secondBefore models.UserDailyTask
+	if err := db.First(&secondBefore, "id = ?", assignments[1].ID).Error; err != nil {
+		t.Fatalf("load second assignment: %v", err)
+	}
+	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
+		t.Fatalf("second AutoCompleteFirstTask() error = %v", err)
+	}
+	var secondAfter models.UserDailyTask
+	if err := db.First(&secondAfter, "id = ?", assignments[1].ID).Error; err != nil {
+		t.Fatalf("reload second assignment: %v", err)
+	}
+	if secondAfter.Status != secondBefore.Status || secondAfter.CurrentCount != secondBefore.CurrentCount || secondAfter.CompletedAt != secondBefore.CompletedAt {
+		t.Fatalf("second assignment changed: before=%+v after=%+v", secondBefore, secondAfter)
+	}
+}
+
 func TestListReturnsTasksNotReadyWhenEnsureFailsOrCreatesNothing(t *testing.T) {
 	service, _, userID, _ := testTaskService(t, false)
 	service.ensurer = ensurerFunc(func(context.Context, uuid.UUID) error { return errors.New("puppeteer unavailable") })

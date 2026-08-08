@@ -107,6 +107,40 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 	return result, nil
 }
 
+// AutoCompleteFirstTask is a temporary demo shortcut for the first user session.
+func (service *Service) AutoCompleteFirstTask(ctx context.Context, userID uuid.UUID) error {
+	rows, err := service.rows(ctx, userID, service.today())
+	if err != nil {
+		return err
+	}
+	if len(rows) != TotalDailyTasks {
+		return ErrTasksNotReady
+	}
+
+	return service.autoCompleteFirstTask(ctx, userID, service.today(), rows[0])
+}
+
+func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.UUID, day time.Time, row taskRow) error {
+	if row.Status == models.CompletedTaskStatus || row.Status == models.ClaimedTaskStatus {
+		return nil
+	}
+
+	now := service.now().UTC()
+	result := service.db.WithContext(ctx).
+		Model(&models.UserDailyTask{}).
+		Where("id = ? AND user_id = ? AND day = ? AND claimed_at IS NULL AND completed_at IS NULL", row.AssignmentID, userID, utcDate(day)).
+		Updates(map[string]any{
+			"current_count": row.TargetCount,
+			"status":        models.CompletedTaskStatus,
+			"completed_at":  now,
+		})
+	if result.Error != nil {
+		return fmt.Errorf("complete first daily task: %w", result.Error)
+	}
+
+	return nil
+}
+
 func (service *Service) Progress(ctx context.Context, userID uuid.UUID, userLevel int) (DailyProgress, error) {
 	dailyTasks, err := service.List(ctx, userID, userLevel)
 	if err != nil {

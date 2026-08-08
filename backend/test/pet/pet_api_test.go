@@ -47,6 +47,7 @@ type petProgressEvent struct {
 		Level                 int    `json:"level"`
 		Leaves                int64  `json:"leaves"`
 		NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
+		ChestPrice            int64  `json:"chestPrice"`
 		LevelUp               bool   `json:"levelUp"`
 	} `json:"data"`
 }
@@ -70,6 +71,9 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	initial := request(t, cfg, token, http.MethodGet, "/api/v1/pet", nil)
 	if initial.status != http.StatusOK {
 		t.Fatalf("initial pet status = %d, body = %s", initial.status, initial.body)
+	}
+	if _, exists := initial.json["targetLeaves"]; exists {
+		t.Fatalf("initial pet response contains removed targetLeaves field: %s", initial.body)
 	}
 	var pet petResponse
 	decode(t, initial.body, &pet)
@@ -99,8 +103,15 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	initialEvent := readPetEvent(t, connection)
 	if initialEvent.Event != "PET_PROGRESS_UPDATED" || initialEvent.Data.Name != "Листик" ||
 		initialEvent.Data.Level != 1 || initialEvent.Data.Leaves != 0 ||
-		initialEvent.Data.NextLevelTargetLeaves != 100 || initialEvent.Data.LevelUp {
+		initialEvent.Data.NextLevelTargetLeaves != 100 || initialEvent.Data.ChestPrice != 200 || initialEvent.Data.LevelUp {
 		t.Fatalf("initial WebSocket event = %+v, want current pet snapshot", initialEvent)
+	}
+	if err := connection.WriteJSON(map[string]string{"action": "GET_CHEST_PRICE"}); err != nil {
+		t.Fatalf("request chest price over WebSocket: %v", err)
+	}
+	chestEvent := readPetEvent(t, connection)
+	if chestEvent.Data.ChestPrice != 200 || chestEvent.Data.NextLevelTargetLeaves != 100 {
+		t.Fatalf("chest price WebSocket event = %+v, want price 200 and target 100", chestEvent)
 	}
 
 	task := getFirstTask(t, cfg, token)
@@ -114,7 +125,7 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	update := readPetEvent(t, connection)
 	if update.Event != "PET_PROGRESS_UPDATED" || update.Data.Name != "Листик" ||
 		update.Data.Level != 1 || update.Data.Leaves != int64(task.RewardLeaves) ||
-		update.Data.NextLevelTargetLeaves != 100 || update.Data.LevelUp {
+		update.Data.NextLevelTargetLeaves != 100 || update.Data.ChestPrice != 200 || update.Data.LevelUp {
 		t.Fatalf("reward WebSocket event = %+v, want %d leaves at level 1", update, task.RewardLeaves)
 	}
 }
@@ -153,7 +164,8 @@ func TestPetWebSocketReportsLevelUp(t *testing.T) {
 		_ = connection.Close()
 	}()
 	initial := readPetEvent(t, connection)
-	if initial.Data.Level != 1 || initial.Data.Leaves != 70 || initial.Data.NextLevelTargetLeaves != 100 {
+	if initial.Data.Level != 1 || initial.Data.Leaves != 70 || initial.Data.NextLevelTargetLeaves != 100 ||
+		initial.Data.ChestPrice != 200 {
 		t.Fatalf("initial level-up snapshot = %+v, want level 1 with 70 leaves", initial)
 	}
 
@@ -166,7 +178,8 @@ func TestPetWebSocketReportsLevelUp(t *testing.T) {
 
 	update := readPetEvent(t, connection)
 	wantLeaves := int64(task.RewardLeaves - 30)
-	if update.Data.Level != 2 || update.Data.Leaves != wantLeaves || update.Data.NextLevelTargetLeaves != 130 || !update.Data.LevelUp {
+	if update.Data.Level != 2 || update.Data.Leaves != wantLeaves || update.Data.NextLevelTargetLeaves != 130 ||
+		update.Data.ChestPrice != 200 || !update.Data.LevelUp {
 		t.Fatalf("level-up WebSocket event = %+v, want level 2, leaves %d, target 130, and level up", update, wantLeaves)
 	}
 }

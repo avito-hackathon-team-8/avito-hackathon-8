@@ -42,6 +42,7 @@ type Progress struct {
 	Level                 int
 	Leaves                int64
 	NextLevelTargetLeaves int64
+	ChestPrice            int64
 	LevelUp               bool
 }
 
@@ -178,7 +179,13 @@ func ApplyLevelUps(level int, balance int64) (int, int64) {
 }
 
 func ProgressForPet(pet models.Pet, levelUp bool) Progress {
-	progress := Progress{Name: pet.Name, Level: pet.Level, Leaves: pet.Leaves, LevelUp: levelUp}
+	progress := Progress{
+		Name:       pet.Name,
+		Level:      pet.Level,
+		Leaves:     pet.Leaves,
+		ChestPrice: models.ChestOpeningLeavesCost,
+		LevelUp:    levelUp,
+	}
 
 	if pet.Level < MaxPetLevel {
 		progress.NextLevelTargetLeaves = LevelCost(pet.Level)

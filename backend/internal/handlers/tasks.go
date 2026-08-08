@@ -87,6 +87,19 @@ func (handler *taskHandler) list(response http.ResponseWriter, request *http.Req
 
 		return
 	}
+	if err := handler.tasks.AutoCompleteFirstTask(request.Context(), user.ID); err != nil {
+		if errors.Is(err, tasks.ErrTasksNotReady) {
+			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+			return
+		}
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return
+	}
+	dailyTasks, err = handler.tasks.List(request.Context(), user.ID, userLevel)
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return
+	}
 
 	responseTasks := make([]dailyTaskResponse, 0, len(dailyTasks))
 
@@ -119,6 +132,19 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 
+		return
+	}
+	if err := handler.tasks.AutoCompleteFirstTask(request.Context(), user.ID); err != nil {
+		if errors.Is(err, tasks.ErrTasksNotReady) {
+			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+			return
+		}
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+		return
+	}
+	progress, err = handler.tasks.Progress(request.Context(), user.ID, userLevel)
+	if err != nil {
+		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
 		return
 	}
 
