@@ -20,19 +20,16 @@ import (
 
 func main() {
 	cfg, err := config.Load()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	db, err := database.Open(cfg.DatabaseURL)
-
 	if err != nil {
 		log.Fatalf("connect to database: %v", err)
 	}
 
 	mailer, err := email.NewSender(cfg.Email)
-
 	if err != nil {
 		log.Fatalf("configure email: %v", err)
 	}
@@ -49,7 +46,7 @@ func main() {
 	activityService := weekly_login.NewLoginService(db)
 	weeklyLoginService := weekly_login.NewService(db, activityService, leafService)
 	eventService := activityevents.NewService(db, taskService)
-	router := handlers.NewRouter(db, authService, rewardService, taskService, leafService, petService, weeklyLoginService, eventService, cfg.InternalServiceToken, activityService, chestService)
+	router := handlers.NewRouter(db, authService, rewardService, taskService, leafService, petService, levelClaimsService, weeklyLoginService, eventService, cfg.InternalServiceToken, activityService, chestService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

@@ -1,0 +1,48 @@
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal__input {
+  width: 100%;
+  padding: 12px 14px;
+
+  color: var(--black);
+
+  background-color: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: 12px;
+
+  &:focus {
+    border-color: var(--blue);
+    outline: 2px solid rgb(10 170 255 / 20%);
+  }
+}
+
+.modal__error {
+  min-height: 18px;
+}
+
+.modal__submit {
+  width: 100%;
+}

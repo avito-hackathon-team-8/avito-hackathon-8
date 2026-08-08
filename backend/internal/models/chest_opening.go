@@ -10,8 +10,8 @@ import (
 const ChestOpeningLeavesCost int64 = 200
 
 type ChestOpening struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"type:uuid;not null;index"`
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey;uniqueIndex:idx_chest_openings_user_id_id,priority:2"`
+	UserID      uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_chest_openings_user_id_id,priority:1"`
 	User        User      `gorm:"constraint:OnDelete:CASCADE"`
 	LeavesSpent int64     `gorm:"not null;check:leaves_spent = 200"`
 	OpenedAt    time.Time `gorm:"not null;index"`
