@@ -78,7 +78,7 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 	}
 	if len(rows) < TotalDailyTasks && service.ensurer != nil {
 		if err := service.ensurer.EnsureDailyTasks(ctx, userID); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrTasksNotReady, err)
+			return nil, fmt.Errorf("%w: %w", ErrTasksNotReady, err)
 		}
 		rows, err = service.rows(ctx, userID, service.today())
 		if err != nil {

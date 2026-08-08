@@ -210,9 +210,10 @@ func seedTaskAssignments(t *testing.T, db *gorm.DB, userID uuid.UUID) []models.U
 	assignments := make([]models.UserDailyTask, 0, TotalDailyTasks)
 	for index, taskType := range types {
 		level := 1
-		if index == 2 {
+		switch index {
+		case 2:
 			level = 5
-		} else if index == 3 {
+		case 3:
 			level = 10
 		}
 		definition := models.DailyTaskDefinition{Code: fmt.Sprintf("task-%d", index+1), Title: fmt.Sprintf("Task %d", index+1), Slot: index + 1, Type: taskType, TargetCount: 3, Reward: 45, UnlockLevel: level, Categories: "[]", Active: true}
