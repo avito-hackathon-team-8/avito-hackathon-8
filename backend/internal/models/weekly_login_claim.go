@@ -10,12 +10,10 @@ import (
 type DayStatus string
 
 const (
-	DayStatusClaimed            DayStatus = "CLAIMED"
-	DayStatusAvailable          DayStatus = "AVAILABLE"
-	DayStatusUnconfirmed        DayStatus = "UNCONFIRMED"
-	DayStatusMissed             DayStatus = "MISSED"
-	DayStatusFuture             DayStatus = "FUTURE"
-	DayStatusBeforeRegistration DayStatus = "BEFORE_REGISTRATION"
+	DayStatusClaimed   DayStatus = "CLAIMED"
+	DayStatusAvailable DayStatus = "AVAILABLE"
+	DayStatusMissed    DayStatus = "MISSED"
+	DayStatusFuture    DayStatus = "FUTURE"
 )
 
 type WeeklyLoginClaim struct {

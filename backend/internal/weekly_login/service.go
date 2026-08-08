@@ -298,13 +298,13 @@ func buildCurrentWeek(user models.User, claims []models.WeeklyLoginClaim, today 
 
 		switch {
 		case date.Before(registrationDate):
-			day.Status = models.DayStatusBeforeRegistration
+			day.Status = models.DayStatusMissed
 		case date.Before(today):
 			day.Status = models.DayStatusMissed
 		case date.After(today):
 			day.Status = models.DayStatusFuture
 		case activityInactive:
-			day.Status = models.DayStatusUnconfirmed
+			day.Status = models.DayStatusFuture
 		default:
 			day.Status = models.DayStatusAvailable
 		}

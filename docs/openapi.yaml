@@ -2054,10 +2054,8 @@ components:
       enum:
         - CLAIMED
         - AVAILABLE
-        - UNCONFIRMED
         - MISSED
         - FUTURE
-        - BEFORE_REGISTRATION
 
     WeeklyLoginDay:
       type: object

@@ -122,7 +122,7 @@ func TestBuildCurrentWeek(t *testing.T) {
 	}
 }
 
-func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
+func TestBuildCurrentWeekMarksDaysBeforeRegistrationMissed(t *testing.T) {
 	t.Parallel()
 
 	today := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
@@ -130,9 +130,9 @@ func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
 
 	week := buildCurrentWeek(user, nil, today, false)
 
-	if week.Claims[0].Status != models.DayStatusBeforeRegistration ||
-		week.Claims[1].Status != models.DayStatusBeforeRegistration {
-		t.Fatalf("days before registration = (%q, %q), want BEFORE_REGISTRATION", week.Claims[0].Status, week.Claims[1].Status)
+	if week.Claims[0].Status != models.DayStatusMissed ||
+		week.Claims[1].Status != models.DayStatusMissed {
+		t.Fatalf("days before registration = (%q, %q), want MISSED", week.Claims[0].Status, week.Claims[1].Status)
 	}
 
 	if week.Claims[2].Status != models.DayStatusAvailable || week.Claims[2].RewardLeaves != 10 {
@@ -140,7 +140,7 @@ func TestBuildCurrentWeekMarksDaysBeforeRegistration(t *testing.T) {
 	}
 }
 
-func TestBuildCurrentWeekMarksInactiveTodayUnconfirmed(t *testing.T) {
+func TestBuildCurrentWeekMarksInactiveTodayFuture(t *testing.T) {
 	t.Parallel()
 
 	today := time.Date(2026, time.August, 5, 12, 0, 0, 0, time.UTC)
@@ -148,12 +148,12 @@ func TestBuildCurrentWeekMarksInactiveTodayUnconfirmed(t *testing.T) {
 
 	week := buildCurrentWeek(user, nil, today, true)
 
-	if week.Claims[2].Status != models.DayStatusUnconfirmed || week.Claims[2].RewardLeaves != 0 {
-		t.Fatalf("inactive today = (%q, %d), want (UNCONFIRMED, 0)", week.Claims[2].Status, week.Claims[2].RewardLeaves)
+	if week.Claims[2].Status != models.DayStatusFuture || week.Claims[2].RewardLeaves != 10 {
+		t.Fatalf("inactive today = (%q, %d), want (FUTURE, 10)", week.Claims[2].Status, week.Claims[2].RewardLeaves)
 	}
 
-	if week.Claims[3].Status != models.DayStatusFuture || week.Claims[3].RewardLeaves != 10 {
-		t.Fatalf("next day = (%q, %d), want (FUTURE, 10)", week.Claims[3].Status, week.Claims[3].RewardLeaves)
+	if week.Claims[3].Status != models.DayStatusFuture || week.Claims[3].RewardLeaves != 20 {
+		t.Fatalf("next day = (%q, %d), want (FUTURE, 20)", week.Claims[3].Status, week.Claims[3].RewardLeaves)
 	}
 }
 
