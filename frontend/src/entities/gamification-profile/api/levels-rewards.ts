@@ -1,4 +1,5 @@
-import type { TRewardCategory } from '@/entities/reward/api/get-rewards.ts';
+import type { TRewardCategory } from '@/entities/reward/api/rewards.ts';
+import { apiRequest } from '@/shared/api/api-request.ts';
 import { getAuthHeaders } from '@/shared/api/get-auth-headers.tsx';
 import { API_URL } from '@/shared/config/api.ts';
 
@@ -22,30 +23,25 @@ export type TLevelRewardItem = {
 export const getLevelsRewards = async (
   signal?: AbortSignal,
 ): Promise<{ levels: TLevelRewardItem[] }> => {
-  const response = await fetch(`${API_URL}${API_ROUTE_PROFILE.levels}`, {
-    headers: getAuthHeaders(),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Ошибка запроса getPetName: ${response.status}`);
-  }
-
-  return await response.json();
+  return await apiRequest(
+    fetch(`${API_URL}${API_ROUTE_PROFILE.levels}`, {
+      headers: getAuthHeaders(),
+      signal,
+    }),
+    'Ошибка запроса getPetName',
+  );
 };
+
 export const receiveLevelReward = async (
   rewardId: string,
   signal?: AbortSignal,
 ): Promise<{ levels: Pick<TLevelRewardItem, 'level' | 'status'> }> => {
-  const response = await fetch(`${API_URL}${API_ROUTE_PROFILE.receiveLevelReward(rewardId)}`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Ошибка запроса receiveLevelReward: ${response.status}`);
-  }
-
-  return await response.json();
+  return await apiRequest(
+    fetch(`${API_URL}${API_ROUTE_PROFILE.receiveLevelReward(rewardId)}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      signal,
+    }),
+    'Ошибка запроса receiveLevelReward',
+  );
 };

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { gamificationProfileKeys } from '../api/gamification-profile-keys';
-import { getPetName } from '../api/get-pet';
+import { getPetName } from '../api/pet';
 
 export const usePetName = () => {
   return useQuery({

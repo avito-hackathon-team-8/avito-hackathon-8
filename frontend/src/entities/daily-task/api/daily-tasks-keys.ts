@@ -1,15 +1,7 @@
-export const tasksQueryKeys = {
-  all: ['tasks'] as const,
+import { mainQueryKey } from '@/shared/config/api';
 
-  list: () => [...tasksQueryKeys.all, 'list'] as const,
+export const dailyTasksQueryKeys = {
+  all: [mainQueryKey.all, 'tasks'] as const,
 
-  progress: () => [...tasksQueryKeys.all, 'progress'] as const,
-};
-
-export const tasksMutationKeys = {
-  all: ['tasks'] as const,
-
-  record: () => [...tasksMutationKeys.all, 'record'] as const,
-
-  claim: (taskId: string) => [...tasksMutationKeys.all, 'claim', taskId] as const,
+  list: () => [...dailyTasksQueryKeys.all, 'list'] as const,
 };

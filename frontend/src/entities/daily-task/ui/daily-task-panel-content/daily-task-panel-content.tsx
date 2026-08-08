@@ -3,19 +3,24 @@ import clsx from 'clsx';
 import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { Typography } from '@/shared/ui/typography';
 
-import type { TTask } from '../../api/get-tasks';
+import type { TTask } from '../../api/tasks';
 
 import styles from './daily-task-panel-content.module.scss';
 
 interface IDailyTaskPanelContentProps {
   listTasks: TTask[];
+  handleReceiveReward: (id: TTask['taskId']) => void;
 }
 
-export const DailyTaskPanelContent = ({ listTasks }: IDailyTaskPanelContentProps) => {
+export const DailyTaskPanelContent = ({
+  listTasks,
+  handleReceiveReward,
+}: IDailyTaskPanelContentProps) => {
   return (
     <ul className={styles.listTask}>
       {listTasks.map((item) => {
         const isLocked = item.status === 'LOCKED';
+        const isClaimed = item.status === 'CLAIMED';
         const isCompleted = item.status === 'COMPLETED';
 
         return (
@@ -23,6 +28,7 @@ export const DailyTaskPanelContent = ({ listTasks }: IDailyTaskPanelContentProps
             className={clsx(styles.listTask__item, {
               [styles.listTask__item_locked]: isLocked,
               [styles.listTask__item_completed]: isCompleted,
+              [styles.listTask__item_claimed]: isClaimed,
             })}
             key={item.taskId}
           >
@@ -64,6 +70,13 @@ export const DailyTaskPanelContent = ({ listTasks }: IDailyTaskPanelContentProps
                 {isCompleted && 'Выполнено'}
               </Typography>
             </div>
+
+            <button
+              className={styles.listTask__button}
+              aria-label="Забрать награду"
+              disabled={!isCompleted}
+              onClick={() => handleReceiveReward(item.taskId)}
+            />
           </li>
         );
       })}
