@@ -1,7 +1,7 @@
 import { mainQueryKey } from '@/shared/config/api';
 
-export const tasksQueryKeys = {
+export const dailyTasksQueryKeys = {
   all: [mainQueryKey.all, 'tasks'] as const,
 
-  list: () => [...tasksQueryKeys.all, 'list'] as const,
+  list: () => [...dailyTasksQueryKeys.all, 'list'] as const,
 };
