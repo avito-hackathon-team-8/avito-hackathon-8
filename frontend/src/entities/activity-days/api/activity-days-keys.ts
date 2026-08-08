@@ -1,5 +1,7 @@
-export const activityDayKeys = {
-  all: ["activity-days"] as const,
+import { mainQueryKey } from '@/shared/config/api';
 
-  current: () => [...activityDayKeys.all, "current"] as const,
+export const activityDayKeys = {
+  all: [mainQueryKey.all, 'activity-days'] as const,
+
+  week: () => [...activityDayKeys.all, 'current'] as const,
 };

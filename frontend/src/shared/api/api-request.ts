@@ -14,5 +14,9 @@ export const apiRequest = async <T>(
     throw new Error(errorText || textError);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 };
