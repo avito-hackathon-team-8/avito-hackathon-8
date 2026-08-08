@@ -1,49 +1,41 @@
-import clsx from "clsx";
+import clsx from 'clsx';
 
-import { formatDays } from "@/shared/lib/format-days";
-import { Typography } from "@/shared/ui/typography";
+import { formatDays } from '@/shared/lib/format-days';
+import { Typography } from '@/shared/ui/typography';
 
-import type { TResponseActivityDay } from "../../api/get-activity-day";
+import type { TActivityDay, TResponseActivityDay } from '../../api/activity-day';
 
-import styles from "./activity-days-panel-content.module.scss";
+import styles from './activity-days-panel-content.module.scss';
 
 interface IActivityDaysPanelContentProps {
   data: TResponseActivityDay;
+  handleReceiveReward: (claimId: NonNullable<TActivityDay['claimId']>) => void;
 }
 
 export const ActivityDaysPanelContent = ({
   data,
+  handleReceiveReward,
 }: IActivityDaysPanelContentProps) => {
   const { claimedDaysCount, claims } = data;
 
-  const activeDay = claims.find((item) => item.status === "AVAILABLE");
+  const activeDay = claims.find((item) => item.status === 'AVAILABLE');
   return (
     <div className={styles.wrapper}>
       <ul className={styles.days}>
-        {claims.map(({ weekday, status, rewardLeaves, date }) => (
-          <li
-            key={date}
-            className={clsx(styles.day, styles[`day_${status.toLowerCase()}`])}
-          >
+        {claims.map(({ weekday, status, rewardLeaves, date, claimId }) => (
+          <li key={date} className={clsx(styles.day, styles[`day_${status.toLowerCase()}`])}>
             <button
               className={styles.day__button}
-              disabled={status !== "AVAILABLE"}
+              disabled={status !== 'AVAILABLE'}
+              onClick={() => handleReceiveReward(claimId)}
             >
               <time className={styles.day__date} dateTime={date}>
-                <Typography
-                  className={styles.day__dateText}
-                  variant="caption-bold"
-                  color="inherit"
-                >
+                <Typography className={styles.day__dateText} variant="caption-bold" color="inherit">
                   {weekday}д
                 </Typography>
               </time>
 
-              <Typography
-                className={styles.day__reward}
-                variant="caption-bold"
-                color="inherit"
-              >
+              <Typography className={styles.day__reward} variant="caption-bold" color="inherit">
                 {rewardLeaves}
               </Typography>
             </button>
