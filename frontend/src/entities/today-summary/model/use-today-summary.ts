@@ -1,16 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getTodaySummary } from '../api/get-today-summary';
+import { todaySummaryQueryKeys } from '../api/today-summary-query-keys';
 
-export const todaySummaryQueryKeys = {
-  all: ['today-summary'] as const,
-  current: () => [...todaySummaryQueryKeys.all, 'current'] as const,
-};
+import { getTodaySummaryStats } from './get-today-summary-stats ';
 
 export const useTodaySummary = () => {
   return useQuery({
     queryKey: todaySummaryQueryKeys.current(),
     queryFn: getTodaySummary,
+    select: getTodaySummaryStats,
     retry: 2,
   });
 };
