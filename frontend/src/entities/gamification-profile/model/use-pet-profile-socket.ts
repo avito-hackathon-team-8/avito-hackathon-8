@@ -4,7 +4,7 @@ import { API_URL } from '@/shared/config/api';
 import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
 import { API_ROUTE_PROFILE } from '../api/api-routes';
-import type { TPet } from '../api/get-pet';
+import type { TPet } from '../api/pet';
 
 import { usePetProfile } from './use-pet-profile';
 
