@@ -103,8 +103,8 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 	return buildCurrentWeek(user, claims, today, activityInactive), nil
 }
 
-func (service *Service) Claim(ctx context.Context, userID uuid.UUID, date time.Time) (ClaimResult, error) {
-	claimDate := utcDate(date)
+func (service *Service) Claim(ctx context.Context, userID uuid.UUID) (ClaimResult, error) {
+	claimDate := utcDate(service.now())
 	var claim models.WeeklyLoginClaim
 	var progress leaves.Progress
 
