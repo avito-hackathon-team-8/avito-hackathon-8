@@ -71,34 +71,36 @@ func TestListSynchronouslyEnsuresMissingAssignments(t *testing.T) {
 	}
 }
 
-func TestAutoCompleteFirstTaskIsIdempotent(t *testing.T) {
+func TestAutoCompleteFirstTasksIsIdempotent(t *testing.T) {
 	service, db, userID, assignments := testTaskService(t, true)
 
-	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
-		t.Fatalf("AutoCompleteFirstTask() error = %v", err)
+	if err := service.AutoCompleteFirstTasks(context.Background(), userID); err != nil {
+		t.Fatalf("AutoCompleteFirstTasks() error = %v", err)
 	}
 
-	var first models.UserDailyTask
-	if err := db.First(&first, "id = ?", assignments[0].ID).Error; err != nil {
-		t.Fatalf("load first assignment: %v", err)
-	}
-	if first.Status != models.CompletedTaskStatus || first.CurrentCount != 3 || first.CompletedAt == nil {
-		t.Fatalf("first assignment = %+v, want completed at target count", first)
+	for index := 0; index < DemoCompletedTaskCount; index++ {
+		var assignment models.UserDailyTask
+		if err := db.First(&assignment, "id = ?", assignments[index].ID).Error; err != nil {
+			t.Fatalf("load assignment %d: %v", index+1, err)
+		}
+		if assignment.Status != models.CompletedTaskStatus || assignment.CurrentCount != 3 || assignment.CompletedAt == nil {
+			t.Fatalf("assignment %d = %+v, want completed at target count", index+1, assignment)
+		}
 	}
 
-	var secondBefore models.UserDailyTask
-	if err := db.First(&secondBefore, "id = ?", assignments[1].ID).Error; err != nil {
-		t.Fatalf("load second assignment: %v", err)
+	var thirdBefore models.UserDailyTask
+	if err := db.First(&thirdBefore, "id = ?", assignments[2].ID).Error; err != nil {
+		t.Fatalf("load third assignment: %v", err)
 	}
-	if err := service.AutoCompleteFirstTask(context.Background(), userID); err != nil {
-		t.Fatalf("second AutoCompleteFirstTask() error = %v", err)
+	if err := service.AutoCompleteFirstTasks(context.Background(), userID); err != nil {
+		t.Fatalf("second AutoCompleteFirstTasks() error = %v", err)
 	}
-	var secondAfter models.UserDailyTask
-	if err := db.First(&secondAfter, "id = ?", assignments[1].ID).Error; err != nil {
-		t.Fatalf("reload second assignment: %v", err)
+	var thirdAfter models.UserDailyTask
+	if err := db.First(&thirdAfter, "id = ?", assignments[2].ID).Error; err != nil {
+		t.Fatalf("reload third assignment: %v", err)
 	}
-	if secondAfter.Status != secondBefore.Status || secondAfter.CurrentCount != secondBefore.CurrentCount || secondAfter.CompletedAt != secondBefore.CompletedAt {
-		t.Fatalf("second assignment changed: before=%+v after=%+v", secondBefore, secondAfter)
+	if thirdAfter.Status != thirdBefore.Status || thirdAfter.CurrentCount != thirdBefore.CurrentCount || thirdAfter.CompletedAt != thirdBefore.CompletedAt {
+		t.Fatalf("third assignment changed: before=%+v after=%+v", thirdBefore, thirdAfter)
 	}
 }
 

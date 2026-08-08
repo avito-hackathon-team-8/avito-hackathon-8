@@ -21,7 +21,10 @@ var (
 	ErrTasksNotReady        = errors.New("daily tasks are not ready")
 )
 
-const TotalDailyTasks = 4
+const (
+	TotalDailyTasks        = 4
+	DemoCompletedTaskCount = 2
+)
 
 type AssignmentEnsurer interface {
 	EnsureDailyTasks(context.Context, uuid.UUID) error
@@ -112,9 +115,10 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID, userLevel in
 	return result, nil
 }
 
-// AutoCompleteFirstTask is a temporary demo shortcut for the first user session.
-func (service *Service) AutoCompleteFirstTask(ctx context.Context, userID uuid.UUID) error {
-	rows, err := service.rows(ctx, userID, service.today())
+// AutoCompleteFirstTasks completes the first two daily tasks for the demo.
+func (service *Service) AutoCompleteFirstTasks(ctx context.Context, userID uuid.UUID) error {
+	today := service.today()
+	rows, err := service.rows(ctx, userID, today)
 	if err != nil {
 		return err
 	}
@@ -122,16 +126,24 @@ func (service *Service) AutoCompleteFirstTask(ctx context.Context, userID uuid.U
 		return ErrTasksNotReady
 	}
 
-	return service.autoCompleteFirstTask(ctx, userID, service.today(), rows[0])
+	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, row := range rows[:DemoCompletedTaskCount] {
+			if err := service.autoCompleteTaskTx(tx, userID, today, row); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
-func (service *Service) autoCompleteFirstTask(ctx context.Context, userID uuid.UUID, day time.Time, row taskRow) error {
+func (service *Service) autoCompleteTaskTx(tx *gorm.DB, userID uuid.UUID, day time.Time, row taskRow) error {
 	if row.Status == models.CompletedTaskStatus || row.Status == models.ClaimedTaskStatus {
 		return nil
 	}
 
 	now := service.now().UTC()
-	result := service.db.WithContext(ctx).
+	result := tx.
 		Model(&models.UserDailyTask{}).
 		Where("id = ? AND user_id = ? AND day = ? AND claimed_at IS NULL AND completed_at IS NULL", row.AssignmentID, userID, utcDate(day)).
 		Updates(map[string]any{
