@@ -18,11 +18,14 @@ import (
 const (
 	MinPetLevel = leaves.MinPetLevel
 	MaxPetLevel = leaves.MaxPetLevel
+	maxInt64    = int64(1<<63 - 1)
 )
 
 var (
-	ErrPetNotFound = errors.New("pet not found")
-	ErrInvalidName = errors.New("pet name must contain from 1 to 35 characters")
+	ErrPetNotFound    = errors.New("pet not found")
+	ErrInvalidName    = errors.New("pet name must contain from 1 to 35 characters")
+	ErrInvalidLeaves  = leaves.ErrInvalidAmount
+	ErrLeavesOverflow = leaves.ErrLeavesOverflow
 )
 
 type Progress = leaves.Progress
@@ -36,10 +39,15 @@ type Service struct {
 	db            *gorm.DB
 	subscribersMu sync.Mutex
 	subscribers   map[uuid.UUID]map[chan Update]struct{}
+	levelClaims   *LevelClaimsService
 }
 
 func NewService(db *gorm.DB) *Service {
 	return &Service{db: db, subscribers: make(map[uuid.UUID]map[chan Update]struct{})}
+}
+
+func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
+	service.levelClaims = levelClaims
 }
 
 func (service *Service) Subscribe(userID uuid.UUID) (<-chan Update, func()) {
@@ -105,6 +113,12 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 			return fmt.Errorf("load pet: %w", err)
 		}
 
+		if service.levelClaims != nil {
+			if err := service.levelClaims.openReachedRewards(tx, userID, pet.Level); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -151,6 +165,78 @@ func (service *Service) UpdateName(ctx context.Context, userID uuid.UUID, name s
 	}
 
 	return pet, nil
+}
+
+func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount int64) (Progress, error) {
+	if amount <= 0 {
+		return Progress{}, ErrInvalidLeaves
+	}
+
+	var progress Progress
+
+	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		progress, err = service.addLeavesTx(tx, userID, amount)
+		return err
+	})
+
+	if err != nil {
+		return Progress{}, err
+	}
+
+	service.publish(Update{UserID: userID, Progress: progress})
+
+	return progress, nil
+}
+
+func (service *Service) AddLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
+	if amount <= 0 {
+		return Progress{}, ErrInvalidLeaves
+	}
+
+	return service.addLeavesTx(tx, userID, amount)
+}
+
+func (service *Service) addLeavesTx(tx *gorm.DB, userID uuid.UUID, amount int64) (Progress, error) {
+	var pet models.Pet
+
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("user_id = ?", userID).
+		First(&pet).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return Progress{}, ErrPetNotFound
+	}
+
+	if err != nil {
+		return Progress{}, fmt.Errorf("lock pet: %w", err)
+	}
+
+	if pet.Leaves < 0 || pet.Leaves > maxInt64-amount {
+		return Progress{}, ErrLeavesOverflow
+	}
+
+	newLevel, remainingLeaves := leaves.ApplyLevelUps(pet.Level, pet.Leaves+amount)
+	oldLevel := pet.Level
+
+	pet.Leaves = remainingLeaves
+	pet.Level = newLevel
+
+	err = tx.Model(&pet).Updates(map[string]any{
+		"leaves": pet.Leaves,
+		"level":  newLevel,
+	}).Error
+
+	if err != nil {
+		return Progress{}, fmt.Errorf("save pet progress: %w", err)
+	}
+	if newLevel > oldLevel && service.levelClaims != nil {
+		if err := service.levelClaims.openReachedRewards(tx, userID, newLevel); err != nil {
+			return Progress{}, err
+		}
+	}
+
+	return ProgressForPet(pet, newLevel > oldLevel), nil
 }
 
 func (service *Service) PublishProgress(userID uuid.UUID, progress Progress) {

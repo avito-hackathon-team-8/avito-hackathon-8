@@ -10,7 +10,7 @@ import styles from './gamification-profile.module.scss';
 export const GamificationProfile = () => {
   return (
     <section className={styles.profile}>
-      <h2>Информация о питомце</h2>
+      <h2 className={styles.profile__title}>Информация о питомце</h2>
 
       <BottomPanel
         title="Список уровней"

@@ -10,12 +10,14 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type petHandler struct {
-	auth *auth.Service
-	pets *pet.Service
+	auth        *auth.Service
+	pets        *pet.Service
+	levelClaims *pet.LevelClaimsService
 }
 
 type petResponse struct {
@@ -39,6 +41,28 @@ type petProgressResponse struct {
 type petProgressUpdatedEvent struct {
 	Event string              `json:"event"`
 	Data  petProgressResponse `json:"data"`
+}
+
+type petLevelRewardResponse struct {
+	ID          string                `json:"id"`
+	Type        models.RewardCategory `json:"type"`
+	Description string                `json:"description"`
+}
+
+type petLevelResponse struct {
+	Level     int                      `json:"level"`
+	Status    models.LevelRewardStatus `json:"status"`
+	Reward    petLevelRewardResponse   `json:"reward"`
+	ExpiresAt *string                  `json:"expiresAt"`
+}
+
+type petLevelsResponse struct {
+	Levels []petLevelResponse `json:"levels"`
+}
+
+type claimLevelRewardResponse struct {
+	Level  int                      `json:"level"`
+	Status models.LevelRewardStatus `json:"status"`
 }
 
 var petWebSocketUpgrader = websocket.Upgrader{
@@ -123,6 +147,76 @@ func (handler *petHandler) updateName(response http.ResponseWriter, request *htt
 	writeJSON(response, http.StatusOK, responsePet(userPet))
 }
 
+func (handler *petHandler) levels(response http.ResponseWriter, request *http.Request) {
+	user, isAuthenticated := handler.authenticate(response, request)
+	if !isAuthenticated {
+		return
+	}
+
+	levels, err := handler.levelClaims.GetLevels(request.Context(), user.ID)
+	if errors.Is(err, pet.ErrPetNotFound) {
+		writeLevelRewardError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")
+		return
+	}
+
+	if err != nil {
+		writeLevelRewardError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить награды уровней")
+		return
+	}
+
+	responseLevels := make([]petLevelResponse, 0, len(levels))
+	for _, level := range levels {
+		var expiresAt *string
+		if level.ExpiresAt != nil {
+			value := level.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z")
+			expiresAt = &value
+		}
+		responseLevels = append(responseLevels, petLevelResponse{
+			Level:  level.Level,
+			Status: level.Status,
+			Reward: petLevelRewardResponse{
+				ID:          level.Reward.ID.String(),
+				Type:        level.Reward.Category,
+				Description: level.Reward.Description,
+			},
+			ExpiresAt: expiresAt,
+		})
+	}
+
+	writeJSON(response, http.StatusOK, petLevelsResponse{Levels: responseLevels})
+}
+
+func (handler *petHandler) claimLevelReward(response http.ResponseWriter, request *http.Request) {
+	user, isAuthenticated := handler.authenticate(response, request)
+	if !isAuthenticated {
+		return
+	}
+
+	rewardID, err := uuid.Parse(request.PathValue("rewardId"))
+	if err != nil {
+		writeLevelRewardError(response, http.StatusBadRequest, "INVALID_LEVEL_REWARD_ID", "Передан некорректный идентификатор награды")
+		return
+	}
+
+	result, err := handler.levelClaims.Claim(request.Context(), user.ID, rewardID)
+	switch {
+	case errors.Is(err, pet.ErrPetNotFound):
+		writeLevelRewardError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")
+	case errors.Is(err, pet.ErrLevelRewardNotFound):
+		writeLevelRewardError(response, http.StatusNotFound, "LEVEL_REWARD_NOT_FOUND", "Награда не принадлежит авторизованному пользователю")
+	case errors.Is(err, pet.ErrLevelRewardLocked):
+		writeLevelRewardError(response, http.StatusConflict, "LEVEL_REWARD_LOCKED", "Сначала необходимо достичь этого уровня")
+	case errors.Is(err, pet.ErrLevelRewardFrozen):
+		writeLevelRewardError(response, http.StatusConflict, "LEVEL_REWARD_FROZEN", "Срок получения награды истёк")
+	case errors.Is(err, pet.ErrLevelRewardAlreadyClaimed):
+		writeLevelRewardError(response, http.StatusConflict, "LEVEL_REWARD_ALREADY_CLAIMED", "Награда за этот уровень уже забрана")
+	case err != nil:
+		writeLevelRewardError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось получить награду")
+	default:
+		writeJSON(response, http.StatusOK, claimLevelRewardResponse{Level: result.Level, Status: result.Status})
+	}
+}
+
 func (handler *petHandler) ws(response http.ResponseWriter, request *http.Request) {
 	user, err := handler.auth.Authenticate(request.Context(), websocketToken(request))
 
@@ -145,7 +239,6 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	if err != nil {
 		return
 	}
-
 	defer func() {
 		_ = connection.Close()
 	}()
@@ -222,4 +315,8 @@ func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) er
 			LevelUp:               progress.LevelUp,
 		},
 	})
+}
+
+func writeLevelRewardError(response http.ResponseWriter, status int, code, message string) {
+	writeJSON(response, status, map[string]string{"code": code, "message": message})
 }

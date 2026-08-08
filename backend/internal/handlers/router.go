@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/leaves"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
@@ -37,11 +38,12 @@ type userResponse struct {
 }
 
 func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Service, taskService *tasks.Service, leafService *leaves.Service, petService *pet.Service, weeklyLoginService *weekly_login.Service, eventService *activityevents.Service, internalToken string,
-	activityService weekly_login.ActivityProvider,
+	activityService weekly_login.ActivityProvider, chestService *chest.Service,
 ) http.Handler {
 	handler := &authHandler{service: authService}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
 	taskHandler := &taskHandler{auth: authService, tasks: taskService, leaves: leafService, pets: petService}
+	chestHandler := &chestHandler{auth: authService, chests: chestService, rewards: rewardService}
 	petHandler := &petHandler{auth: authService, pets: petService}
 	weeklyLoginHandler := &weeklyLoginHandler{
 		auth:        authService,
@@ -63,6 +65,9 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux.HandleFunc("GET /api/v1/pet", petHandler.get)
 	mux.HandleFunc("PATCH /api/v1/pet", petHandler.updateName)
 	mux.HandleFunc("GET /api/v1/pet/ws", petHandler.ws)
+	mux.HandleFunc("GET /api/v1/pet/levels", petHandler.levels)
+	mux.HandleFunc("POST /api/v1/pet/level-rewards/{rewardId}/claim", petHandler.claimLevelReward)
+	mux.HandleFunc("POST /api/v1/pet/chests/open", chestHandler.open)
 	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
 	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
 	mux.HandleFunc("POST /api/v1/tasks/record", taskHandler.record)

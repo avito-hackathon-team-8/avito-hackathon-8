@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/chest"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
@@ -38,14 +39,17 @@ func main() {
 
 	authService := auth.NewService(db, mailer, cfg.Auth)
 	rewardService := rewards.NewService(db)
+	levelClaimsService := pet.NewLevelClaimsService(db, rewardService)
 	taskAssigner := tasks.NewPuppeteerAssigner(cfg.PuppeteerInternalURL, cfg.InternalServiceToken)
 	taskService := tasks.NewService(db, taskAssigner)
 	leafService := leaves.NewService(db)
 	petService := pet.NewService(db)
+	petService.SetLevelClaimsService(levelClaimsService)
+	chestService := chest.NewService(db, petService, rewardService)
 	activityService := weekly_login.NewLoginService(db)
 	weeklyLoginService := weekly_login.NewService(db, activityService, leafService)
 	eventService := activityevents.NewService(db, taskService)
-	router := handlers.NewRouter(db, authService, rewardService, taskService, leafService, petService, weeklyLoginService, eventService, cfg.InternalServiceToken, activityService)
+	router := handlers.NewRouter(db, authService, rewardService, taskService, leafService, petService, weeklyLoginService, eventService, cfg.InternalServiceToken, activityService, chestService)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

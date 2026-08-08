@@ -372,7 +372,6 @@ func websocketURL(t *testing.T, cfg testConfig, token string) string {
 	if err != nil {
 		t.Fatalf("parse API URL: %v", err)
 	}
-
 	switch parsed.Scheme {
 	case "http":
 		parsed.Scheme = "ws"

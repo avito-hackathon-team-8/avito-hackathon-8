@@ -22,6 +22,7 @@ func Open(databaseURL string) (*gorm.DB, error) {
 		&models.Pet{},
 		&models.OTP{},
 		&models.LevelReward{},
+		&models.ChestOpening{},
 		&models.Reward{},
 		&models.WeeklyLoginClaim{},
 		&models.UserLogin{},

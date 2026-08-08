@@ -31,9 +31,11 @@ type Reward struct {
 	User            User           `gorm:"constraint:OnDelete:CASCADE"`
 	LevelRewardID   *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
 	LevelReward     *LevelReward   `gorm:"constraint:OnDelete:SET NULL"`
+	ChestOpeningID  *uuid.UUID     `gorm:"type:uuid;uniqueIndex"`
+	ChestOpening    *ChestOpening  `gorm:"constraint:OnDelete:SET NULL"`
 	Title           string         `gorm:"not null"`
 	Category        RewardCategory `gorm:"type:varchar(32);not null;index"`
-	Source          RewardSource   `gorm:"type:varchar(32);not null;uniqueIndex:idx_reward_source_ref,priority:2"`
+	Source          RewardSource   `gorm:"type:varchar(32);not null;uniqueIndex:idx_reward_source_ref,priority:2;check:chk_rewards_origin,((source = 'LEVEL' AND level_reward_id IS NOT NULL AND chest_opening_id IS NULL) OR (source = 'CHEST' AND level_reward_id IS NULL AND chest_opening_id IS NOT NULL) OR (source = 'LEADERBOARD' AND level_reward_id IS NULL AND chest_opening_id IS NULL))"`
 	SourceReference *string        `gorm:"type:varchar(128);uniqueIndex:idx_reward_source_ref,priority:3"`
 	ExpiresAt       time.Time      `gorm:"not null;index:idx_rewards_active,priority:2"`
 	RedeemedAt      *time.Time     `gorm:"index:idx_rewards_active,priority:3"`

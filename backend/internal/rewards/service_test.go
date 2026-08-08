@@ -63,6 +63,55 @@ func TestRewardSources(t *testing.T) {
 	}
 }
 
+func TestValidGrantOrigin(t *testing.T) {
+	t.Parallel()
+
+	levelRewardID := uuid.New()
+	chestOpeningID := uuid.New()
+
+	tests := []struct {
+		name  string
+		grant Grant
+		want  bool
+	}{
+		{
+			name:  "level reward",
+			grant: Grant{Source: models.RewardSourceLevel, LevelRewardID: &levelRewardID},
+			want:  true,
+		},
+		{
+			name:  "chest reward",
+			grant: Grant{Source: models.RewardSourceChest, ChestOpeningID: &chestOpeningID},
+			want:  true,
+		},
+		{
+			name:  "leaderboard reward",
+			grant: Grant{Source: models.RewardSourceLeaderboard},
+			want:  true,
+		},
+		{
+			name:  "chest reward without opening",
+			grant: Grant{Source: models.RewardSourceChest},
+			want:  false,
+		},
+		{
+			name:  "two origins",
+			grant: Grant{Source: models.RewardSourceChest, LevelRewardID: &levelRewardID, ChestOpeningID: &chestOpeningID},
+			want:  false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := validGrantOrigin(test.grant); got != test.want {
+				t.Fatalf("validGrantOrigin(%+v) = %t, want %t", test.grant, got, test.want)
+			}
+		})
+	}
+}
+
 func TestRewardStatus(t *testing.T) {
 	t.Parallel()
 
