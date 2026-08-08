@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -194,7 +195,7 @@ func testTaskService(t *testing.T, withAssignments bool) (*Service, *gorm.DB, uu
 	if err := db.AutoMigrate(&models.DailyTaskDefinition{}, &models.UserDailyTask{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
-	service := NewService(db)
+	service := NewService(db, testutil.DailyReportNotifierMock{})
 	service.now = func() time.Time { return taskTestNow }
 	userID := uuid.New()
 	var assignments []models.UserDailyTask

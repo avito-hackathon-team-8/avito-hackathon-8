@@ -41,17 +41,29 @@ type Grant struct {
 	ChestOpeningID *uuid.UUID
 }
 
-type Service struct {
-	db  *gorm.DB
-	now func() time.Time
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db, now: time.Now}
+type Service struct {
+	db          *gorm.DB
+	now         func() time.Time
+	dailyReport DailyReportNotifier
+}
+
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier) *Service {
+	return &Service{db: db, now: time.Now, dailyReport: dailyReport}
 }
 
 func (service *Service) Grant(ctx context.Context, userID uuid.UUID, grant Grant) (models.Reward, error) {
-	return service.GrantTx(ctx, service.db, userID, grant)
+	reward, err := service.GrantTx(ctx, service.db, userID, grant)
+	if err != nil {
+		return models.Reward{}, err
+	}
+
+	service.dailyReport.Notify(userID)
+
+	return reward, nil
 }
 
 func (service *Service) GrantTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, grant Grant) (models.Reward, error) {

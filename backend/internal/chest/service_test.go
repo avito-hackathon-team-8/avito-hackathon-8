@@ -9,6 +9,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -198,8 +199,9 @@ func testService(t *testing.T) (*Service, *gorm.DB, models.User, *pet.Service) {
 	}
 
 	petService := pet.NewService(db)
-	rewardService := rewards.NewService(db)
-	service := NewService(db, petService, rewardService)
+	notifier := testutil.DailyReportNotifierMock{}
+	rewardService := rewards.NewService(db, notifier)
+	service := NewService(db, notifier, petService, rewardService)
 	service.selectReward = func() (RewardDefinition, error) {
 		return defaultRewardDefinitions[0], nil
 	}

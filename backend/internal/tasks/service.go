@@ -27,6 +27,10 @@ type AssignmentEnsurer interface {
 	EnsureDailyTasks(context.Context, uuid.UUID) error
 }
 
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
+}
+
 type DailyTask struct {
 	ID            uuid.UUID
 	Slot          int
@@ -57,13 +61,14 @@ type Event struct {
 }
 
 type Service struct {
-	db      *gorm.DB
-	now     func() time.Time
-	ensurer AssignmentEnsurer
+	db          *gorm.DB
+	dailyReport DailyReportNotifier
+	now         func() time.Time
+	ensurer     AssignmentEnsurer
 }
 
-func NewService(db *gorm.DB, ensurer ...AssignmentEnsurer) *Service {
-	service := &Service{db: db, now: time.Now}
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, ensurer ...AssignmentEnsurer) *Service {
+	service := &Service{db: db, dailyReport: dailyReport, now: time.Now}
 	if len(ensurer) > 0 {
 		service.ensurer = ensurer[0]
 	}
@@ -224,6 +229,8 @@ func (service *Service) ClaimWithReward(ctx context.Context, userID, taskID uuid
 	if err != nil {
 		return ClaimResult{}, err
 	}
+
+	service.dailyReport.Notify(userID)
 
 	return result, nil
 }

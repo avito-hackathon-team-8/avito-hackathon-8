@@ -9,6 +9,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -157,8 +158,9 @@ func testEventService(t *testing.T, unlockLevel int) (*Service, *gorm.DB, uuid.U
 			assignment = created
 		}
 	}
-	taskService := tasks.NewService(db)
-	service := NewService(db, taskService)
+	notifier := testutil.DailyReportNotifierMock{}
+	taskService := tasks.NewService(db, notifier)
+	service := NewService(db, notifier, taskService)
 	service.now = func() time.Time { return eventTestNow }
 	return service, db, user.ID, assignment
 }

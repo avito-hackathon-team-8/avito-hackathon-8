@@ -31,14 +31,19 @@ type Event struct {
 	OccurredAt time.Time
 }
 
-type Service struct {
-	db    *gorm.DB
-	tasks *tasks.Service
-	now   func() time.Time
+type DailyReportNotifier interface {
+	Notify(userID uuid.UUID)
 }
 
-func NewService(db *gorm.DB, taskService *tasks.Service) *Service {
-	return &Service{db: db, tasks: taskService, now: time.Now}
+type Service struct {
+	db          *gorm.DB
+	tasks       *tasks.Service
+	now         func() time.Time
+	dailyReport DailyReportNotifier
+}
+
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, taskService *tasks.Service) *Service {
+	return &Service{db: db, tasks: taskService, now: time.Now, dailyReport: dailyReport}
 }
 
 func (service *Service) Record(ctx context.Context, userID uuid.UUID, batch []Event) error {
@@ -117,7 +122,7 @@ func (service *Service) Record(ctx context.Context, userID uuid.UUID, batch []Ev
 		}
 	}
 
-	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		userLevel := 1
 
 		if hasTaskEvent {
@@ -176,6 +181,13 @@ func (service *Service) Record(ctx context.Context, userID uuid.UUID, batch []Ev
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	service.dailyReport.Notify(userID)
+
+	return nil
 }
 
 func (service *Service) validateEvent(event Event, now time.Time) error {
