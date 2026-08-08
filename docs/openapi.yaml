@@ -173,6 +173,19 @@ paths:
                     id: 72482c10-6976-4823-a835-333333333333
                     email: user@example.com
                     verified: true
+                    leaderboard:
+                      period:
+                        key: '2026-08'
+                        startAt: '2026-08-01T00:00:00Z'
+                        endAt: '2026-09-01T00:00:00Z'
+                      calculatedAt: '2026-08-08T00:00:00Z'
+                      nextCalculationAt: '2026-08-09T00:00:00Z'
+                      player:
+                        playerId: 72482c10-6976-4823-a835-333333333333
+                        nickname: Коробыш
+                        position: 148
+                        leaves: 120
+                        isTop10: false
         '401':
           description: JWT отсутствует, недействителен или принадлежит неизвестному пользователю.
           content:
@@ -1042,44 +1055,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/leaderboard/me:
-    get:
-      tags: [Рейтинг]
-      operationId: getMyLeaderboardPosition
-      summary: Получить позицию авторизованного игрока в рейтинге за месяц
-      description: |
-        Определяет игрока по Bearer-токену и возвращает его строку из последнего
-        успешно опубликованного снимка. Клиент не может передать идентификатор игрока.
-      responses:
-        '200':
-          description: Данные авторизованного игрока в рейтинге.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MyLeaderboardResponse'
-              examples:
-                default:
-                  value:
-                    period:
-                      key: '2026-08'
-                      startAt: '2026-08-01T00:00:00Z'
-                      endAt: '2026-09-01T00:00:00Z'
-                    calculatedAt: '2026-08-12T00:00:00Z'
-                    nextCalculationAt: '2026-08-13T00:00:00Z'
-                    player:
-                      playerId: 72482c10-6976-4823-a835-333333333333
-                      nickname: Коробыш
-                      position: 148
-                      isTop10: false
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/PlayerNotFound'
-        '503':
-          $ref: '#/components/responses/LeaderboardNotReady'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
   /api/v1/weekly-login:
     get:
       tags: [Еженедельный вход]
@@ -1411,6 +1386,11 @@ components:
         verified:
           type: boolean
           description: Подтверждён ли адрес электронной почты одноразовым кодом.
+        leaderboard:
+          allOf:
+            - $ref: '#/components/schemas/MyLeaderboardResponse'
+          nullable: true
+          description: Позиция пользователя в последнем опубликованном снимке рейтинга. Отсутствует, если снимок ещё не рассчитан.
 
     PetLevel:
       type: integer
