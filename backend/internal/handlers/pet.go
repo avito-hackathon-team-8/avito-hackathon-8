@@ -21,12 +21,6 @@ type petHandler struct {
 	levelClaims *pet.LevelClaimsService
 }
 
-type petResponse struct {
-	Name   string `json:"name"`
-	Level  int    `json:"level"`
-	Leaves int64  `json:"leaves"`
-}
-
 type petNameUpdateRequest struct {
 	Name string `json:"name"`
 }
@@ -327,30 +321,30 @@ func websocketToken(request *http.Request) string {
 	return request.URL.Query().Get("token")
 }
 
-func responsePet(userPet models.Pet) petResponse {
-	return petResponse{
-		Name:   userPet.Name,
-		Level:  userPet.Level,
-		Leaves: userPet.Leaves,
-	}
+func responsePet(userPet models.Pet) petProgressResponse {
+	return responsePetProgress(pet.ProgressForPet(userPet, false))
 }
 
-func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) error {
+func responsePetProgress(progress pet.Progress) petProgressResponse {
 	chestPrice := progress.ChestPrice
 	if chestPrice == 0 {
 		chestPrice = models.ChestOpeningLeavesCost
 	}
 
+	return petProgressResponse{
+		Name:                  progress.Name,
+		Level:                 progress.Level,
+		Leaves:                progress.Leaves,
+		NextLevelTargetLeaves: progress.NextLevelTargetLeaves,
+		ChestPrice:            chestPrice,
+		LevelUp:               progress.LevelUp,
+	}
+}
+
+func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) error {
 	return connection.WriteJSON(petProgressUpdatedEvent{
 		Event: "PET_PROGRESS_UPDATED",
-		Data: petProgressResponse{
-			Name:                  progress.Name,
-			Level:                 progress.Level,
-			Leaves:                progress.Leaves,
-			NextLevelTargetLeaves: progress.NextLevelTargetLeaves,
-			ChestPrice:            chestPrice,
-			LevelUp:               progress.LevelUp,
-		},
+		Data:  responsePetProgress(progress),
 	})
 }
 

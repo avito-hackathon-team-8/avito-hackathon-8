@@ -204,18 +204,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PetResponse'
+                $ref: '#/components/schemas/PetProgress'
               examples:
                 default:
                   value:
                     name: Листик
                     level: 5
                     leaves: 45
+                    nextLevelTargetLeaves: 230
+                    chestPrice: 200
+                    levelUp: false
                 uninitialized:
                   value:
                     name: ''
                     level: 1
                     leaves: 0
+                    nextLevelTargetLeaves: 100
+                    chestPrice: 200
+                    levelUp: false
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -241,7 +247,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PetResponse'
+                $ref: '#/components/schemas/PetProgress'
         '400':
           description: Имя отсутствует, пустое или превышает допустимую длину.
           content:
@@ -1445,25 +1451,6 @@ components:
       enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
       description: Текущий уровень питомца. Максимальный уровень — 10.
 
-    PetResponse:
-      type: object
-      required: [name, level, leaves]
-      properties:
-        name:
-          type: string
-          minLength: 0
-          maxLength: 35
-          description: Имя питомца текущего пользователя. Пустая строка означает, что имя ещё не задано.
-        level:
-          $ref: '#/components/schemas/PetLevel'
-        leaves:
-          type: integer
-          format: int64
-          minimum: 0
-          description: |
-            Текущий баланс листьев. На 10-м уровне листья больше не расходуются на
-            повышение уровня и могут быть потрачены пользователем на открытие сундуков.
-
     PetNameUpdateRequest:
       type: object
       additionalProperties: false
@@ -1477,7 +1464,7 @@ components:
 
     PetProgress:
       type: object
-      required: [name, level, leaves, nextLevelTargetLeaves, levelUp]
+      required: [name, level, leaves, nextLevelTargetLeaves, chestPrice, levelUp]
       description: |
         Прогресс рассчитывается сервером по оставшемуся балансу листьев.
         Листья тратятся на повышение уровня по такой шкале стоимости:
@@ -1504,11 +1491,16 @@ components:
           format: int64
           minimum: 0
           description: Стоимость следующего уровня; 0 на максимальном уровне.
+        chestPrice:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Стоимость открытия сундука в листьях.
         levelUp:
           type: boolean
           description: |
-            Равно true, если операция, вызвавшая это WebSocket-сообщение, повысила
-            уровень питомца. В первом сообщении после подключения всегда false.
+            Для REST-ответов всегда false. Для WebSocket равно true, если операция,
+            вызвавшая сообщение, повысила уровень питомца.
 
     PetProgressUpdatedEvent:
       type: object
