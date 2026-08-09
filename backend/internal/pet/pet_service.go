@@ -18,8 +18,8 @@ import (
 const (
 	MinPetLevel      = 1
 	MaxPetLevel      = 10
-	InitialPetLevel  = MaxPetLevel
-	InitialPetLeaves = int64(1000)
+	InitialPetLevel  = MinPetLevel
+	InitialPetLeaves = int64(0)
 )
 
 var (
@@ -194,6 +194,15 @@ func (service *Service) AddLeaves(ctx context.Context, userID uuid.UUID, amount 
 		Amount:       amount,
 		Reason:       models.LeafReasonTaskReward,
 		OperationKey: fmt.Sprintf("pet:add:%s", uuid.NewString()),
+	})
+}
+
+func (service *Service) AddMVPLeaves(ctx context.Context, userID uuid.UUID) (Progress, error) {
+	return service.Credit(ctx, Credit{
+		UserID:       userID,
+		Amount:       200,
+		Reason:       models.LeafReasonMVP,
+		OperationKey: fmt.Sprintf("pet:mvp:%s", uuid.NewString()),
 	})
 }
 

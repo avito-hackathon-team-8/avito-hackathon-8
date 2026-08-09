@@ -88,6 +88,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux.HandleFunc("GET /api/v1/pet", petHandler.get)
 	mux.HandleFunc("PATCH /api/v1/pet", petHandler.updateName)
 	mux.HandleFunc("GET /api/v1/pet/ws", petHandler.ws)
+	mux.HandleFunc("POST /api/v1/pet/mvp/leaves", petHandler.addMVPLeaves)
 	mux.HandleFunc("GET /api/v1/pet/levels", petHandler.levels)
 	mux.HandleFunc("POST /api/v1/pet/level-rewards/{rewardId}/claim", petHandler.claimLevelReward)
 
