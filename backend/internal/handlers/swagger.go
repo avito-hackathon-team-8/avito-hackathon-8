@@ -35,6 +35,7 @@ const swaggerHTML = `<!doctype html>
 
 func swaggerUI(response http.ResponseWriter, _ *http.Request) {
 	spec, err := os.ReadFile("docs/openapi.yaml")
+
 	if err != nil {
 		http.Error(response, "OpenAPI specification is unavailable", http.StatusInternalServerError)
 
@@ -42,6 +43,7 @@ func swaggerUI(response http.ResponseWriter, _ *http.Request) {
 	}
 
 	specJSON, err := json.Marshal(string(spec))
+
 	if err != nil {
 		http.Error(response, "OpenAPI specification is unavailable", http.StatusInternalServerError)
 
