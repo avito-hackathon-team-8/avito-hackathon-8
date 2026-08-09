@@ -22,6 +22,7 @@ export const GamificationProfile = () => {
 
   if (!pet) return;
 
+  const isMaxLevel = pet.nextLevelTargetLeaves === 0;
   const percent = pet.nextLevelTargetLeaves ? (pet.leaves / pet.nextLevelTargetLeaves) * 100 : 0;
 
   return (
@@ -46,7 +47,7 @@ export const GamificationProfile = () => {
                 className={styles.profile__infoExperience}
                 variant="p2-semiBold"
               >
-                {pet.leaves} / {pet.nextLevelTargetLeaves}{' '}
+                {pet.leaves} {isMaxLevel || `/${pet.nextLevelTargetLeaves}`}{' '}
                 <img src={leafIcon} width={24} height={24} aria-label="Валюта из листьев" />
               </Typography>
 
@@ -54,7 +55,7 @@ export const GamificationProfile = () => {
                 className={styles.profile__infoProgressBar}
                 style={
                   {
-                    '--progress': `${percent}%`,
+                    '--progress': `${isMaxLevel ? 100 : percent}%`,
                   } as CSSProperties
                 }
               >

@@ -23,6 +23,7 @@ export type TypographyVariant =
   | 'inherit'
   | 'display'
   | 'heading'
+  | 'heading-semiBold'
   | 'section'
   | 'body'
   | 'caption'
