@@ -59,10 +59,7 @@ jobs:
           go-version: "1.25"
           cache-dependency-path: backend/go.sum
 
-      - name: Проверить тесты
-        run: go test ./...
-
-      - name: Проверить конкурентность
+      - name: Проверить тесты и конкурентность
         run: go test -race ./...
 
       - name: Проверить код
@@ -110,10 +107,7 @@ jobs:
           go-version: "1.25"
           cache-dependency-path: puppeteer/go.sum
 
-      - name: Проверить тесты
-        run: go test ./...
-
-      - name: Проверить конкурентность
+      - name: Проверить тесты и конкурентность
         run: go test -race ./...
 
       - name: Проверить код

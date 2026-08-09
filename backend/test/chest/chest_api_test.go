@@ -136,6 +136,9 @@ func containsReward(response map[string]any, rewardID string) bool {
 
 func getConfig(t *testing.T) testConfig {
 	t.Helper()
+	if os.Getenv("RUN_BACKEND_E2E") != "1" {
+		t.Skip("set RUN_BACKEND_E2E=1 to run backend e2e tests")
+	}
 
 	repoRoot, err := filepath.Abs("../../..")
 	if err != nil {

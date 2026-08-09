@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down restart build logs ps migrate lint lint-frontend lint-backend lint-puppeteer branch feature bugfix chore
+.PHONY: help up down restart build logs ps migrate test-backend-e2e lint lint-frontend lint-backend lint-puppeteer branch feature bugfix chore
 
 help:
 	@printf '%s\n' \
@@ -13,6 +13,7 @@ help:
 		'make logs                 Follow service logs' \
 		'make ps                   Show service status' \
 		'make migrate              Apply database migrations' \
+		'make test-backend-e2e     Run backend end-to-end tests' \
 		'make lint                 Run all checks' \
 		'make feature NAME=login   Create feature/login' \
 		'make bugfix NAME=api      Create bugfix/api' \
@@ -40,6 +41,9 @@ ps:
 
 migrate:
 	docker compose run --rm migrator
+
+test-backend-e2e:
+	cd backend && RUN_BACKEND_E2E=1 go test ./test/...
 
 lint: lint-frontend lint-backend lint-puppeteer
 
