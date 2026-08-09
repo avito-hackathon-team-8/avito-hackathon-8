@@ -39,3 +39,11 @@ rewards:
     title: Бесплатная доставка для двух заказов
     description: Бесплатная доставка для двух заказов
     category: FREE_DELIVERY
+
+chestRewards:
+  - title: 1000 бонусов Авито
+    category: AVITO_BONUS
+  - title: Бесплатная доставка для трёх заказов
+    category: FREE_DELIVERY
+  - title: Бесплатное продвижение объявления на 7 дней
+    category: FREE_PROMOTION

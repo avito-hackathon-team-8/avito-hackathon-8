@@ -64,6 +64,22 @@ func TestOpenSpendsLeavesAndIssuesReward(t *testing.T) {
 		t.Fatalf("chest rewards = %d, want 1", issuedCount)
 	}
 
+	var purchase models.LeafTransaction
+	if err := db.Where("operation_key = ?", fmt.Sprintf("chest:%s", opening.ID)).First(&purchase).Error; err != nil {
+		t.Fatalf("load chest purchase transaction: %v", err)
+	}
+	if purchase.UserID != user.ID || purchase.Amount != -models.ChestOpeningLeavesCost || purchase.Reason != models.LeafReasonChestPurchase {
+		t.Fatalf("chest purchase = %+v, want a 200-leaf CHEST_PURCHASE debit", purchase)
+	}
+
+	var state models.UserGameState
+	if err := db.Where("user_id = ?", user.ID).First(&state).Error; err != nil {
+		t.Fatalf("load game state: %v", err)
+	}
+	if state.PetLevel != pet.MaxPetLevel || state.LeafBalance != 75 {
+		t.Fatalf("game state = %+v, want level 10 with 75 leaves", state)
+	}
+
 	update := <-updates
 	if update.Progress.Level != pet.MaxPetLevel || update.Progress.Leaves != 75 || update.Progress.LevelUp {
 		t.Fatalf("progress update = %+v, want level 10 with 75 leaves", update.Progress)
@@ -167,12 +183,13 @@ func TestOpenRollsBackWhenRewardSelectionFails(t *testing.T) {
 }
 
 func TestRandomRewardReturnsConfiguredReward(t *testing.T) {
-	reward, err := randomReward()
+	reward, err := randomReward(testChestRewardDefinitions())()
 	if err != nil {
 		t.Fatalf("randomReward() error = %v", err)
 	}
 
-	for _, definition := range defaultRewardDefinitions {
+	definitions := testChestRewardDefinitions()
+	for _, definition := range definitions {
 		if reward == definition {
 			return
 		}
@@ -189,7 +206,7 @@ func testService(t *testing.T) (*Service, *gorm.DB, models.User, *pet.Service) {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.ChestOpening{}, &models.Reward{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.ChestOpening{}, &models.Reward{}, &models.LeafTransaction{}, &models.UserGameState{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 
@@ -201,10 +218,18 @@ func testService(t *testing.T) (*Service, *gorm.DB, models.User, *pet.Service) {
 	petService := pet.NewService(db)
 	notifier := testutil.DailyReportNotifierMock{}
 	rewardService := rewards.NewService(db, notifier)
-	service := NewService(db, notifier, petService, rewardService)
+	service := NewService(db, notifier, petService, rewardService, testChestRewardDefinitions())
 	service.selectReward = func() (RewardDefinition, error) {
-		return defaultRewardDefinitions[0], nil
+		return testChestRewardDefinitions()[0], nil
 	}
 
 	return service, db, user, petService
+}
+
+func testChestRewardDefinitions() []RewardDefinition {
+	return []RewardDefinition{
+		{Title: "1000 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
+		{Title: "Бесплатная доставка для трёх заказов", Category: models.RewardCategoryFreeDelivery},
+		{Title: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
+	}
 }

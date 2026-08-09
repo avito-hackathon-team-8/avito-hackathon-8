@@ -12,6 +12,7 @@ import (
 	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/reward_catalog"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
@@ -31,12 +32,16 @@ func main() {
 	authService := auth.NewService(db, cfg.Auth)
 	dailyReportService := daily_report.NewService(db)
 	rewardService := rewards.NewService(db, dailyReportService)
+	rewardCatalog, err := reward_catalog.Load(cfg.LevelRewardsConfig)
+	if err != nil {
+		log.Fatalf("load reward catalog: %v", err)
+	}
 	petService := pet.NewService(db, dailyReportService)
-	levelClaimsService := pet.NewLevelClaimsService(db, dailyReportService, rewardService)
+	levelClaimsService := pet.NewLevelClaimsService(db, dailyReportService, rewardService, rewardCatalog.LevelRewards())
 	petService.SetLevelClaimsService(levelClaimsService)
 	taskAssigner := tasks.NewPuppeteerAssigner(cfg.PuppeteerInternalURL, cfg.InternalServiceToken)
 	taskService := tasks.NewService(db, dailyReportService, taskAssigner)
-	chestService := chest.NewService(db, dailyReportService, petService, rewardService)
+	chestService := chest.NewService(db, dailyReportService, petService, rewardService, rewardCatalog.ChestRewards())
 	weeklyLoginService := weekly_login.NewService(db, dailyReportService, petService)
 	eventService := activityevents.NewService(db, dailyReportService, taskService)
 	router := handlers.NewRouter(db, authService, rewardService,
