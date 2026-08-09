@@ -14,6 +14,7 @@ const (
 	LeafReasonWeeklyLogin   LeafTransactionReason = "WEEKLY_LOGIN"
 	LeafReasonLevelUp       LeafTransactionReason = "LEVEL_UP"
 	LeafReasonChestPurchase LeafTransactionReason = "CHEST_PURCHASE"
+	LeafReasonMVP           LeafTransactionReason = "MVP"
 )
 
 type LeafTransaction struct {

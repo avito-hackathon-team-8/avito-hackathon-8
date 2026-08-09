@@ -264,7 +264,7 @@ func (service *Service) DebitTx(tx *gorm.DB, debit Debit) (Progress, error) {
 }
 
 func validCreditReason(reason models.LeafTransactionReason) bool {
-	return reason == models.LeafReasonTaskReward || reason == models.LeafReasonWeeklyLogin
+	return reason == models.LeafReasonTaskReward || reason == models.LeafReasonWeeklyLogin || reason == models.LeafReasonMVP
 }
 
 func validDebitReason(reason models.LeafTransactionReason) bool {

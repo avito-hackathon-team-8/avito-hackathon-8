@@ -204,8 +204,8 @@ paths:
         Возвращает единственного питомца, связанного с авторизованным пользователем.
         Уровень вычисляется сервером по оставшемуся балансу листьев и не принимается
         от клиента. Листья тратятся на переходы между уровнями, поэтому баланс уменьшается
-        после каждого повышения. Новый пользователь начинает с питомцем 10-го уровня,
-        1000 листьями и пустым именем.
+        после каждого повышения. Новый пользователь начинает с питомцем 1-го уровня,
+        0 листьями и пустым именем.
         Если `name` пустое, клиент показывает пользователю форму первичной настройки имени.
       responses:
         '200':
@@ -226,9 +226,9 @@ paths:
                 uninitialized:
                   value:
                     name: ''
-                    level: 10
-                    leaves: 1000
-                    nextLevelTargetLeaves: 0
+                    level: 1
+                    leaves: 0
+                    nextLevelTargetLeaves: 100
                     chestPrice: 200
                     levelUp: false
         '401':
@@ -267,6 +267,24 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/PetNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/pet/mvp/leaves:
+    post:
+      tags: [Питомец]
+      operationId: addMVPLeaves
+      summary: Начислить MVP-бонус
+      description: Начисляет авторизованному пользователю 200 листьев для демонстрации MVP.
+      responses:
+        '200':
+          description: Листья начислены.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetProgress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
 

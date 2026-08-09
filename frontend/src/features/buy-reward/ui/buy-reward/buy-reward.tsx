@@ -14,8 +14,18 @@ interface IBuyRewardProps {
 }
 
 export const BuyReward = ({ className }: IBuyRewardProps) => {
-  const { pet, reward, isOpen, isPending, isDisabled, isRewardVisible, openChest, closeModal } =
-    useBuyReward();
+  const {
+    pet,
+    reward,
+    isOpen,
+    isPending,
+    isDisabled,
+    isMVPLeavesPending,
+    isRewardVisible,
+    openChest,
+    addMVPLeaves,
+    closeModal,
+  } = useBuyReward();
 
   return (
     <>
@@ -43,6 +53,12 @@ export const BuyReward = ({ className }: IBuyRewardProps) => {
           )}
 
           {pet?.nextLevelTargetLeaves !== 0 && 'Разблокируется на 10 уровне'}
+        </Typography>
+      </Button>
+
+      <Button variant="primary" disabled={isMVPLeavesPending} onClick={addMVPLeaves}>
+        <Typography variant="p3-semiBold" as="span" color="inherit">
+          {isMVPLeavesPending ? 'Начисляем листья...' : 'MVP: +200 листьев'}
         </Typography>
       </Button>
 

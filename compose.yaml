@@ -44,6 +44,7 @@ services:
       LEVEL_REWARDS_CONFIG: /app/config/level_rewards.yaml
     volumes:
       - ./config:/app/config:ro
+      - ./docs:/app/docs:ro
     ports:
       - "8090:8090"
     depends_on:

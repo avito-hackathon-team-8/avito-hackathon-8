@@ -7,11 +7,12 @@ import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-pro
 import type { TReward } from '@/entities/reward/api/rewards';
 import { rewardsQueryKeys } from '@/entities/reward/api/rewards-keys';
 
+import { addMVPLeaves } from '../api/add-mvp-leaves';
 import { openChest as openChestRequest } from '../api/open-chest';
 
 export const useBuyReward = () => {
   const queryClient = useQueryClient();
-  const { data: pet } = usePetProfile();
+  const { data: pet, updatePetProfile } = usePetProfile();
   const [reward, setReward] = useState<TReward | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isRewardVisible, setIsRewardVisible] = useState(false);
@@ -48,6 +49,16 @@ export const useBuyReward = () => {
     },
   });
 
+  const { mutate: addMVPLeavesRequest, isPending: isMVPLeavesPending } = useMutation({
+    mutationFn: addMVPLeaves,
+    onSuccess: (updatedPet) => {
+      updatePetProfile(updatedPet);
+    },
+    onError: () => {
+      toast.error('Не удалось начислить листья');
+    },
+  });
+
   const openChest = useCallback(() => {
     mutate();
   }, [mutate]);
@@ -67,8 +78,10 @@ export const useBuyReward = () => {
     isOpen,
     isPending,
     isDisabled,
+    isMVPLeavesPending,
     isRewardVisible,
     openChest,
+    addMVPLeaves: () => addMVPLeavesRequest(),
     closeModal,
   };
 };
