@@ -237,8 +237,7 @@ backend/
   internal/database/      # PostgreSQL, GORM и миграции
   internal/events/        # доверенные события активности
   internal/handlers/      # HTTP handlers и маршруты
-  internal/leaves/        # журнал листьев и повышение уровня
-  internal/pet/           # питомец, награды уровней и WebSocket
+  internal/pet/           # питомец, листья, награды уровней и WebSocket
   internal/rewards/       # персональные награды и redemption
   internal/tasks/         # чтение и выдача дневных заданий
   internal/weekly_login/  # недельные награды за вход
@@ -246,7 +245,8 @@ puppeteer/
   main.go                 # фоновые jobs и health endpoint
 config/
   task_definitions.yaml   # варианты заданий
-  leaderboard_rewards.yaml# награды топ-3
+  leaderboard_rewards.yaml # награды топ-3
+  level_rewards.yaml      # награды за уровни питомца
 frontend/                 # React/Vite интерфейс
 docs/
   openapi.yaml            # контракт API

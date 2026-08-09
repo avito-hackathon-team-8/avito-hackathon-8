@@ -233,7 +233,7 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	if !result.Claim.ClaimDate.Equal(utcDate(now)) {
 		t.Fatalf("ClaimDate = %s, want current UTC date %s", result.Claim.ClaimDate, utcDate(now))
 	}
-	if result.Claim.RewardLeaves != 10 || result.Progress.Level != 1 || result.Progress.Leaves != 10 || result.Progress.LevelUp {
+	if result.Claim.RewardLeaves != 10 || result.Progress.Level != pet.InitialPetLevel || result.Progress.Leaves != pet.InitialPetLeaves+10 || result.Progress.LevelUp {
 		t.Fatalf("claim result = %+v", result)
 	}
 	var transactions []models.LeafTransaction

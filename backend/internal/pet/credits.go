@@ -107,7 +107,11 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 	if err := tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
 		DoNothing: true,
-	}).Create(&models.Pet{UserID: credit.UserID, Level: MinPetLevel}).Error; err != nil {
+	}).Create(&models.Pet{
+		UserID: credit.UserID,
+		Level:  InitialPetLevel,
+		Leaves: InitialPetLeaves,
+	}).Error; err != nil {
 		return Progress{}, fmt.Errorf("ensure pet: %w", err)
 	}
 

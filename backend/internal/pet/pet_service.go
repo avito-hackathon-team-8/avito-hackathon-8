@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	MinPetLevel = 1
-	MaxPetLevel = 10
+	MinPetLevel      = 1
+	MaxPetLevel      = 10
+	InitialPetLevel  = MaxPetLevel
+	InitialPetLeaves = int64(1000)
 )
 
 var (
@@ -110,7 +112,11 @@ func (service *Service) GetOrCreate(ctx context.Context, userID uuid.UUID) (mode
 	var pet models.Pet
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		newPet := models.Pet{UserID: userID}
+		newPet := models.Pet{
+			UserID: userID,
+			Level:  InitialPetLevel,
+			Leaves: InitialPetLeaves,
+		}
 
 		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&newPet).Error; err != nil {
 			return fmt.Errorf("create pet: %w", err)

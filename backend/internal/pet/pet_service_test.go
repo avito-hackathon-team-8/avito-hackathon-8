@@ -20,8 +20,8 @@ func TestGetOrCreateAndUpdateName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetOrCreate() error = %v", err)
 	}
-	if created.UserID != user.ID || created.Level != 1 || created.Leaves != 0 {
-		t.Fatalf("created pet = %+v", created)
+	if created.UserID != user.ID || created.Level != InitialPetLevel || created.Leaves != InitialPetLeaves {
+		t.Fatalf("created pet = %+v, want level %d with %d leaves", created, InitialPetLevel, InitialPetLeaves)
 	}
 
 	updated, err := service.UpdateName(context.Background(), user.ID, "  Листик  ")
