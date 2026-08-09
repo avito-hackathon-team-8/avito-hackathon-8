@@ -1,4 +1,4 @@
-import { mainQueryKey } from '@/shared/config/api';
+import { mainQueryKey } from '@/shared/config';
 
 export const todaySummaryQueryKeys = {
   all: [mainQueryKey.all, 'today-summary'] as const,

@@ -1,6 +1,5 @@
-import { apiRequest } from '@/shared/api/api-request';
-import { getAuthHeaders } from '@/shared/api/get-auth-headers';
-import { API_URL } from '@/shared/config/api';
+import { apiRequest, getAuthHeaders } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 
 import { API_ROUTE_DAILY_TASKS } from './api-routes';
 

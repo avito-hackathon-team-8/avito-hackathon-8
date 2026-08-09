@@ -1,8 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation } from '@tanstack/react-query';
 
-import { requestOtp } from "@/features/auth/api/auth";
+import { requestOtp } from '../api/auth';
 
-import { authMutationKeys } from "./auth-query-keys";
+import { authMutationKeys } from './auth-query-keys';
 
 export const useRequestOtp = () => {
   return useMutation({

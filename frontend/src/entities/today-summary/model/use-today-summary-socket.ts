@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { API_URL } from '@/shared/config/api';
-import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
+import { API_URL } from '@/shared/config';
+import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
 import { API_ROUTE_TODAY_SUMMARY } from '../api/api-routes';
 import type { TTodaySummary } from '../api/get-today-summary';

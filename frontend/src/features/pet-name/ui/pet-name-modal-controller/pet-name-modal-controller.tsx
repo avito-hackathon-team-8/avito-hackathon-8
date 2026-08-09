@@ -1,4 +1,4 @@
-import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
+import { usePetProfile } from '@/entities/gamification-profile';
 
 import { PetNameModal } from '../pet-name-modal/pet-name-modal';
 

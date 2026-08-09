@@ -3,10 +3,10 @@ import { createBrowserRouter } from 'react-router';
 import { AppShell } from '@/app/layouts/app-shell/app-shell';
 import { MainLayout } from '@/app/layouts/main-layout';
 import { TanstackQueryProvider } from '@/app/providers/tanstack-query';
-import { MainPage } from '@/pages/main-page/main.page';
+import { MainPage } from '@/pages/main-page';
 import { PageNotFound } from '@/pages/page-not-found';
 import { RegisterPage } from '@/pages/register-page';
-import { APP_ROUTES } from '@/shared/config/routes';
+import { APP_ROUTES } from '@/shared/config';
 
 import { GuestOnly } from './guards/guest-only';
 import { RequireAuth } from './guards/require-auth';

@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { dailyTasksQueryKeys } from '@/entities/daily-task/api/daily-tasks-keys';
-import { API_URL } from '@/shared/config/api';
-import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
+import { dailyTasksQueryKeys } from '@/entities/daily-task';
+import { API_URL } from '@/shared/config';
+import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
 import { API_ROUTE_PROFILE } from '../api/api-routes';
 import { gamificationProfileKeys } from '../api/gamification-profile-keys';

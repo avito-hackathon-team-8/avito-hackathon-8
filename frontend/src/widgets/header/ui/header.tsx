@@ -1,5 +1,5 @@
 import { PetName } from '@/features/pet-name';
-import { ArrowIcon } from '@/shared/assets/icon/arrow-icon';
+import { ArrowIcon } from '@/shared/assets/icon';
 import { Button } from '@/shared/ui/button';
 
 import styles from './header.module.scss';

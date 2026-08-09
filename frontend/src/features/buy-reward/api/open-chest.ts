@@ -1,7 +1,6 @@
-import type { TReward } from '@/entities/reward/api/rewards';
-import { apiRequest } from '@/shared/api/api-request';
-import { getAuthHeaders } from '@/shared/api/get-auth-headers';
-import { API_URL } from '@/shared/config/api';
+import type { TReward } from '@/entities/reward';
+import { apiRequest, getAuthHeaders } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 
 const OPEN_CHEST_ROUTE = '/v1/pet/chests/open';
 

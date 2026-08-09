@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 
-import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
+import { leafIcon } from '@/shared/assets/icon';
 import { Button } from '@/shared/ui/button';
-import { Modal } from '@/shared/ui/modal/modal';
+import { Modal } from '@/shared/ui/modal';
 import { Typography } from '@/shared/ui/typography';
 
 import { useBuyReward } from '../../model/use-buy-reward';

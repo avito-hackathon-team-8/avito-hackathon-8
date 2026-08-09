@@ -1,4 +1,4 @@
-import { mainQueryKey } from '@/shared/config/api';
+import { mainQueryKey } from '@/shared/config';
 
 export const dailyTasksQueryKeys = {
   all: [mainQueryKey.all, 'tasks'] as const,

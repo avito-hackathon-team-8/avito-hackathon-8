@@ -1,6 +1,6 @@
 import { type CSSProperties, useMemo } from 'react';
 
-import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
+import { leafIcon } from '@/shared/assets/icon';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { Typography } from '@/shared/ui/typography';
 

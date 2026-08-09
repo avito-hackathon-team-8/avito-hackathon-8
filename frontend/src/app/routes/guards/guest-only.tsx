@@ -1,7 +1,7 @@
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet } from 'react-router';
 
-import { useCurrentUser } from "@/entities/user";
-import { APP_ROUTES } from "@/shared/config/routes";
+import { useCurrentUser } from '@/entities/user';
+import { APP_ROUTES } from '@/shared/config';
 
 export const GuestOnly = () => {
   const { data: currentUser, isLoading } = useCurrentUser();

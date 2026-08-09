@@ -1,7 +1,6 @@
-import type { TPet } from '@/entities/gamification-profile/api/pet';
-import { apiRequest } from '@/shared/api/api-request';
-import { getAuthHeaders } from '@/shared/api/get-auth-headers';
-import { API_URL } from '@/shared/config/api';
+import type { TPet } from '@/entities/gamification-profile';
+import { apiRequest, getAuthHeaders } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 
 export const addMVPLeaves = async (): Promise<TPet> => {
   return await apiRequest(

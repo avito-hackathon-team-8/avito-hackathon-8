@@ -25,6 +25,18 @@
 
 @font-face {
   font-style: normal;
+  font-weight: 500;
+  font-family: Manrope;
+
+  src:
+    url('../../shared/assets/fonts/manrope/Manrope-Medium.woff2') format('woff2'),
+    url('../../shared/assets/fonts/manrope/Manrope-Medium.woff') format('woff'),
+    url('../../shared/assets/fonts/manrope/Manrope-Medium.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-style: normal;
   font-weight: 400;
   font-family: Manrope;
 

@@ -1,29 +1,8 @@
-import { apiRequest } from '@/shared/api/api-request';
-import { removeSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
+import type { User } from '@/entities/user';
+import { apiRequest } from '@/shared/api';
+import { removeSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
 const AUTH_API = '/api/app/auth';
-
-export type User = {
-  id: string;
-  email: string;
-  verified: boolean;
-  leaderboard?: {
-    period: {
-      key: string;
-      startAt: string;
-      endAt: string;
-    };
-    calculatedAt: string;
-    nextCalculationAt: string;
-    player: {
-      playerId: string;
-      nickname: string;
-      position: number;
-      leaves: number;
-      isTop10: boolean;
-    };
-  };
-};
 
 type TAuthUserRecord = Pick<User, 'id' | 'email' | 'verified'>;
 
@@ -49,16 +28,6 @@ export const verifyOtp = async (email: string, code: string): Promise<AuthRespon
       body: JSON.stringify({ email, code }),
     }),
   );
-
-export const getCurrentUser = async (token: string | null): Promise<User> => {
-  return await apiRequest(
-    fetch(`${AUTH_API}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
-    'Ошибка получения данных getCurrentUser',
-    () => removeSessionStorageValue(sessionStorageKeysMap.authToken),
-  );
-};
 
 export const logout = () => {
   removeSessionStorageValue(sessionStorageKeysMap.authToken);

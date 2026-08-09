@@ -1,4 +1,4 @@
-import { formatDays } from '@/shared/lib/format-days';
+import { formatDays } from '@/shared/lib';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 

@@ -1,8 +1,7 @@
-import type { TTaskType } from '@/entities/daily-task/api/tasks';
-import type { TRewardCategory } from '@/entities/reward/api/rewards';
-import { apiRequest } from '@/shared/api/api-request';
-import { getAuthHeaders } from '@/shared/api/get-auth-headers';
-import { API_URL } from '@/shared/config/api';
+import type { TTaskType } from '@/entities/daily-task';
+import type { TRewardCategory } from '@/entities/reward';
+import { apiRequest, getAuthHeaders } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 
 import { API_ROUTE_TODAY_SUMMARY } from './api-routes';
 

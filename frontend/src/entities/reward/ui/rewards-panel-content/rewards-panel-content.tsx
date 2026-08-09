@@ -1,8 +1,8 @@
-import { RewardsIcons } from '@/entities/reward/ui/assets/reward-icon';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TReward } from '../../api/rewards';
+import { RewardsIcons } from '../assets/reward-icon';
 
 import styles from './rewards-panel-content.module.scss';
 

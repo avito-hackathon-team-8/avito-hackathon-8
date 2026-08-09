@@ -1,4 +1,4 @@
-import { Accordion } from '@/shared/ui/accordion/accordion';
+import { Accordion } from '@/shared/ui/accordion';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TRule } from '../../model/rules';

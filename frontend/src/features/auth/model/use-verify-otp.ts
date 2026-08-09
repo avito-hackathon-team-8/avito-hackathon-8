@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { userQueryKeys } from '@/entities/user';
-import { getCurrentUser, verifyOtp } from '@/features/auth/api/auth';
-import { mainQueryKey } from '@/shared/config/api';
-import { sessionStorageKeysMap, setSessionStorageValue } from '@/shared/lib/session-storage';
+import { getCurrentUser, userQueryKeys } from '@/entities/user';
+import { mainQueryKey } from '@/shared/config';
+import { sessionStorageKeysMap, setSessionStorageValue } from '@/shared/lib';
+
+import { verifyOtp } from '../api/auth';
 
 import { authMutationKeys } from './auth-query-keys';
 

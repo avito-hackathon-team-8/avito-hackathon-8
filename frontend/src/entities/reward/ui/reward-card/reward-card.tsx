@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { formatWord } from '@/shared/lib/format-word';
+import { formatWord } from '@/shared/lib';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 

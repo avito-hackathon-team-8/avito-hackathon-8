@@ -1,7 +1,6 @@
-import { DailyTaskIcons } from '@/entities/daily-task/ui/assets/daily-task-icons';
-import { RewardsIcons } from '@/entities/reward/ui/assets/reward-icon';
-import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
-import { LevelUpIcon } from '@/shared/assets/icon/level-up-icon';
+import { DailyTaskIcons } from '@/entities/daily-task';
+import { RewardsIcons } from '@/entities/reward';
+import { leafIcon, LevelUpIcon } from '@/shared/assets/icon';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TTodaySummaryStats } from '../../model/get-today-summary-stats ';

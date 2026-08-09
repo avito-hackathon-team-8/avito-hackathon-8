@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-import type { TTaskType } from '@/entities/daily-task/api/tasks';
+import type { TTaskType } from '../../api/tasks';
 
 interface TRewardsIconsProps extends SVGProps<SVGSVGElement> {
   variant: TTaskType;

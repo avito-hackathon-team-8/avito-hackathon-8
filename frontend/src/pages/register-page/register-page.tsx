@@ -1,9 +1,9 @@
-import { useNavigate } from "react-router";
+import { useNavigate } from 'react-router';
 
-import { AuthFormStep, useOtpAuth, WelcomeStep } from "@/features/auth";
-import { APP_ROUTES } from "@/shared/config/routes";
+import { AuthFormStep, useOtpAuth, WelcomeStep } from '@/features/auth';
+import { APP_ROUTES } from '@/shared/config';
 
-import styles from "./register-page.module.scss";
+import styles from './register-page.module.scss';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -16,11 +16,9 @@ export const RegisterPage = () => {
 
   return (
     <div className={styles.page}>
-      {auth.step === "welcome" ? (
-        <WelcomeStep onContinue={auth.openEmailStep} />
-      ) : null}
+      {auth.step === 'welcome' ? <WelcomeStep onContinue={auth.openEmailStep} /> : null}
 
-      {auth.step === "email" ? (
+      {auth.step === 'email' ? (
         <AuthFormStep
           variant="email"
           value={auth.email}
@@ -32,7 +30,7 @@ export const RegisterPage = () => {
         />
       ) : null}
 
-      {auth.step === "code" ? (
+      {auth.step === 'code' ? (
         <AuthFormStep
           variant="code"
           email={auth.email}

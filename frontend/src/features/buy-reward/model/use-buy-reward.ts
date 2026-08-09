@@ -3,9 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
-import type { TReward } from '@/entities/reward/api/rewards';
-import { rewardsQueryKeys } from '@/entities/reward/api/rewards-keys';
+import { usePetProfile } from '@/entities/gamification-profile';
+import { rewardsQueryKeys, type TReward } from '@/entities/reward';
 
 import { addMVPLeaves } from '../api/add-mvp-leaves';
 import { openChest as openChestRequest } from '../api/open-chest';

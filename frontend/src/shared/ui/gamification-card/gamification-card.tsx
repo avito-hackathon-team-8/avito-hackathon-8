@@ -28,7 +28,7 @@ export const GamificationCard = ({
         {title}
       </Typography>
 
-      <Typography className={styles.card__description} variant="caption" color="gray500">
+      <Typography className={styles.card__description} variant="caption-medium" color="gray500">
         {description}
       </Typography>
 

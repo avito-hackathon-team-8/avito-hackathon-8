@@ -1,10 +1,9 @@
 import { ActivityDaysAutoPanel } from '@/entities/activity-days';
-import { usePetName } from '@/entities/gamification-profile/model/use-pet-name';
-import { usePetProfileSocket } from '@/entities/gamification-profile/model/use-pet-profile-socket';
+import { usePetName, usePetProfileSocket } from '@/entities/gamification-profile';
 import { useTodaySummarySocket } from '@/entities/today-summary';
 import { PetNameModal } from '@/features/pet-name';
 import { GamificationDashboard } from '@/widgets/gamification-dashboard';
-import { ProfileDashboard } from '@/widgets/profile-dashboard/ui/profile-dashboard';
+import { ProfileDashboard } from '@/widgets/profile-dashboard';
 
 import styles from './main.page.module.scss';
 

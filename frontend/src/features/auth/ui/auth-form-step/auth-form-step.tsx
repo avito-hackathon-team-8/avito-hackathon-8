@@ -1,8 +1,9 @@
 import type { SubmitEvent } from 'react';
 
-import { OTP_LENGTH } from '@/features/auth/model/constants';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
+
+import { OTP_LENGTH } from '../../model/constants';
 
 import styles from './auth-form-step.module.scss';
 
