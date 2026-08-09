@@ -129,22 +129,19 @@ func TestGetBuildsDailyReportFromTodaysActivity(t *testing.T) {
 		!report.Rewards[0].ExpiresAt.Equal(firstReward.ExpiresAt) || !report.Rewards[0].ReceivedAt.Equal(firstReward.CreatedAt) {
 		t.Fatalf("first reward = %+v", report.Rewards[0])
 	}
-	if len(report.Tasks) != 2 {
-		t.Fatalf("len(Tasks) = %d, want 2", len(report.Tasks))
+	if len(report.Tasks) != 1 {
+		t.Fatalf("len(Tasks) = %d, want only the claimed task", len(report.Tasks))
 	}
-	if report.Tasks[0].ID != firstTask.ID || report.Tasks[1].ID != secondTask.ID {
-		t.Fatalf("Tasks order = %+v, want slot 1 followed by slot 2", report.Tasks)
+	if report.Tasks[0].ID != firstTask.ID {
+		t.Fatalf("Tasks = %+v, want only claimed task %s; unclaimed task %s must be excluded", report.Tasks, firstTask.ID, secondTask.ID)
 	}
 	if report.Tasks[0].Type != models.ViewListingsTaskType || report.Tasks[0].Description != "Посмотреть объявления" ||
-		report.Tasks[0].RewardLeaves != 45 || !report.Tasks[0].RewardClaimed || !report.Tasks[0].CompletedAt.Equal(completedAt) {
+		report.Tasks[0].RewardLeaves != 45 || !report.Tasks[0].CompletedAt.Equal(completedAt) {
 		t.Fatalf("first task = %+v", report.Tasks[0])
 	}
-	if report.Tasks[1].RewardClaimed {
-		t.Fatalf("second task RewardClaimed = true, want false")
-	}
 	if report.LevelUp == nil || report.LevelUp.FromLevel != 2 || report.LevelUp.ToLevel != 4 ||
-		!report.LevelUp.OccurredAt.Equal(transactions[2].OccurredAt) {
-		t.Fatalf("LevelUp = %+v, want levels 2 to 4 at %s", report.LevelUp, transactions[2].OccurredAt)
+		!report.LevelUp.OccurredAt.Equal(transactions[3].OccurredAt) {
+		t.Fatalf("LevelUp = %+v, want levels 2 to 4 at last level-up time %s", report.LevelUp, transactions[3].OccurredAt)
 	}
 	if !report.UpdatedAt.Equal(claimedAt) {
 		t.Fatalf("UpdatedAt = %s, want %s", report.UpdatedAt, claimedAt)
@@ -179,7 +176,7 @@ func TestGetUsesUTCDateBoundsAndIsolatesUsers(t *testing.T) {
 	}
 
 	includedCompletedAt := dayStart.Add(22 * time.Hour)
-	includedTask := seedDailyReportTask(t, db, user.ID, 1, models.ViewListingsTaskType, "Included", 10, includedCompletedAt, nil)
+	includedTask := seedDailyReportTask(t, db, user.ID, 1, models.ViewListingsTaskType, "Included", 10, includedCompletedAt, &includedCompletedAt)
 	seedDailyReportTask(t, db, user.ID, 2, models.AddToFavoritesTaskType, "Previous day", 10, dayStart.Add(-time.Second), nil)
 	seedDailyReportTask(t, db, user.ID, 3, models.PublishListingTaskType, "Next day", 10, dayEnd, nil)
 	seedDailyReportTask(t, db, otherUser.ID, 1, models.ViewListingsTaskType, "Other user", 10, dayStart.Add(21*time.Hour), nil)

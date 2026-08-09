@@ -22,12 +22,11 @@ type dailyReportRewardResponse struct {
 }
 
 type dailyReportTaskResponse struct {
-	TaskID        string          `json:"taskId"`
-	Type          models.TaskType `json:"type"`
-	Description   string          `json:"description"`
-	RewardLeaves  int             `json:"rewardLeaves"`
-	RewardClaimed bool            `json:"rewardClaimed"`
-	CompletedAt   time.Time       `json:"completedAt"`
+	TaskID       string          `json:"taskId"`
+	Type         models.TaskType `json:"type"`
+	Description  string          `json:"description"`
+	RewardLeaves int             `json:"rewardLeaves"`
+	CompletedAt  time.Time       `json:"completedAt"`
 }
 
 type dailyReportLevelUpResponse struct {
@@ -214,12 +213,11 @@ func responseDailyReport(report daily_report.DailyReport) dailyReportResponse {
 
 	for _, task := range report.Tasks {
 		tasks = append(tasks, dailyReportTaskResponse{
-			TaskID:        task.ID.String(),
-			Type:          task.Type,
-			Description:   task.Description,
-			RewardLeaves:  task.RewardLeaves,
-			RewardClaimed: task.RewardClaimed,
-			CompletedAt:   task.CompletedAt.UTC(),
+			TaskID:       task.ID.String(),
+			Type:         task.Type,
+			Description:  task.Description,
+			RewardLeaves: task.RewardLeaves,
+			CompletedAt:  task.CompletedAt.UTC(),
 		})
 	}
 

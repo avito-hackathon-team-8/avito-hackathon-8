@@ -23,12 +23,11 @@ type Reward struct {
 }
 
 type Task struct {
-	ID            uuid.UUID
-	Type          models.TaskType
-	Description   string
-	RewardLeaves  int
-	RewardClaimed bool
-	CompletedAt   time.Time
+	ID           uuid.UUID
+	Type         models.TaskType
+	Description  string
+	RewardLeaves int
+	CompletedAt  time.Time
 }
 
 type LevelUp struct {
@@ -165,7 +164,8 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 			Select(`assignments.id, definitions.type, definitions.title AS description,
 				definitions.reward AS reward_leaves, assignments.claimed_at, assignments.completed_at`).
 			Joins("JOIN daily_task_definitions AS definitions ON definitions.id = assignments.task_definition_id").
-			Where("assignments.user_id = ? AND assignments.completed_at >= ? AND assignments.completed_at < ?", userID, dayStart, dayEnd).
+			Where(`assignments.user_id = ? AND assignments.completed_at >= ? AND assignments.completed_at < ?
+				AND assignments.claimed_at IS NOT NULL`, userID, dayStart, dayEnd).
 			Order("assignments.completed_at ASC, definitions.slot ASC").
 			Scan(&taskRows).Error
 
@@ -177,12 +177,11 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 			completedAt := row.CompletedAt.UTC()
 
 			report.Tasks = append(report.Tasks, Task{
-				ID:            row.ID,
-				Type:          row.Type,
-				Description:   row.Description,
-				RewardLeaves:  row.RewardLeaves,
-				RewardClaimed: row.ClaimedAt != nil,
-				CompletedAt:   completedAt,
+				ID:           row.ID,
+				Type:         row.Type,
+				Description:  row.Description,
+				RewardLeaves: row.RewardLeaves,
+				CompletedAt:  completedAt,
 			})
 
 			report.UpdatedAt = latestTime(report.UpdatedAt, completedAt)
@@ -286,7 +285,7 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 	return int(earnedLeaves), &LevelUp{
 		FromLevel:  fromLevel,
 		ToLevel:    pet.Level,
-		OccurredAt: levelUps[0].OccurredAt.UTC(),
+		OccurredAt: levelUps[len(levelUps)-1].OccurredAt.UTC(),
 	}, updatedAt, nil
 }
 
