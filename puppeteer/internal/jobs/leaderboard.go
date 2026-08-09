@@ -15,7 +15,6 @@ type CalculateLeaderboard struct {
 }
 
 func (CalculateLeaderboard) Name() string { return "calculate-leaderboard" }
-func (CalculateLeaderboard) Daily()       {}
 
 func (job CalculateLeaderboard) Run(ctx context.Context, db *gorm.DB, now time.Time) error {
 	now = now.UTC()
