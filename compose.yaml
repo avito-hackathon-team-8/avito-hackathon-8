@@ -15,6 +15,23 @@ services:
       timeout: 3s
       retries: 10
 
+  migrator:
+    image: postgres:17-alpine
+    restart: "no"
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+    command: ["/bin/sh", "/migrations/run.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend
@@ -27,8 +44,8 @@ services:
     ports:
       - "8090:8090"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8090/api/health"]
       interval: 5s
@@ -52,6 +69,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8091/health"]
       interval: 5s
