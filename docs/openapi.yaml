@@ -34,8 +34,6 @@ tags:
     description: Задания текущего дня, прогресс их выполнения и получение наград.
   - name: Ежедневная сводка
     description: Итоги активности пользователя за текущий день и обновления в реальном времени.
-  - name: Внешняя активность
-    description: Приём и получение данных о дневной активности пользователя.
 security:
   - bearerAuth: []
 
@@ -1176,79 +1174,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/external/v1/users/{userId}/activity:
-    get:
-      tags: [Внешняя активность]
-      operationId: getExternalUserActivity
-      summary: Получить активность пользователя за диапазон дат
-      description: |
-        Контракт внешнего сервиса, используемого бэкендом. Для этой операции не
-        применяется Bearer-токен игрока из приложения; межсервисную аутентификацию
-        необходимо настроить отдельно.
-      security: []
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          description: Идентификатор пользователя во внешней системе.
-          schema:
-            type: string
-        - name: dateFrom
-          in: query
-          required: true
-          description: Начальная календарная дата в UTC, включительно.
-          schema:
-            type: string
-            format: date
-        - name: dateTo
-          in: query
-          required: true
-          description: Конечная календарная дата в UTC, включительно.
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Состояние активности для каждой запрошенной даты в UTC.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExternalActivityResponse'
-              examples:
-                default:
-                  value:
-                    userId: 8f123af2
-                    window:
-                      dateFrom: '2026-08-03'
-                      dateTo: '2026-08-09'
-                    generatedAt: '2026-08-05T12:00:00Z'
-                    completeUntil: '2026-08-04'
-                    days:
-                      - date: '2026-08-03'
-                        status: ACTIVE
-                        firstActivityAt: '2026-08-03T07:15:00Z'
-                        activityCount: 12
-                      - date: '2026-08-04'
-                        status: INACTIVE
-                        firstActivityAt: null
-                        activityCount: 0
-                      - date: '2026-08-05'
-                        status: UNKNOWN
-                        firstActivityAt: null
-                        activityCount: null
-        '400':
-          description: Некорректный диапазон дат или параметры.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Ошибка внешнего сервиса.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
 components:
   securitySchemes:
     bearerAuth:
@@ -2102,59 +2027,6 @@ components:
       properties:
         claim:
           $ref: '#/components/schemas/WeeklyLoginClaim'
-
-    ExternalActivityStatus:
-      type: string
-      enum: [ACTIVE, INACTIVE, UNKNOWN, BEFORE_REGISTRATION]
-
-    ExternalActivityWindow:
-      type: object
-      required: [dateFrom, dateTo]
-      properties:
-        dateFrom:
-          type: string
-          format: date
-        dateTo:
-          type: string
-          format: date
-
-    ExternalActivityDay:
-      type: object
-      required: [date, status, firstActivityAt, activityCount]
-      properties:
-        date:
-          type: string
-          format: date
-        status:
-          $ref: '#/components/schemas/ExternalActivityStatus'
-        firstActivityAt:
-          type: string
-          format: date-time
-          nullable: true
-        activityCount:
-          type: integer
-          format: int64
-          minimum: 0
-          nullable: true
-
-    ExternalActivityResponse:
-      type: object
-      required: [userId, window, generatedAt, completeUntil, days]
-      properties:
-        userId:
-          type: string
-        window:
-          $ref: '#/components/schemas/ExternalActivityWindow'
-        generatedAt:
-          type: string
-          format: date-time
-        completeUntil:
-          type: string
-          format: date
-        days:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExternalActivityDay'
 
     ErrorResponse:
       type: object
