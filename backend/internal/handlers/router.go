@@ -77,6 +77,9 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", health)
+	mux.HandleFunc("GET /swagger", swaggerUI)
+	mux.HandleFunc("GET /swagger/", swaggerUI)
+	mux.HandleFunc("GET /api/openapi.yaml", openAPISpec)
 	mux.HandleFunc("POST /api/app/auth/request-otp", handler.requestOTP)
 	mux.HandleFunc("POST /api/app/auth/verify-otp", handler.verifyOTP)
 	mux.HandleFunc("GET /api/app/auth/me", handler.me)
