@@ -3,7 +3,7 @@ import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import type { TTask } from '../../api/tasks';
 import { useDailyTasks } from '../../model/use-daily-tasks';
-import tasksBoardIcon from '../assets/tasks-board-icon.svg';
+import tasksBoardIcon from '../assets/tasks-board-icon.webp';
 import { DailyTaskPanelContent } from '../daily-task-panel-content/daily-task-panel-content';
 
 const TITLE_CARD = 'Ежедневные задания';
@@ -39,8 +39,8 @@ export const DailyTaskCard = () => {
           imageProps={{
             src: tasksBoardIcon,
             alt: 'Доска задач',
-            width: 78,
-            height: 86,
+            width: 69,
+            height: 74,
           }}
           wrapperProps={{ onClick: open }}
         />

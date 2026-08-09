@@ -70,7 +70,8 @@ export const useBuyReward = () => {
     setReward(null);
   }, [clearRewardTimer]);
 
-  const isDisabled = !pet || pet.leaves < pet.chestPrice || isPending;
+  const isDisabled =
+    !pet || pet.nextLevelTargetLeaves !== 0 || pet.leaves < pet.chestPrice || isPending;
 
   return {
     pet,

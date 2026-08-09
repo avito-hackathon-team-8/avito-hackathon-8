@@ -20,15 +20,17 @@
 
   &.card_horizontal {
     display: grid;
-    grid-template: "title img" auto "description img" 1fr / 1fr auto;
+    grid-template: 'title img' auto 'description img' 1fr / 1fr auto;
     column-gap: 22px;
 
     .card__img {
       grid-area: img;
+      align-self: center;
     }
 
     .card__description {
       grid-area: description;
+      max-width: 170px;
     }
   }
 

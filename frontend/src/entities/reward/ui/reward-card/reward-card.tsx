@@ -5,7 +5,7 @@ import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { useRewards } from '../../model/use-reward';
-import cupIcon from '../assets/сup-icon.svg';
+import cupIcon from '../assets/сup-icon.webp';
 import { RewardsPanelContent } from '../rewards-panel-content/rewards-panel-content';
 
 const TITLE_CARD = 'Награды';
@@ -40,7 +40,7 @@ export const RewardCard = () => {
         <GamificationCard
           title={TITLE_CARD}
           description={getDescription}
-          imageProps={{ src: cupIcon, alt: 'кубок', width: 92, height: 80 }}
+          imageProps={{ src: cupIcon, alt: 'кубок', width: 63, height: 75 }}
           wrapperProps={{ onClick: open }}
         />
       )}

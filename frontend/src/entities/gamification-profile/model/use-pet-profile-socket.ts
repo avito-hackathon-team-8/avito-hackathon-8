@@ -28,7 +28,7 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
   const { updatePetProfile } = usePetProfile();
 
   useEffect(() => {
-    if (enabled) return;
+    if (!enabled) return;
 
     const token = getSessionStorageValue(sessionStorageKeysMap.authToken);
 
@@ -44,7 +44,6 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
     let reconnectDelay = INITIAL_RECONNECT_DELAY;
 
     let disposed = false;
-    let wasConnected = false;
 
     const connect = () => {
       if (disposed) {
@@ -60,7 +59,6 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
       socket = new WebSocket(socketUrl);
 
       socket.onopen = () => {
-        wasConnected = true;
         reconnectDelay = INITIAL_RECONNECT_DELAY;
       };
 
@@ -102,12 +100,6 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
         });
 
         if (disposed) {
-          return;
-        }
-
-        if (!wasConnected) {
-          console.error('WebSocket не смог установить первоначальное соединение');
-
           return;
         }
 
