@@ -37,7 +37,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("get database connection: %v", err)
 	}
-	defer sqlDB.Close()
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("close database connection: %v", err)
+		}
+	}()
 
 	authService := auth.NewService(db, cfg.Auth)
 	dailyReportService := daily_report.NewService(db)
@@ -77,7 +81,7 @@ func main() {
 	select {
 	case err := <-serverErr:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("serve backend: %v", err)
+			log.Printf("serve backend: %v", err)
 		}
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
