@@ -961,7 +961,8 @@ paths:
       description: |
         Возвращает текущую сводку авторизованного пользователя за календарный день в UTC.
         Количество заработанных листьев передаётся первым полем. В `tasks` входят только
-        выполненные сегодня задания, а в `rewards` — награды, полученные сегодня.
+        выполненные сегодня задания с уже забранной наградой, а в `rewards` — награды,
+        полученные сегодня.
       responses:
         '200':
           description: Текущая ежедневная сводка.
@@ -991,12 +992,6 @@ paths:
                         rewardLeaves: 45
                         rewardClaimed: true
                         completedAt: '2026-08-05T09:15:00Z'
-                      - taskId: 6ab41fc5-1a5f-4db4-9129-222222222222
-                        type: ADD_TO_FAVORITES
-                        description: Добавить 3 объявления в избранное
-                        rewardLeaves: 45
-                        rewardClaimed: false
-                        completedAt: '2026-08-05T11:20:00Z'
                     visitedToday: true
                     updatedAt: '2026-08-05T11:20:00Z'
         '401':
@@ -1794,7 +1789,7 @@ components:
         taskId:
           type: string
           format: uuid
-          description: Идентификатор выполненного задания.
+          description: Идентификатор выполненного задания с забранной наградой.
         type:
           $ref: '#/components/schemas/DailyTaskType'
         description:
@@ -1808,7 +1803,7 @@ components:
           description: Количество листьев за получение награды задания.
         rewardClaimed:
           type: boolean
-          description: Были ли листья за это задание уже начислены.
+          description: Были ли листья за это задание уже начислены. В ежедневной сводке всегда `true`.
         completedAt:
           type: string
           format: date-time
@@ -1858,7 +1853,7 @@ components:
           description: Повышение уровня за сегодня; `null`, если уровня не было.
         tasks:
           type: array
-          description: Выполненные сегодня задания в порядке выполнения.
+          description: Выполненные сегодня задания с забранной наградой в порядке выполнения.
           items:
             $ref: '#/components/schemas/DailyReportTask'
         visitedToday:
