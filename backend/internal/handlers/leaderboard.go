@@ -204,9 +204,3 @@ func startOfMonth(at time.Time) time.Time {
 
 	return time.Date(at.Year(), at.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
-
-func nextMidnight(at time.Time) time.Time {
-	at = at.UTC()
-
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1)
-}
