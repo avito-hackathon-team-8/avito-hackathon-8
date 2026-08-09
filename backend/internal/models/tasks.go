@@ -15,7 +15,6 @@ const (
 	ClaimedTaskStatus    TaskStatus = "CLAIMED"
 	InProgressTaskStatus TaskStatus = "IN_PROGRESS"
 	CompletedTaskStatus  TaskStatus = "COMPLETED"
-	ExpiredTaskStatus    TaskStatus = "EXPIRED"
 )
 
 const (

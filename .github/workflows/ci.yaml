@@ -59,8 +59,8 @@ jobs:
           go-version: "1.25"
           cache-dependency-path: backend/go.sum
 
-      - name: Проверить тесты
-        run: go test ./...
+      - name: Проверить тесты и конкурентность
+        run: go test -race ./...
 
       - name: Проверить код
         run: go vet ./...
@@ -74,6 +74,73 @@ jobs:
           version: v2.12.2
           working-directory: backend
           args: --config ../.golangci.yaml
+
+  puppeteer:
+    name: Puppeteer
+    runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/puppeteer_test
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: puppeteer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d puppeteer_test"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: puppeteer
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+
+      - name: Установить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: puppeteer/go.sum
+
+      - name: Проверить тесты и конкурентность
+        run: go test -race ./...
+
+      - name: Проверить код
+        run: go vet ./...
+
+      - name: Проверить форматирование
+        run: test -z "$(gofmt -l .)"
+
+      - name: Запустить линтер
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12.2
+          working-directory: puppeteer
+          args: --config ../.golangci.yaml
+
+  repository:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Проверить пробелы и конфликтующие изменения
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            git diff --check "$BASE_SHA" "$GITHUB_SHA"
+          else
+            git diff --check HEAD^ HEAD
+          fi
 
   docker:
     name: Docker

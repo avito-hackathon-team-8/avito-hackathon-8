@@ -214,6 +214,9 @@ func findDayByDate(t *testing.T, days []weeklyLoginDay, date string) weeklyLogin
 
 func getConfig(t *testing.T) testConfig {
 	t.Helper()
+	if os.Getenv("RUN_BACKEND_E2E") != "1" {
+		t.Skip("set RUN_BACKEND_E2E=1 to run backend e2e tests")
+	}
 
 	cfgOnce.Do(func() {
 		cfg, cfgErr = prepareConfig()

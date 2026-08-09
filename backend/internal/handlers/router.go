@@ -196,6 +196,7 @@ func (handler *authHandler) me(response http.ResponseWriter, request *http.Reque
 
 	if err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load leaderboard position")
+
 		return
 	}
 

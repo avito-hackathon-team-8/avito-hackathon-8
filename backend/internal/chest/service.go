@@ -67,6 +67,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("user_id = ?", userID).
 			First(&userPet).Error
+
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrPetNotFound
 		}
@@ -85,6 +86,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			LeavesSpent: models.ChestOpeningLeavesCost,
 			OpenedAt:    now,
 		}
+
 		if err := tx.Create(&opening).Error; err != nil {
 			return fmt.Errorf("create chest opening: %w", err)
 		}
@@ -103,6 +105,7 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 		}
 
 		definition, err := service.selectReward()
+
 		if err != nil {
 			return fmt.Errorf("select chest reward: %w", err)
 		}
@@ -114,12 +117,14 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			ExpiresAt:      now.Add(ChestRewardLifetime),
 			ChestOpeningID: &opening.ID,
 		})
+
 		if err != nil {
 			return fmt.Errorf("issue chest reward: %w", err)
 		}
 
 		return nil
 	})
+
 	if err != nil {
 		return models.Reward{}, err
 	}

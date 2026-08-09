@@ -82,8 +82,15 @@ INTERNAL_SERVICE_TOKEN=<значение_2>
 make up
 ```
 
-Эта команда собирает Docker-образы и запускает PostgreSQL, backend, puppeteer и
-frontend.
+Эта команда применяет непримененные версионированные миграции, собирает
+Docker-образы и запускает PostgreSQL, backend, puppeteer и frontend.
+
+Миграции находятся в `migrations/` и применяются отдельным контейнером
+`migrator`. Для ручного применения миграций используйте:
+
+```sh
+make migrate
+```
 
 Остановить проект:
 

@@ -12,6 +12,7 @@ var localOrigins = map[string]struct{}{
 func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		origin := request.Header.Get("Origin")
+
 		if _, allowed := localOrigins[origin]; allowed {
 			response.Header().Set("Access-Control-Allow-Origin", origin)
 			response.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")

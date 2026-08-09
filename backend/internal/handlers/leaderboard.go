@@ -64,29 +64,41 @@ type leaderboardRow struct {
 func (handler *leaderboardHandler) list(response http.ResponseWriter, request *http.Request) {
 	if _, err := handler.auth.Authenticate(request.Context(), request.Header.Get("Authorization")); err != nil {
 		writeAuthenticationError(response, err)
+
 		return
 	}
+
 	now := time.Now().UTC()
 	period := startOfMonth(now)
+
 	var rows []leaderboardRow
+
 	if err := handler.db.WithContext(request.Context()).Table("leaderboard_entries AS entries").Select(`
 		entries.user_id AS player_id, split_part(users.email, '@', 1) AS nickname,
 		entries.rank AS position, entries.leaves, entries.calculated_at`).
 		Joins("JOIN users ON users.id = entries.user_id").Where("entries.period_start = ?", period).
 		Order("entries.rank ASC").Limit(10).Scan(&rows).Error; err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load leaderboard")
+
 		return
 	}
+
 	calculatedAt, err := handler.snapshotCalculatedAt(request.Context(), period)
+
 	if err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load leaderboard")
+
 		return
 	}
+
 	if calculatedAt.IsZero() {
 		writeError(response, http.StatusServiceUnavailable, "Leaderboard is not ready")
+
 		return
 	}
+
 	items := make([]leaderboardUser, 0, len(rows))
+
 	for _, row := range rows {
 		items = append(items, leaderboardUser{PlayerID: row.PlayerID.String(), Nickname: row.Nickname, Position: row.Position, Leaves: row.Leaves})
 	}

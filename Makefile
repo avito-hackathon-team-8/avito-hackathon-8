@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down restart build logs ps lint lint-frontend lint-backend branch feature bugfix chore
+.PHONY: help up down restart build logs ps migrate test-backend-e2e lint lint-frontend lint-backend lint-puppeteer branch feature bugfix chore
 
 help:
 	@printf '%s\n' \
@@ -12,6 +12,8 @@ help:
 		'make build                Build all Docker images' \
 		'make logs                 Follow service logs' \
 		'make ps                   Show service status' \
+		'make migrate              Apply database migrations' \
+		'make test-backend-e2e     Run backend end-to-end tests' \
 		'make lint                 Run all checks' \
 		'make feature NAME=login   Create feature/login' \
 		'make bugfix NAME=api      Create bugfix/api' \
@@ -19,6 +21,7 @@ help:
 		'make branch TYPE=x NAME=y Create x/y'
 
 up:
+	docker compose run --rm migrator
 	docker compose up --build -d
 
 down:
@@ -36,13 +39,22 @@ logs:
 ps:
 	docker compose ps
 
-lint: lint-frontend lint-backend
+migrate:
+	docker compose run --rm migrator
+
+test-backend-e2e:
+	cd backend && RUN_BACKEND_E2E=1 go test ./test/...
+
+lint: lint-frontend lint-backend lint-puppeteer
 
 lint-frontend:
 	docker run --rm -v "$(CURDIR)/frontend:/app" -v /app/node_modules -w /app node:24-alpine sh -c "npm ci && npm run lint && npm run lint:styles"
 
 lint-backend:
 	docker run --rm -v "$(CURDIR):/app:ro" -w /app/backend golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
+
+lint-puppeteer:
+	docker run --rm -v "$(CURDIR):/app:ro" -w /app/puppeteer golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
 
 branch:
 	@test -n "$(TYPE)" || (printf '%s\n' 'TYPE is required' && exit 1)

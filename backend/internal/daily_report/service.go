@@ -66,21 +66,28 @@ func (s *Service) Subscribe(userID uuid.UUID) (<-chan struct{}, func()) {
 	updates := make(chan struct{}, 1)
 
 	s.subscribersMu.Lock()
+
 	if s.subscribers[userID] == nil {
 		s.subscribers[userID] = make(map[chan struct{}]struct{})
 	}
+
 	s.subscribers[userID][updates] = struct{}{}
 	s.subscribersMu.Unlock()
 
 	var once sync.Once
+
 	unsubscribe := func() {
 		once.Do(func() {
 			s.subscribersMu.Lock()
+
 			delete(s.subscribers[userID], updates)
+
 			if len(s.subscribers[userID]) == 0 {
 				delete(s.subscribers, userID)
 			}
+
 			close(updates)
+
 			s.subscribersMu.Unlock()
 		})
 	}
@@ -168,6 +175,7 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 
 		for _, row := range taskRows {
 			completedAt := row.CompletedAt.UTC()
+
 			report.Tasks = append(report.Tasks, Task{
 				ID:            row.ID,
 				Type:          row.Type,
@@ -176,7 +184,9 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 				RewardClaimed: row.ClaimedAt != nil,
 				CompletedAt:   completedAt,
 			})
+
 			report.UpdatedAt = latestTime(report.UpdatedAt, completedAt)
+
 			if row.ClaimedAt != nil {
 				report.UpdatedAt = latestTime(report.UpdatedAt, row.ClaimedAt.UTC())
 			}
@@ -196,10 +206,13 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 		}
 
 		var leafUpdatedAt time.Time
+
 		report.LeavesEarnedToday, report.LevelUp, leafUpdatedAt, err = leafActivityForDay(tx, userID, dayStart, dayEnd)
+
 		if err != nil {
 			return err
 		}
+
 		report.UpdatedAt = latestTime(report.UpdatedAt, leafUpdatedAt)
 
 		return nil
@@ -264,6 +277,7 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 	}
 
 	fromLevel := pet.Level - len(levelUps)
+
 	if fromLevel < 1 {
 		return 0, nil, time.Time{}, fmt.Errorf("calculate level up: current level %d is inconsistent with %d level-up transactions", pet.Level, len(levelUps))
 	}

@@ -59,10 +59,12 @@ func (service *Service) Credit(ctx context.Context, credit Credit) (Progress, er
 
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var err error
+
 		progress, err = service.CreditTx(tx, credit)
 
 		return err
 	})
+
 	if err != nil {
 		return Progress{}, err
 	}
@@ -82,6 +84,7 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 	}
 
 	credit.OperationKey = strings.TrimSpace(credit.OperationKey)
+
 	if credit.UserID == uuid.Nil ||
 		credit.OperationKey == "" ||
 		len(credit.OperationKey) > 160 ||
@@ -105,6 +108,7 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 		OperationKey: credit.OperationKey,
 		OccurredAt:   credit.OccurredAt,
 	})
+
 	if result.Error != nil {
 		return Progress{}, fmt.Errorf("record leaf credit: %w", result.Error)
 	}
@@ -125,12 +129,15 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 	}
 
 	var userPet models.Pet
+
 	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("user_id = ?", credit.UserID).
 		First(&userPet).Error
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return Progress{}, ErrPetNotFound
 	}
+
 	if err != nil {
 		return Progress{}, fmt.Errorf("lock pet: %w", err)
 	}
@@ -153,6 +160,7 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 
 	for level := oldLevel; level < newLevel; level++ {
 		cost := LevelCost(level)
+
 		if err := tx.Create(&models.LeafTransaction{
 			UserID:       credit.UserID,
 			Amount:       -cost,

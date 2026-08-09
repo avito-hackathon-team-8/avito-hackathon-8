@@ -77,22 +77,32 @@ func (handler *taskHandler) list(response http.ResponseWriter, request *http.Req
 	if _, err := handler.tasks.List(request.Context(), user.ID, userLevel); err != nil {
 		if errors.Is(err, tasks.ErrTasksNotReady) {
 			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+
 			return
 		}
+
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
+
 	if err := handler.tasks.AutoCompleteFirstTasks(request.Context(), user.ID); err != nil {
 		if errors.Is(err, tasks.ErrTasksNotReady) {
 			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+
 			return
 		}
+
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
+
 	dailyTasks, err := handler.tasks.List(request.Context(), user.ID, userLevel)
+
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
 
@@ -121,22 +131,32 @@ func (handler *taskHandler) progress(response http.ResponseWriter, request *http
 	if _, err := handler.tasks.Progress(request.Context(), user.ID, userLevel); err != nil {
 		if errors.Is(err, tasks.ErrTasksNotReady) {
 			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+
 			return
 		}
+
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
+
 	if err := handler.tasks.AutoCompleteFirstTasks(request.Context(), user.ID); err != nil {
 		if errors.Is(err, tasks.ErrTasksNotReady) {
 			writeTaskError(response, http.StatusServiceUnavailable, "TASKS_NOT_READY", "Задания ещё назначаются. Повторите запрос.")
+
 			return
 		}
+
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
+
 	progress, err := handler.tasks.Progress(request.Context(), user.ID, userLevel)
+
 	if err != nil {
 		writeTaskError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Внутренняя ошибка сервера")
+
 		return
 	}
 
@@ -179,13 +199,17 @@ func (handler *taskHandler) record(response http.ResponseWriter, request *http.R
 		}
 
 		var taskID uuid.UUID
+
 		if event.TaskID != "" {
 			taskID, err = uuid.Parse(event.TaskID)
+
 			if err != nil {
 				writeTaskError(response, http.StatusBadRequest, "INVALID_REQUEST", "Некорректный taskId.")
+
 				return
 			}
 		}
+
 		events = append(events, tasks.Event{TaskID: taskID, Type: event.Type, Count: count})
 	}
 

@@ -10,6 +10,10 @@ import (
 type Config struct {
 	DatabaseURL              string
 	HTTPAddress              string
+	ReadHeaderTimeout        time.Duration
+	ReadTimeout              time.Duration
+	WriteTimeout             time.Duration
+	IdleTimeout              time.Duration
 	PollInterval             time.Duration
 	InternalServiceToken     string
 	TaskDefinitionsConfig    string
@@ -30,6 +34,10 @@ func Load() (Config, error) {
 	cfg := Config{
 		DatabaseURL:              os.Getenv("DATABASE_URL"),
 		HTTPAddress:              stringEnv("PUPPETEER_HTTP_ADDRESS", ":8091"),
+		ReadHeaderTimeout:        5 * time.Second,
+		ReadTimeout:              15 * time.Second,
+		WriteTimeout:             30 * time.Second,
+		IdleTimeout:              60 * time.Second,
 		PollInterval:             pollInterval,
 		InternalServiceToken:     os.Getenv("INTERNAL_SERVICE_TOKEN"),
 		TaskDefinitionsConfig:    stringEnv("TASK_DEFINITIONS_CONFIG", "../config/task_definitions.yaml"),
