@@ -19,6 +19,8 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
   });
 };
 
+const LEVEL_FOR_OPEN_CAT = 2;
+
 export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParams) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data } = usePetProfile();
@@ -67,7 +69,7 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
       const characterWidth = 120;
       const characterHeight = character.height * (characterWidth / character.width);
 
-      if (level > 2) {
+      if (level >= LEVEL_FOR_OPEN_CAT) {
         return ctx.drawImage(
           character,
           (rect.width - characterWidth) / 2,
@@ -80,7 +82,7 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
       const boxWidth = 80;
       const boxHeight = box.height * (boxWidth / box.width);
 
-      if (level <= 2) {
+      if (level < LEVEL_FOR_OPEN_CAT) {
         ctx.drawImage(
           box,
           (rect.width - boxWidth) / 2,

@@ -1,10 +1,10 @@
-import type { SubmitEvent } from "react";
+import type { SubmitEvent } from 'react';
 
-import { OTP_LENGTH } from "@/features/auth/model/constants";
-import { Button } from "@/shared/ui/button";
-import { Typography } from "@/shared/ui/typography";
+import { OTP_LENGTH } from '@/features/auth/model/constants';
+import { Button } from '@/shared/ui/button';
+import { Typography } from '@/shared/ui/typography';
 
-import styles from "./auth-form-step.module.scss";
+import styles from './auth-form-step.module.scss';
 
 type BaseAuthFormStepProps = {
   value: string;
@@ -16,11 +16,11 @@ type BaseAuthFormStepProps = {
 };
 
 type EmailAuthFormStepProps = BaseAuthFormStepProps & {
-  variant: "email";
+  variant: 'email';
 };
 
 type CodeAuthFormStepProps = BaseAuthFormStepProps & {
-  variant: "code";
+  variant: 'code';
   email: string;
   isResending: boolean;
   onBack: () => void;
@@ -30,7 +30,7 @@ type CodeAuthFormStepProps = BaseAuthFormStepProps & {
 type AuthFormStepProps = EmailAuthFormStepProps | CodeAuthFormStepProps;
 
 export const AuthFormStep = (props: AuthFormStepProps) => {
-  const isEmailStep = props.variant === "email";
+  const isEmailStep = props.variant === 'email';
 
   const errorId = `${props.variant}-step-error`;
 
@@ -44,36 +44,30 @@ export const AuthFormStep = (props: AuthFormStepProps) => {
     <section className={styles.authFormStep} data-variant={props.variant}>
       <div className={styles.authFormStep__header}>
         <Typography as="h1" variant="heading">
-          {isEmailStep ? "Вход" : "Код из письма"}
+          {isEmailStep ? 'Вход' : 'Код из письма'}
         </Typography>
 
         <Typography as="p" variant="caption" color="gray500">
-          {isEmailStep
-            ? "Введите вашу почту"
-            : `Мы отправили код на ${props.email}`}
+          {isEmailStep ? 'Введите вашу почту' : `Введите любой 8 значный код`}
         </Typography>
       </div>
 
-      <form
-        className={styles.authFormStep__form}
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      <form className={styles.authFormStep__form} onSubmit={handleSubmit} noValidate>
         <label className={styles.authFormStep__field}>
           <Typography as="span" variant="caption" color="gray500">
-            {isEmailStep ? "Email" : "Код из письма"}
+            {isEmailStep ? 'Email' : 'Код из письма'}
           </Typography>
 
           <input
             className={styles.authFormStep__input}
-            type={isEmailStep ? "email" : "text"}
-            name={isEmailStep ? "email" : "otp"}
-            inputMode={isEmailStep ? "email" : "numeric"}
-            autoComplete={isEmailStep ? "email" : "one-time-code"}
+            type={isEmailStep ? 'email' : 'text'}
+            name={isEmailStep ? 'email' : 'otp'}
+            inputMode={isEmailStep ? 'email' : 'numeric'}
+            autoComplete={isEmailStep ? 'email' : 'one-time-code'}
             autoFocus
             maxLength={isEmailStep ? undefined : OTP_LENGTH}
             value={props.value}
-            placeholder={isEmailStep ? "example@mail.ru" : "12345678"}
+            placeholder={isEmailStep ? 'example@mail.ru' : '12345678'}
             disabled={props.isSubmitting || (!isEmailStep && props.isResending)}
             aria-invalid={Boolean(props.error)}
             aria-describedby={props.error ? errorId : undefined}
@@ -100,19 +94,15 @@ export const AuthFormStep = (props: AuthFormStepProps) => {
             type="submit"
             variant="primary"
             className={styles.authFormStep__submitButton}
-            disabled={
-              props.isSubmitting ||
-              !props.isValid ||
-              (!isEmailStep && props.isResending)
-            }
+            disabled={props.isSubmitting || !props.isValid || (!isEmailStep && props.isResending)}
           >
             {isEmailStep
               ? props.isSubmitting
-                ? "Отправляем..."
-                : "Получить код"
+                ? 'Отправляем...'
+                : 'Получить код'
               : props.isSubmitting
-                ? "Проверяем..."
-                : "Войти"}
+                ? 'Проверяем...'
+                : 'Войти'}
           </Button>
 
           {!isEmailStep ? (

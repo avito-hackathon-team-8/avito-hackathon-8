@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { useCurrentUser } from '@/entities/user/model/use-current-user';
+import type { User } from '@/entities/user';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TLeaderboardUser } from '../../api/leaderboard';
@@ -9,10 +9,15 @@ import styles from './leaderboard-panel-content.module.scss';
 
 interface ILeaderboardPanelContentProps {
   listUsers: TLeaderboardUser[];
+  userPosition: number;
+  user: User;
 }
 
-export const LeaderboardPanelContent = ({ listUsers }: ILeaderboardPanelContentProps) => {
-  const { data: user } = useCurrentUser();
+export const LeaderboardPanelContent = ({
+  listUsers,
+  userPosition,
+  user,
+}: ILeaderboardPanelContentProps) => {
   const hasUserTop = listUsers.some((item) => item.playerId === user?.id);
 
   if (!user) return;
@@ -27,7 +32,7 @@ export const LeaderboardPanelContent = ({ listUsers }: ILeaderboardPanelContentP
           key={playerId}
         >
           <Typography className={styles.leaderboardPanel__text} variant="caption">
-            {user.id === playerId ? user.position || 0 : position}
+            {position}
           </Typography>
           <Typography className={styles.leaderboardPanel__text} variant="caption">
             {user.id === playerId ? 'вы' : nickname}
@@ -44,7 +49,7 @@ export const LeaderboardPanelContent = ({ listUsers }: ILeaderboardPanelContentP
           </li>
           <li className={clsx(styles.leaderboardPanel__item, styles.leaderboardPanel__item_active)}>
             <Typography className={styles.leaderboardPanel__text} variant="caption">
-              {user.position || 0}
+              {userPosition}
             </Typography>
             <Typography className={styles.leaderboardPanel__text} variant="caption">
               Вы

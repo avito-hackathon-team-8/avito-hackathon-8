@@ -14,9 +14,10 @@
       'img content button' auto
       / auto 1fr auto;
     gap: 12px;
-    padding-bottom: 11px;
 
     &:not(:last-child) {
+      padding-bottom: 11px;
+
       border-bottom: 1px solid var(--gray-250);
 
       .rewardsPanel__itemContent {
@@ -41,4 +42,8 @@
       align-self: start;
     }
   }
+}
+
+.rewardsEmpty {
+  text-align: center;
 }

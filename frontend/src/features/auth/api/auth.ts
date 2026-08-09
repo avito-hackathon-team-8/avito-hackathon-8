@@ -7,12 +7,29 @@ export type User = {
   id: string;
   email: string;
   verified: boolean;
-  position?: number;
+  leaderboard?: {
+    period: {
+      key: string;
+      startAt: string;
+      endAt: string;
+    };
+    calculatedAt: string;
+    nextCalculationAt: string;
+    player: {
+      playerId: string;
+      nickname: string;
+      position: number;
+      leaves: number;
+      isTop10: boolean;
+    };
+  };
 };
+
+type TAuthUserRecord = Pick<User, 'id' | 'email' | 'verified'>;
 
 export type AuthResponse = {
   token: string;
-  record: User;
+  record: TAuthUserRecord;
 };
 
 export const requestOtp = (email: string): Promise<{ sent: boolean }> =>

@@ -2,8 +2,8 @@ import { DailyTaskIcons } from '@/entities/daily-task/ui/assets/daily-task-icons
 import { RewardsIcons } from '@/entities/reward/ui/assets/reward-icon';
 import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { LevelUpIcon } from '@/shared/assets/icon/level-up-icon';
-import { formatWord } from '@/shared/lib/format-count';
 import { formatTasks } from '@/shared/lib/format-tasks';
+import { formatWord } from '@/shared/lib/format-word';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TTodaySummaryStats } from '../../model/get-today-summary-stats ';
