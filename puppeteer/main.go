@@ -32,18 +32,25 @@ func main() {
 	if err != nil {
 		log.Fatalf("get database connection: %v", err)
 	}
-	defer sqlDB.Close()
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("close database connection: %v", err)
+		}
+	}()
 	taskDefinitions, err := jobs.LoadTaskDefinitions(cfg.TaskDefinitionsConfig)
 	if err != nil {
-		log.Fatalf("load task definitions: %v", err)
+		log.Printf("load task definitions: %v", err)
+		return
 	}
 	leaderboardRewards, err := jobs.LoadLeaderboardRewards(cfg.LeaderboardRewardsConfig)
 	if err != nil {
-		log.Fatalf("load leaderboard rewards: %v", err)
+		log.Printf("load leaderboard rewards: %v", err)
+		return
 	}
 	taskAssigner := jobs.NewTaskAssigner(db, taskDefinitions, nil)
 	if err := taskAssigner.Seed(context.Background()); err != nil {
-		log.Fatalf("seed task definitions: %v", err)
+		log.Printf("seed task definitions: %v", err)
+		return
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
