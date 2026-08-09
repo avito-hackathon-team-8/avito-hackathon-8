@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
@@ -152,28 +153,35 @@ func (handler *petHandler) updateName(response http.ResponseWriter, request *htt
 
 func (handler *petHandler) levels(response http.ResponseWriter, request *http.Request) {
 	user, isAuthenticated := handler.authenticate(response, request)
+
 	if !isAuthenticated {
 		return
 	}
 
 	levels, err := handler.levelClaims.GetLevels(request.Context(), user.ID)
+
 	if errors.Is(err, pet.ErrPetNotFound) {
 		writeLevelRewardError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")
+
 		return
 	}
 
 	if err != nil {
 		writeLevelRewardError(response, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить награды уровней")
+
 		return
 	}
 
 	responseLevels := make([]petLevelResponse, 0, len(levels))
+
 	for _, level := range levels {
 		var expiresAt *string
+
 		if level.ExpiresAt != nil {
 			value := level.ExpiresAt.UTC().Format("2006-01-02T15:04:05Z")
 			expiresAt = &value
 		}
+
 		responseLevels = append(responseLevels, petLevelResponse{
 			Level:  level.Level,
 			Status: level.Status,
@@ -191,17 +199,21 @@ func (handler *petHandler) levels(response http.ResponseWriter, request *http.Re
 
 func (handler *petHandler) claimLevelReward(response http.ResponseWriter, request *http.Request) {
 	user, isAuthenticated := handler.authenticate(response, request)
+
 	if !isAuthenticated {
 		return
 	}
 
 	rewardID, err := uuid.Parse(request.PathValue("rewardId"))
+
 	if err != nil {
 		writeLevelRewardError(response, http.StatusBadRequest, "INVALID_LEVEL_REWARD_ID", "Передан некорректный идентификатор награды")
+
 		return
 	}
 
 	result, err := handler.levelClaims.Claim(request.Context(), user.ID, rewardID)
+
 	switch {
 	case errors.Is(err, pet.ErrPetNotFound):
 		writeLevelRewardError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")
@@ -243,8 +255,9 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 		return
 	}
 	defer func() {
-		_ = connection.Close()
+		closeWebSocket(connection)
 	}()
+	configureWebSocket(connection)
 
 	updates, unsubscribe := handler.pets.Subscribe(user.ID)
 	defer unsubscribe()
@@ -257,25 +270,32 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 
 	done := make(chan struct{})
 	requests := make(chan petSocketRequest, 1)
+	pingTicker := time.NewTicker(websocketPingPeriod)
+	defer pingTicker.Stop()
 
 	go func() {
 		defer close(done)
 
 		for {
 			_, payload, err := connection.ReadMessage()
+
 			if err != nil {
 				return
 			}
 
 			var socketRequest petSocketRequest
+
 			if json.Unmarshal(payload, &socketRequest) == nil {
 				action := socketRequest.Action
+
 				if action == "" {
 					action = socketRequest.Type
 				}
+
 				if !strings.EqualFold(action, getChestPriceAction) {
 					continue
 				}
+
 				select {
 				case requests <- socketRequest:
 				default:
@@ -297,6 +317,10 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 			}
 		case <-done:
 			return
+		case <-pingTicker.C:
+			if err := writeWebSocketPing(connection); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -327,6 +351,7 @@ func responsePet(userPet models.Pet) petProgressResponse {
 
 func responsePetProgress(progress pet.Progress) petProgressResponse {
 	chestPrice := progress.ChestPrice
+
 	if chestPrice == 0 {
 		chestPrice = models.ChestOpeningLeavesCost
 	}
@@ -342,7 +367,7 @@ func responsePetProgress(progress pet.Progress) petProgressResponse {
 }
 
 func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) error {
-	return connection.WriteJSON(petProgressUpdatedEvent{
+	return writeWebSocketJSON(connection, petProgressUpdatedEvent{
 		Event: "PET_PROGRESS_UPDATED",
 		Data:  responsePetProgress(progress),
 	})

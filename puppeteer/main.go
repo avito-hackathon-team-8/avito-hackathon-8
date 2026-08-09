@@ -27,6 +27,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("connect to database: %v", err)
 	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("get database connection: %v", err)
+	}
+	defer sqlDB.Close()
 	taskDefinitions, err := jobs.LoadTaskDefinitions(cfg.TaskDefinitionsConfig)
 	if err != nil {
 		log.Fatalf("load task definitions: %v", err)
@@ -53,10 +59,17 @@ func main() {
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
 		Handler:           health.NewHandler(status, db, cfg.InternalServiceToken, taskAssigner),
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		ReadTimeout:       cfg.ReadTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
 	}
 
-	go runner.Run(ctx)
+	runnerDone := make(chan struct{})
+	go func() {
+		defer close(runnerDone)
+		runner.Run(ctx)
+	}()
 
 	go func() {
 		log.Printf("puppeteer health endpoint listening on %s", cfg.HTTPAddress)
@@ -75,5 +88,11 @@ func main() {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shut down health server: %v", err)
+	}
+
+	select {
+	case <-runnerDone:
+	case <-time.After(5 * time.Second):
+		log.Printf("puppeteer runner did not stop before shutdown deadline")
 	}
 }

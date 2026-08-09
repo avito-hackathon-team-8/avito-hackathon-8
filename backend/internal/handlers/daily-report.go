@@ -59,32 +59,42 @@ type dailyReportHandler struct {
 var dailyReportsWebSocketUpgrader = websocket.Upgrader{
 	CheckOrigin: func(request *http.Request) bool {
 		origin := request.Header.Get("Origin")
+
 		if origin == "" {
 			return true
 		}
 
 		parsed, err := url.Parse(origin)
+
 		if err != nil {
 			return false
 		}
 
 		requestHost := request.Host
+
 		if host, _, splitErr := net.SplitHostPort(requestHost); splitErr == nil {
 			requestHost = host
 		}
+
 		return strings.EqualFold(parsed.Hostname(), requestHost)
 	},
 }
 
 func (h *dailyReportHandler) get(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.Authenticate(r.Context(), r.Header.Get("Authorization"))
+
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
+
+		return
 	}
 
 	dailyReport, err := h.dailyReport.Get(r.Context(), user.ID)
+
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+
+		return
 	}
 
 	writeJSON(w, http.StatusOK, responseDailyReport(dailyReport))
@@ -92,8 +102,10 @@ func (h *dailyReportHandler) get(w http.ResponseWriter, r *http.Request) {
 
 func (h *dailyReportHandler) ws(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.Authenticate(r.Context(), websocketToken(r))
+
 	if err != nil {
 		writeAuthenticationError(w, err)
+
 		return
 	}
 
@@ -101,26 +113,35 @@ func (h *dailyReportHandler) ws(w http.ResponseWriter, r *http.Request) {
 	defer unsubscribe()
 
 	report, err := h.dailyReport.Get(r.Context(), user.ID)
+
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+
 		return
 	}
 
 	ws, err := dailyReportsWebSocketUpgrader.Upgrade(w, r, nil)
+
 	if err != nil {
 		return
 	}
+
 	defer func() {
-		_ = ws.Close()
+		closeWebSocket(ws)
 	}()
+	configureWebSocket(ws)
 
 	if err := writeDailyReportEvent(ws, report); err != nil {
 		return
 	}
 
 	done := make(chan struct{})
+	pingTicker := time.NewTicker(websocketPingPeriod)
+	defer pingTicker.Stop()
+
 	go func() {
 		defer close(done)
+
 		for {
 			if _, _, err := ws.ReadMessage(); err != nil {
 				return
@@ -133,6 +154,7 @@ func (h *dailyReportHandler) ws(w http.ResponseWriter, r *http.Request) {
 
 	writeCurrentReport := func() error {
 		report, err := h.dailyReport.Get(r.Context(), user.ID)
+
 		if err != nil {
 			return err
 		}
@@ -153,12 +175,16 @@ func (h *dailyReportHandler) ws(w http.ResponseWriter, r *http.Request) {
 			dayTimer.Reset(untilNextUTCDay(time.Now()))
 		case <-done:
 			return
+		case <-pingTicker.C:
+			if err := writeWebSocketPing(ws); err != nil {
+				return
+			}
 		}
 	}
 }
 
 func writeDailyReportEvent(connection *websocket.Conn, report daily_report.DailyReport) error {
-	return connection.WriteJSON(dailyReportUpdatedEvent{
+	return writeWebSocketJSON(connection, dailyReportUpdatedEvent{
 		Event: "DAILY_REPORT_UPDATED",
 		Data:  responseDailyReport(report),
 	})
@@ -173,6 +199,7 @@ func untilNextUTCDay(now time.Time) time.Duration {
 
 func responseDailyReport(report daily_report.DailyReport) dailyReportResponse {
 	rewards := make([]dailyReportRewardResponse, 0, len(report.Rewards))
+
 	for _, reward := range report.Rewards {
 		rewards = append(rewards, dailyReportRewardResponse{
 			RewardID:   reward.ID.String(),
@@ -184,6 +211,7 @@ func responseDailyReport(report daily_report.DailyReport) dailyReportResponse {
 	}
 
 	tasks := make([]dailyReportTaskResponse, 0, len(report.Tasks))
+
 	for _, task := range report.Tasks {
 		tasks = append(tasks, dailyReportTaskResponse{
 			TaskID:        task.ID.String(),
@@ -196,6 +224,7 @@ func responseDailyReport(report daily_report.DailyReport) dailyReportResponse {
 	}
 
 	var levelUp *dailyReportLevelUpResponse
+
 	if report.LevelUp != nil {
 		levelUp = &dailyReportLevelUpResponse{
 			FromLevel:  report.LevelUp.FromLevel,

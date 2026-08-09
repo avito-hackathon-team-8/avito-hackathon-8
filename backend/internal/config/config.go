@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 )
 
 type Config struct {
 	HTTPAddress          string
 	ReadHeaderTimeout    time.Duration
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	IdleTimeout          time.Duration
 	DatabaseURL          string
 	Auth                 auth.Config
-	Email                email.Config
 	InternalServiceToken string
 	PuppeteerInternalURL string
 }
@@ -30,18 +31,13 @@ func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddress:       env("HTTP_ADDRESS", ":8090"),
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
 		Auth: auth.Config{
 			JWTSecret:  os.Getenv("JWT_SECRET"),
 			SessionTTL: sessionTTL,
-		},
-		Email: email.Config{
-			Mode:     env("EMAIL_MODE", "smtp"),
-			From:     os.Getenv("EMAIL_FROM"),
-			Host:     os.Getenv("SMTP_HOST"),
-			Port:     env("SMTP_PORT", "587"),
-			Username: os.Getenv("SMTP_USERNAME"),
-			Password: os.Getenv("SMTP_PASSWORD"),
 		},
 		InternalServiceToken: os.Getenv("INTERNAL_SERVICE_TOKEN"),
 		PuppeteerInternalURL: env("PUPPETEER_INTERNAL_URL", "http://puppeteer:8091"),
