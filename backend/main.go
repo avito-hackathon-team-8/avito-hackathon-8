@@ -49,7 +49,8 @@ func main() {
 	rewardService := rewards.NewService(db, dailyReportService)
 	rewardCatalog, err := reward_catalog.Load(cfg.LevelRewardsConfig)
 	if err != nil {
-		log.Fatalf("load reward catalog: %v", err)
+		log.Printf("load reward catalog: %v", err)
+		return
 	}
 	petService := pet.NewService(db, dailyReportService)
 	levelClaimsService := pet.NewLevelClaimsService(db, dailyReportService, rewardService, rewardCatalog.LevelRewards())
