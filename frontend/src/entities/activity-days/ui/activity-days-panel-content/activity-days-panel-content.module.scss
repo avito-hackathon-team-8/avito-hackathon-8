@@ -102,6 +102,10 @@
 
   background-color: var(--black);
   border-radius: 8px;
+
+  &_claimed {
+    background-color: var(--green-700);
+  }
 }
 
 .info__series {

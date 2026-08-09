@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { rewardsQueryKeys } from '@/entities/reward/api/rewards-keys';
+
 import { gamificationProfileKeys } from '../api/gamification-profile-keys';
 import { getLevelsRewards, receiveLevelReward, type TLevelRewardItem } from '../api/levels-rewards';
 
@@ -61,6 +63,12 @@ export const useLevelsProfile = () => {
       }
 
       toast.error('Произошла ошибка при получении награды за уровень');
+    },
+
+    onSuccess: () => {
+      return queryClient.invalidateQueries({
+        queryKey: rewardsQueryKeys.list(),
+      });
     },
 
     onSettled: () => {

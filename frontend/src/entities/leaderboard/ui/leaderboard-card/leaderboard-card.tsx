@@ -1,3 +1,4 @@
+import { useCurrentUser } from '@/entities/user';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
@@ -9,6 +10,9 @@ const TITLE_CARD = 'Лидерборд';
 
 export const LeaderboardCard = () => {
   const { data, refetch, isPending } = useLeaderboard();
+  const { data: user } = useCurrentUser();
+
+  const userPosition = user?.leaderboard?.player.position ?? 0;
 
   const handleClick = () => {
     if (!data && !isPending) {
@@ -25,7 +29,7 @@ export const LeaderboardCard = () => {
       renderTrigger={(open) => (
         <GamificationCard
           title={TITLE_CARD}
-          description="Ваше место: 18"
+          description={`Ваше место: ${userPosition}`}
           imageProps={{
             src: pedestalIcon,
             alt: 'Пьедестал',
@@ -36,7 +40,9 @@ export const LeaderboardCard = () => {
         />
       )}
     >
-      {data && <LeaderboardPanelContent listUsers={data.items} />}
+      {data && user && (
+        <LeaderboardPanelContent listUsers={data.items} user={user} userPosition={userPosition} />
+      )}
     </BottomPanel>
   );
 };
