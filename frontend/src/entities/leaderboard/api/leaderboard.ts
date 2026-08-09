@@ -8,6 +8,7 @@ export type TLeaderboardUser = {
   playerId: string;
   nickname: string;
   position: number;
+  leaves: number;
 };
 
 export type TResponseLeaderboard = {
