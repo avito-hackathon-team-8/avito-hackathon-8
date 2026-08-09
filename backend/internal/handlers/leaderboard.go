@@ -18,6 +18,8 @@ type leaderboardHandler struct {
 	db   *gorm.DB
 }
 
+const leaderboardRefreshInterval = 10 * time.Minute
+
 type leaderboardUser struct {
 	PlayerID string `json:"playerId"`
 	Nickname string `json:"nickname"`
@@ -104,7 +106,7 @@ func (handler *leaderboardHandler) list(response http.ResponseWriter, request *h
 	}
 	writeJSON(response, http.StatusOK, leaderboardResponse{
 		Period: makePeriod(period), CalculatedAt: calculatedAt,
-		NextCalculationAt: nextMidnight(now), Items: items,
+		NextCalculationAt: nextLeaderboardCalculation(calculatedAt), Items: items,
 	})
 }
 
@@ -146,12 +148,16 @@ func loadLeaderboardMe(ctx context.Context, db *gorm.DB, user models.User, now t
 
 	return &leaderboardMeResponse{
 		Period: makePeriod(period), CalculatedAt: calculatedAt,
-		NextCalculationAt: nextMidnight(now),
+		NextCalculationAt: nextLeaderboardCalculation(calculatedAt),
 		Player: leaderboardMe{
 			PlayerID: row.PlayerID.String(), Nickname: row.Nickname,
 			Position: row.Position, Leaves: row.Leaves, IsTop10: row.Position <= 10,
 		},
 	}, nil
+}
+
+func nextLeaderboardCalculation(calculatedAt time.Time) time.Time {
+	return calculatedAt.UTC().Add(leaderboardRefreshInterval)
 }
 
 func (handler *leaderboardHandler) snapshotCalculatedAt(ctx context.Context, period time.Time) (time.Time, error) {
@@ -197,10 +203,4 @@ func startOfMonth(at time.Time) time.Time {
 	at = at.UTC()
 
 	return time.Date(at.Year(), at.Month(), 1, 0, 0, 0, 0, time.UTC)
-}
-
-func nextMidnight(at time.Time) time.Time {
-	at = at.UTC()
-
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1)
 }

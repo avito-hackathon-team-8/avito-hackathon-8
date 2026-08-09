@@ -175,7 +175,7 @@ paths:
                         startAt: '2026-08-01T00:00:00Z'
                         endAt: '2026-09-01T00:00:00Z'
                       calculatedAt: '2026-08-08T00:00:00Z'
-                      nextCalculationAt: '2026-08-09T00:00:00Z'
+                      nextCalculationAt: '2026-08-08T00:10:00Z'
                       player:
                         playerId: 72482c10-6976-4823-a835-333333333333
                         nickname: Коробыш
@@ -1054,7 +1054,7 @@ paths:
                       startAt: '2026-08-01T00:00:00Z'
                       endAt: '2026-09-01T00:00:00Z'
                     calculatedAt: '2026-08-12T00:00:00Z'
-                    nextCalculationAt: '2026-08-13T00:00:00Z'
+                    nextCalculationAt: '2026-08-12T00:10:00Z'
                     items:
                       - playerId: 8f123af2-24c5-4ff7-b114-111111111111
                         nickname: Капибосс
@@ -1243,7 +1243,7 @@ components:
                 code: LEADERBOARD_NOT_READY
                 message: Рейтинг ещё не рассчитан
                 details:
-                  nextCalculationAt: '2026-08-05T00:00:00Z'
+                  nextCalculationAt: '2026-08-05T00:10:00Z'
     InternalError:
       description: Непредвиденная ошибка сервера.
       content:
@@ -1936,7 +1936,7 @@ components:
         nextCalculationAt:
           type: string
           format: date-time
-          description: Время следующего запланированного ежедневного расчёта — 00:00 UTC.
+          description: Время следующего запланированного расчёта; снимок обновляется каждые 10 минут.
         items:
           type: array
           minItems: 0
@@ -1957,6 +1957,7 @@ components:
         nextCalculationAt:
           type: string
           format: date-time
+          description: Время следующего запланированного расчёта; снимок обновляется каждые 10 минут.
         player:
           $ref: '#/components/schemas/MyLeaderboardItem'
 

@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const LeaderboardInterval = 10 * time.Minute
+
 type Config struct {
 	DatabaseURL              string
 	HTTPAddress              string
@@ -21,7 +23,7 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	pollInterval, err := durationEnv("PUPPETEER_POLL_INTERVAL", time.Minute)
+	pollInterval, err := durationEnv("PUPPETEER_POLL_INTERVAL", LeaderboardInterval)
 
 	if err != nil {
 		return Config{}, err

@@ -23,7 +23,7 @@ export const LeaderboardCard = () => {
   return (
     <BottomPanel
       title={TITLE_CARD}
-      description="Топ-10 платформы. Обновляется раз в день"
+      description="Топ-10 платформы. Обновляется каждые 10 минут"
       disabled={!data}
       onClick={handleClick}
       renderTrigger={(open) => (
