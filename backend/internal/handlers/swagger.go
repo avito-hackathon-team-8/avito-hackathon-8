@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const swaggerHTML = `<!doctype html>
@@ -23,7 +25,7 @@ const swaggerHTML = `<!doctype html>
     const openAPISpec = __OPENAPI_SPEC__;
 
     window.ui = SwaggerUIBundle({
-      url: 'data:text/yaml;charset=utf-8,' + encodeURIComponent(openAPISpec),
+      spec: openAPISpec,
       dom_id: '#swagger-ui',
       deepLinking: true,
       presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
@@ -42,7 +44,15 @@ func swaggerUI(response http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	specJSON, err := json.Marshal(string(spec))
+	var openAPISpec map[string]any
+
+	if err := yaml.Unmarshal(spec, &openAPISpec); err != nil {
+		http.Error(response, "OpenAPI specification is invalid", http.StatusInternalServerError)
+
+		return
+	}
+
+	specJSON, err := json.Marshal(openAPISpec)
 
 	if err != nil {
 		http.Error(response, "OpenAPI specification is unavailable", http.StatusInternalServerError)
