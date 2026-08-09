@@ -11,5 +11,5 @@ Black-box e2e-сценарий для открытия сундука.
 ```sh
 make up
 cd backend
-GOCACHE="${TMPDIR:-/tmp}/avito-go-build-cache" go test ./test/chest -count=1 -v
+RUN_BACKEND_E2E=1 GOCACHE="${TMPDIR:-/tmp}/avito-go-build-cache" go test ./test/chest -count=1 -v
 ```

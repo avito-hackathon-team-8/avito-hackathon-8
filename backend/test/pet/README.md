@@ -18,5 +18,5 @@ Black-box e2e-сценарии для API и WebSocket питомца. Тест�
 ```sh
 make up
 cd backend
-GOCACHE="${TMPDIR:-/tmp}/avito-go-build-cache" go test ./test/pet -count=1 -v
+RUN_BACKEND_E2E=1 GOCACHE="${TMPDIR:-/tmp}/avito-go-build-cache" go test ./test/pet -count=1 -v
 ```
