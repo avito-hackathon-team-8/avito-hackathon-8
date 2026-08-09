@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 
 import { formatDays } from '@/shared/lib/format-days';
+import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TActivityDay, TResponseActivityDay } from '../../api/activity-day';
@@ -46,18 +47,15 @@ export const ActivityDaysPanelContent = ({
       </ul>
 
       {activeDay && (
-        <div
-          className={clsx(styles.info__wrapper, {
-            [styles.info__wrapper_claimed]: activeDay.status === 'CLAIMED',
-          })}
+        <Button
+          className={styles.button}
+          disabled={activeDay.status !== 'AVAILABLE'}
+          variant="primary"
+          isFullWidth
+          onClick={() => handleReceiveReward(activeDay.claimId)}
         >
-          <Typography variant="caption-bold" color="white">
-            День {activeDay.weekday} — {activeDay.rewardLeaves} листьев
-          </Typography>
-          <Typography variant="caption" color="white">
-            Зайдите сегодня, чтобы получить награду
-          </Typography>
-        </div>
+          Забрать награду
+        </Button>
       )}
 
       <Typography className={styles.info__series} variant="caption-bold">

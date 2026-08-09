@@ -1,21 +1,22 @@
 .header {
   display: grid;
-  grid-template-areas: 'backButton name notificationButton';
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(19px, 1fr) minmax(0, auto) 1fr;
   align-items: center;
-  padding-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 12px;
 
   .header__backButton {
-    grid-area: backButton;
+    justify-self: start;
   }
 
   .header__name {
-    grid-area: name;
+    min-width: 0;
 
     text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .header__notificationButton {
-    grid-area: notificationButton;
+    justify-self: end;
   }
 }

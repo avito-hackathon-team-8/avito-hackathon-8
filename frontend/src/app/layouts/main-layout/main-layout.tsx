@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router';
 
-import { useRecordTodayActivity } from '@/entities/activity-days';
 import { usePetName } from '@/entities/gamification-profile/model/use-pet-name';
 import { AppError } from '@/shared/ui/app-error/app-error';
 import { AppLoader } from '@/shared/ui/app-loader/app-loader';
@@ -9,8 +8,6 @@ import { Header } from '@/widgets/header';
 import styles from './main-layout.module.scss';
 
 export const MainLayout = () => {
-  useRecordTodayActivity();
-
   const { data: petName, isLoading, isError } = usePetName();
 
   const isInitialized = Boolean(petName?.trim());

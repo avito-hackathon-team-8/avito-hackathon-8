@@ -45,7 +45,9 @@
       }
 
       .profile__infoExperience {
+        display: flex;
         grid-area: experience;
+        align-items: center;
         place-self: end end;
       }
 

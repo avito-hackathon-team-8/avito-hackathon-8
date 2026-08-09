@@ -13,7 +13,7 @@
   cursor: pointer;
 
   &:disabled {
-    &.button__primary {
+    &.button_primary {
       color: var(--gray-500);
 
       background-color: var(--gray-200);
@@ -24,7 +24,7 @@
   }
 }
 
-.button__primary {
+.button_primary {
   padding: 10px;
 
   color: var(--white);
@@ -33,7 +33,11 @@
   border-radius: 14px;
 }
 
-.button__default {
+.button_fullWidth {
+  width: 100%;
+}
+
+.button_default {
   padding: 10px;
 
   color: var(--black);

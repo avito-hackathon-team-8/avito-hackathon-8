@@ -3,64 +3,40 @@ import { useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { recordTodayActivity, type TResponseActivityDay } from '../api/activity-day';
+import { getActivityDay, recordTodayActivity } from '../api/activity-day';
 import { activityDayKeys } from '../api/activity-days-keys';
 
 export const useRecordTodayActivity = () => {
   const queryClient = useQueryClient();
+  const wasRecorded = useRef(false);
 
   const queryKey = activityDayKeys.week();
 
-  const wasRecorded = useRef(false);
-
-  const recordTodayActivityMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: recordTodayActivity,
 
-    onMutate: async () => {
-      await queryClient.cancelQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey,
+        refetchType: 'none',
       });
 
-      const previousActivityDays = queryClient.getQueryData<TResponseActivityDay>(queryKey);
-      const today = new Date().toISOString().slice(0, 10);
-
-      queryClient.setQueryData<TResponseActivityDay>(queryKey, (old) => {
-        if (!old) {
-          return old;
-        }
-
-        return {
-          ...old,
-          claims: old.claims.map((day) =>
-            day.date === today && day.status === 'FUTURE'
-              ? {
-                  ...day,
-                  status: 'AVAILABLE' as const,
-                }
-              : day,
-          ),
-        };
-      });
-
-      return {
-        previousActivityDays,
-      };
+      try {
+        await queryClient.fetchQuery({
+          queryKey,
+          queryFn: getActivityDay,
+        });
+      } catch {
+        toast.error('Не удалось получить данные за неделю');
+      }
     },
 
-    onError: (_error, _variables, context) => {
-      if (context?.previousActivityDays) {
-        queryClient.setQueryData(queryKey, context.previousActivityDays);
-      }
-
+    onError: () => {
       toast.error('Не удалось отметить активность за сегодня');
     },
-
-    onSuccess: () => {
-      return queryClient.invalidateQueries({
-        queryKey,
-      });
-    },
   });
+
+  const { mutate } = mutation;
 
   useEffect(() => {
     if (wasRecorded.current) {
@@ -68,6 +44,8 @@ export const useRecordTodayActivity = () => {
     }
 
     wasRecorded.current = true;
-    recordTodayActivityMutation.mutate();
-  }, [recordTodayActivityMutation]);
+    mutate();
+  }, [mutate]);
+
+  return mutation;
 };

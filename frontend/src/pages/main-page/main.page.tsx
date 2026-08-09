@@ -1,3 +1,4 @@
+import { ActivityDaysAutoPanel } from '@/entities/activity-days';
 import { usePetName } from '@/entities/gamification-profile/model/use-pet-name';
 import { usePetProfileSocket } from '@/entities/gamification-profile/model/use-pet-profile-socket';
 import { useTodaySummarySocket } from '@/entities/today-summary';
@@ -10,17 +11,22 @@ import styles from './main.page.module.scss';
 export const MainPage = () => {
   const { data: pet } = usePetName();
 
+  const isPetInitialized = Boolean(pet?.trim());
+
   usePetProfileSocket({ enabled: Boolean(pet?.length === 0) });
   useTodaySummarySocket();
 
   return (
     <>
       <PetNameModal isOpen={!pet || pet.trim().length === 0} />
-      {pet && pet.length > 0 && (
-        <div className={styles.page}>
-          <ProfileDashboard />
-          <GamificationDashboard />
-        </div>
+      {isPetInitialized && (
+        <>
+          <div className={styles.page}>
+            <ProfileDashboard />
+            <GamificationDashboard />
+          </div>
+          <ActivityDaysAutoPanel />
+        </>
       )}
     </>
   );
