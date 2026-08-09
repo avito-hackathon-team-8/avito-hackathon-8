@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 
 import type { User } from '@/entities/user';
+import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TLeaderboardUser } from '../../api/leaderboard';
@@ -24,7 +25,7 @@ export const LeaderboardPanelContent = ({
 
   return (
     <ul className={styles.leaderboardPanel}>
-      {listUsers.map(({ playerId, nickname, position }) => (
+      {listUsers.map(({ playerId, nickname, position, leaves }) => (
         <li
           className={clsx(styles.leaderboardPanel__item, {
             [styles.leaderboardPanel__item_active]: user.id === playerId,
@@ -37,6 +38,10 @@ export const LeaderboardPanelContent = ({
           <Typography className={styles.leaderboardPanel__text} variant="caption">
             {user.id === playerId ? 'вы' : nickname}
           </Typography>
+          <span className={styles.leaderboardPanel__leaves}>
+            <img src={leafIcon} width={20} height={20} aria-hidden />
+            <Typography variant="caption">{leaves}</Typography>
+          </span>
         </li>
       ))}
 
@@ -54,6 +59,10 @@ export const LeaderboardPanelContent = ({
             <Typography className={styles.leaderboardPanel__text} variant="caption">
               Вы
             </Typography>
+            <span className={styles.leaderboardPanel__leaves}>
+              <img src={leafIcon} width={20} height={20} aria-hidden />
+              <Typography variant="caption">{user.leaderboard?.player.leaves ?? 0}</Typography>
+            </span>
           </li>
         </>
       )}
