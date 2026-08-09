@@ -13,6 +13,16 @@ interface IActivityDaysPanelContentProps {
   handleReceiveReward: () => void;
 }
 
+const LIST_DAYS = {
+  1: 'пн',
+  2: 'вт',
+  3: 'ср',
+  4: 'чт',
+  5: 'пт',
+  6: 'бс',
+  7: 'вс',
+};
+
 export const ActivityDaysPanelContent = ({
   data,
   handleReceiveReward,
@@ -34,7 +44,7 @@ export const ActivityDaysPanelContent = ({
             >
               <time className={styles.day__date} dateTime={date}>
                 <Typography className={styles.day__dateText} variant="caption-bold" color="inherit">
-                  {weekday}д
+                  {LIST_DAYS[weekday]}
                 </Typography>
               </time>
 
