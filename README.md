@@ -5,6 +5,10 @@
 повышают уровень питомца, открывают персональные награды и учитываются в
 ежемесячном лидерборде.
 
+**Описание решения:** [Google Docs](https://docs.google.com/document/d/1UFAN0kMT8po3yejkDp6qLK1_UexiBgVp90pIeYflQxM/edit?usp=sharing)
+
+**Макет интерфейса:** [Figma](https://www.figma.com/design/RHfbvMqMBv6jjdmBk84UbH/Avito-%D1%82%D0%B0%D0%BC%D0%B0%D0%B3%D0%BE%D1%87%D0%B8?node-id=386-450&t=B6gl5dSgMxxRX7nn-0)
+
 ## Оглавление
 
 - [Архитектура](#архитектура)
