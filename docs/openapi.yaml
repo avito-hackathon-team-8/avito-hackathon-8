@@ -65,11 +65,10 @@ paths:
     post:
       tags: [Авторизация]
       operationId: requestOtp
-      summary: Запросить одноразовый код для входа
+      summary: Запросить вход
       description: |
         Нормализует адрес электронной почты, создаёт пользователя при первом обращении
-        и отправляет новый одноразовый код. Ранее выданный код для этого пользователя
-        становится недействительным.
+        и открывает возможность завершить вход любым непустым кодом.
       security: []
       requestBody:
         required: true
@@ -83,7 +82,7 @@ paths:
                   email: user@example.com
       responses:
         '200':
-          description: Одноразовый код успешно отправлен.
+          description: Запрос на вход принят.
           content:
             application/json:
               schema:
@@ -99,7 +98,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
         '500':
-          description: Не удалось создать или отправить одноразовый код.
+          description: Не удалось создать пользователя.
           content:
             application/json:
               schema:
@@ -109,11 +108,10 @@ paths:
     post:
       tags: [Авторизация]
       operationId: verifyOtp
-      summary: Подтвердить одноразовый код
+      summary: Завершить вход кодом
       description: |
-        Проверяет одноразовый код и возвращает JWT вместе с данными пользователя.
-        Код можно ввести неверно не более трёх раз; просроченный или успешно
-        использованный код становится недействительным.
+        Принимает любой непустой код после успешного запроса входа и возвращает JWT
+        вместе с данными пользователя.
       security: []
       requestBody:
         required: true
@@ -128,7 +126,7 @@ paths:
                   code: '12345678'
       responses:
         '200':
-          description: Код подтверждён, JWT выпущен.
+          description: Код принят, JWT выпущен.
           content:
             application/json:
               schema:
@@ -142,7 +140,7 @@ paths:
                       email: user@example.com
                       verified: true
         '400':
-          description: Тело запроса некорректно либо код недействителен или просрочен.
+          description: Тело запроса некорректно либо вход ещё не запрашивался.
           content:
             application/json:
               schema:

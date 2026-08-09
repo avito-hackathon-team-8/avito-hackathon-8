@@ -1,9 +1,6 @@
 package auth
 
-import (
-	"regexp"
-	"testing"
-)
+import "testing"
 
 func TestNormalizeEmail(t *testing.T) {
 	t.Parallel()
@@ -24,19 +21,5 @@ func TestNormalizeEmailRejectsDisplayName(t *testing.T) {
 
 	if _, err := normalizeEmail("User <user@example.com>"); err == nil {
 		t.Fatal("normalizeEmail accepted a display name")
-	}
-}
-
-func TestGenerateCode(t *testing.T) {
-	t.Parallel()
-
-	code, err := generateCode(8)
-
-	if err != nil {
-		t.Fatalf("generateCode returned an error: %v", err)
-	}
-
-	if !regexp.MustCompile(`^[0-9]{8}$`).MatchString(code) {
-		t.Fatalf("generateCode = %q, want 8 digits", code)
 	}
 }
