@@ -20,6 +20,18 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
 };
 
 const LEVEL_FOR_OPEN_CAT = 2;
+const MAX_PET_LEVEL = 10;
+const CHARACTER_BASE_WIDTH = 120;
+const CHARACTER_INITIAL_SCALE = 0.8;
+const CHARACTER_MAX_SCALE = 1.25;
+const CHARACTER_VERTICAL_OFFSET = 8;
+
+const getCharacterScale = (level: number) => {
+  const clampedLevel = Math.min(Math.max(level, LEVEL_FOR_OPEN_CAT), MAX_PET_LEVEL);
+  const levelProgress = (clampedLevel - LEVEL_FOR_OPEN_CAT) / (MAX_PET_LEVEL - LEVEL_FOR_OPEN_CAT);
+
+  return CHARACTER_INITIAL_SCALE + (CHARACTER_MAX_SCALE - CHARACTER_INITIAL_SCALE) * levelProgress;
+};
 
 export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParams) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,14 +78,14 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
 
       ctx.drawImage(background, 0, 0, rect.width, rect.height);
 
-      const characterWidth = 120;
+      const characterWidth = CHARACTER_BASE_WIDTH * getCharacterScale(level);
       const characterHeight = character.height * (characterWidth / character.width);
 
       if (level >= LEVEL_FOR_OPEN_CAT) {
         return ctx.drawImage(
           character,
           (rect.width - characterWidth) / 2,
-          rect.height - characterHeight,
+          rect.height - characterHeight + CHARACTER_VERTICAL_OFFSET,
           characterWidth,
           characterHeight,
         );

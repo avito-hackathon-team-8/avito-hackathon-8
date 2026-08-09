@@ -58,7 +58,12 @@ export const BuyReward = ({ className }: IBuyRewardProps) => {
         </Typography>
       </Button>
 
-      <Button variant="primary" disabled={isMVPLeavesPending} onClick={addMVPLeaves}>
+      <Button
+        className={styles.buttonLeaves}
+        variant="primary"
+        disabled={isMVPLeavesPending}
+        onClick={addMVPLeaves}
+      >
         <Typography variant="p3-semiBold" as="span" color="inherit">
           {isMVPLeavesPending ? 'Начисляем листья...' : 'MVP: +200 листьев'}
         </Typography>
