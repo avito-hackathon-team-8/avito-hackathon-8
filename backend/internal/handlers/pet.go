@@ -154,12 +154,14 @@ func (handler *petHandler) updateName(response http.ResponseWriter, request *htt
 func (handler *petHandler) addMVPLeaves(response http.ResponseWriter, request *http.Request) {
 	user, isAuthenticated := handler.authenticate(response, request)
 	if !isAuthenticated {
+
 		return
 	}
 
 	progress, err := handler.pets.AddMVPLeaves(request.Context(), user.ID)
 	if err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not add MVP leaves")
+
 		return
 	}
 
