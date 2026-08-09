@@ -54,12 +54,11 @@ type dailyReportReward struct {
 }
 
 type dailyReportTask struct {
-	TaskID        string    `json:"taskId"`
-	Type          string    `json:"type"`
-	Description   string    `json:"description"`
-	RewardLeaves  int       `json:"rewardLeaves"`
-	RewardClaimed bool      `json:"rewardClaimed"`
-	CompletedAt   time.Time `json:"completedAt"`
+	TaskID       string    `json:"taskId"`
+	Type         string    `json:"type"`
+	Description  string    `json:"description"`
+	RewardLeaves int       `json:"rewardLeaves"`
+	CompletedAt  time.Time `json:"completedAt"`
 }
 
 type dailyReportLevelUp struct {

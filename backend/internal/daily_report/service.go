@@ -23,12 +23,11 @@ type Reward struct {
 }
 
 type Task struct {
-	ID            uuid.UUID
-	Type          models.TaskType
-	Description   string
-	RewardLeaves  int
-	RewardClaimed bool
-	CompletedAt   time.Time
+	ID           uuid.UUID
+	Type         models.TaskType
+	Description  string
+	RewardLeaves int
+	CompletedAt  time.Time
 }
 
 type LevelUp struct {
@@ -178,12 +177,11 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID) (DailyReport, error
 			completedAt := row.CompletedAt.UTC()
 
 			report.Tasks = append(report.Tasks, Task{
-				ID:            row.ID,
-				Type:          row.Type,
-				Description:   row.Description,
-				RewardLeaves:  row.RewardLeaves,
-				RewardClaimed: row.ClaimedAt != nil,
-				CompletedAt:   completedAt,
+				ID:           row.ID,
+				Type:         row.Type,
+				Description:  row.Description,
+				RewardLeaves: row.RewardLeaves,
+				CompletedAt:  completedAt,
 			})
 
 			report.UpdatedAt = latestTime(report.UpdatedAt, completedAt)

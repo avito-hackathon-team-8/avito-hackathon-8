@@ -136,7 +136,7 @@ func TestGetBuildsDailyReportFromTodaysActivity(t *testing.T) {
 		t.Fatalf("Tasks = %+v, want only claimed task %s; unclaimed task %s must be excluded", report.Tasks, firstTask.ID, secondTask.ID)
 	}
 	if report.Tasks[0].Type != models.ViewListingsTaskType || report.Tasks[0].Description != "Посмотреть объявления" ||
-		report.Tasks[0].RewardLeaves != 45 || !report.Tasks[0].RewardClaimed || !report.Tasks[0].CompletedAt.Equal(completedAt) {
+		report.Tasks[0].RewardLeaves != 45 || !report.Tasks[0].CompletedAt.Equal(completedAt) {
 		t.Fatalf("first task = %+v", report.Tasks[0])
 	}
 	if report.LevelUp == nil || report.LevelUp.FromLevel != 2 || report.LevelUp.ToLevel != 4 ||

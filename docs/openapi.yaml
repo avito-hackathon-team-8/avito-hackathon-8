@@ -990,7 +990,6 @@ paths:
                         type: VIEW_LISTINGS
                         description: Посмотреть 5 объявлений
                         rewardLeaves: 45
-                        rewardClaimed: true
                         completedAt: '2026-08-05T09:15:00Z'
                     visitedToday: true
                     updatedAt: '2026-08-05T11:20:00Z'
@@ -1784,7 +1783,7 @@ components:
 
     DailyReportTask:
       type: object
-      required: [taskId, type, description, rewardLeaves, rewardClaimed, completedAt]
+      required: [taskId, type, description, rewardLeaves, completedAt]
       properties:
         taskId:
           type: string
@@ -1800,10 +1799,7 @@ components:
           type: integer
           format: int32
           minimum: 1
-          description: Количество листьев за получение награды задания.
-        rewardClaimed:
-          type: boolean
-          description: Были ли листья за это задание уже начислены. В ежедневной сводке всегда `true`.
+          description: Количество листьев, полученных за выполнение задания.
         completedAt:
           type: string
           format: date-time
