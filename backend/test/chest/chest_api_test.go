@@ -50,43 +50,44 @@ func TestOpenChestIssuesRewardAndSpendsLeaves(t *testing.T) {
 	cfg := getConfig(t)
 	userID := createUser(t, cfg)
 	token := makeToken(t, cfg, userID)
-	seedPet(t, cfg, userID, 10, 250)
 
 	unauthorized := request(t, cfg, "", http.MethodPost, "/api/v1/pet/chests/open", nil)
 	if unauthorized.status != http.StatusUnauthorized {
 		t.Fatalf("unauthorized chest opening status = %d, want 401", unauthorized.status)
 	}
 
-	opened := request(t, cfg, token, http.MethodPost, "/api/v1/pet/chests/open", nil)
-	if opened.status != http.StatusOK {
-		t.Fatalf("open chest status = %d, body = %s", opened.status, opened.body)
-	}
-	if _, exists := opened.json["leaves"]; exists {
-		t.Fatal("open chest response contains leaves, want only reward fields")
-	}
-
-	var reward rewardResponse
-	decode(t, opened.body, &reward)
-	if reward.ID == "" || reward.Source != "CHEST" || !reward.Active || reward.Status != "ACTIVE" || reward.Title == "" || reward.Category == "" {
-		t.Fatalf("open chest reward = %+v, want active chest reward", reward)
-	}
-
-	pet := request(t, cfg, token, http.MethodGet, "/api/v1/pet", nil)
-	if pet.status != http.StatusOK {
-		t.Fatalf("get pet status = %d, body = %s", pet.status, pet.body)
+	initialPet := request(t, cfg, token, http.MethodGet, "/api/v1/pet", nil)
+	if initialPet.status != http.StatusOK {
+		t.Fatalf("get initial pet status = %d, body = %s", initialPet.status, initialPet.body)
 	}
 	var currentPet petResponse
-	decode(t, pet.body, &currentPet)
-	if currentPet.Level != 10 || currentPet.Leaves != 50 {
-		t.Fatalf("pet after chest = %+v, want level 10 with 50 leaves", currentPet)
+	decode(t, initialPet.body, &currentPet)
+	if currentPet.Level != 10 || currentPet.Leaves != 1000 {
+		t.Fatalf("initial pet = %+v, want level 10 with 1000 leaves", currentPet)
 	}
 
-	rewards := request(t, cfg, token, http.MethodGet, "/api/app/rewards", nil)
-	if rewards.status != http.StatusOK {
-		t.Fatalf("list rewards status = %d, body = %s", rewards.status, rewards.body)
-	}
-	if !containsReward(rewards.json, reward.ID) {
-		t.Fatalf("reward %s is not returned by GET /api/app/rewards", reward.ID)
+	for openingsLeft := 5; openingsLeft > 0; openingsLeft-- {
+		opened := request(t, cfg, token, http.MethodPost, "/api/v1/pet/chests/open", nil)
+		if opened.status != http.StatusOK {
+			t.Fatalf("open chest with %d openings left status = %d, body = %s", openingsLeft, opened.status, opened.body)
+		}
+		if _, exists := opened.json["leaves"]; exists {
+			t.Fatal("open chest response contains leaves, want only reward fields")
+		}
+
+		var reward rewardResponse
+		decode(t, opened.body, &reward)
+		if reward.ID == "" || reward.Source != "CHEST" || !reward.Active || reward.Status != "ACTIVE" || reward.Title == "" || reward.Category == "" {
+			t.Fatalf("open chest reward = %+v, want active chest reward", reward)
+		}
+
+		rewards := request(t, cfg, token, http.MethodGet, "/api/app/rewards", nil)
+		if rewards.status != http.StatusOK {
+			t.Fatalf("list rewards status = %d, body = %s", rewards.status, rewards.body)
+		}
+		if !containsReward(rewards.json, reward.ID) {
+			t.Fatalf("reward %s is not returned by GET /api/app/rewards", reward.ID)
+		}
 	}
 
 	insufficient := request(t, cfg, token, http.MethodPost, "/api/v1/pet/chests/open", nil)
@@ -94,7 +95,16 @@ func TestOpenChestIssuesRewardAndSpendsLeaves(t *testing.T) {
 		t.Fatalf("second chest opening status = %d, body = %s", insufficient.status, insufficient.body)
 	}
 	if insufficient.json["code"] != "INSUFFICIENT_LEAVES" {
-		t.Fatalf("second chest opening error = %v, want INSUFFICIENT_LEAVES", insufficient.json)
+		t.Fatalf("opening after balance is exhausted error = %v, want INSUFFICIENT_LEAVES", insufficient.json)
+	}
+
+	finalPet := request(t, cfg, token, http.MethodGet, "/api/v1/pet", nil)
+	if finalPet.status != http.StatusOK {
+		t.Fatalf("get final pet status = %d, body = %s", finalPet.status, finalPet.body)
+	}
+	decode(t, finalPet.body, &currentPet)
+	if currentPet.Level != 10 || currentPet.Leaves != 0 {
+		t.Fatalf("pet after five openings = %+v, want level 10 with 0 leaves", currentPet)
 	}
 }
 
@@ -140,15 +150,17 @@ func getConfig(t *testing.T) testConfig {
 		postgresUser: envOr(dotenv, "POSTGRES_USER", "hackathon"),
 		jwtSecret:    envOr(dotenv, "JWT_SECRET", ""),
 	}
-	if len(cfg.jwtSecret) < 32 {
-		t.Skip("chest e2e tests require JWT_SECRET with at least 32 characters")
-	}
 	if err := waitForBackend(cfg.apiURL); err != nil {
 		t.Skipf("chest e2e tests need a running backend: %v", err)
 	}
 	if err := runSQL(cfg, "SELECT 1;"); err != nil {
 		t.Skipf("chest e2e tests need Compose Postgres: %v", err)
 	}
+	secret, err := backendJWTSecret(cfg)
+	if err != nil {
+		t.Skipf("chest e2e tests need a backend JWT secret: %v", err)
+	}
+	cfg.jwtSecret = secret
 
 	return cfg
 }
@@ -171,22 +183,6 @@ func createUser(t *testing.T, cfg testConfig) uuid.UUID {
 	})
 
 	return userID
-}
-
-func seedPet(t *testing.T, cfg testConfig, userID uuid.UUID, level int, leaves int64) {
-	t.Helper()
-
-	petID := uuid.New()
-	statement := fmt.Sprintf(
-		"INSERT INTO pets (id, user_id, name, level, leaves, created_at, updated_at) VALUES (%s, %s, '', %d, %d, NOW(), NOW());",
-		sqlUUID(petID),
-		sqlUUID(userID),
-		level,
-		leaves,
-	)
-	if err := runSQL(cfg, statement); err != nil {
-		t.Fatalf("create e2e pet: %v", err)
-	}
 }
 
 func makeToken(t *testing.T, cfg testConfig, userID uuid.UUID) string {
@@ -291,6 +287,22 @@ func runSQL(cfg testConfig, statement string) error {
 	}
 
 	return nil
+}
+
+func backendJWTSecret(cfg testConfig) (string, error) {
+	command := exec.Command("docker", "compose", "exec", "-T", "backend", "printenv", "JWT_SECRET")
+	command.Dir = cfg.repoRoot
+	output, err := command.Output()
+	if err != nil {
+		return "", fmt.Errorf("read JWT_SECRET from running backend: %w", err)
+	}
+
+	secret := strings.TrimSpace(string(output))
+	if len(secret) < 32 {
+		return "", errors.New("running backend JWT_SECRET must be at least 32 characters")
+	}
+
+	return secret, nil
 }
 
 func readEnv(paths ...string) map[string]string {
