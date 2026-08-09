@@ -231,8 +231,9 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 	err := tx.
 		Select("amount", "reason", "occurred_at").
 		Where(`user_id = ? AND occurred_at >= ? AND occurred_at < ?
-			AND reason IN (?, ?, ?, ?)`, userID, dayStart, dayEnd,
-			models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonLevelUp, models.LeafReasonChestPurchase).
+			AND reason IN (?, ?, ?, ?, ?)`, userID, dayStart, dayEnd,
+			models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonMVP,
+			models.LeafReasonLevelUp, models.LeafReasonChestPurchase).
 		Order("occurred_at ASC, id ASC").
 		Find(&transactions).Error
 
@@ -246,7 +247,7 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 
 	for _, transaction := range transactions {
 		switch transaction.Reason {
-		case models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin:
+		case models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonMVP:
 			if transaction.Amount > 0 {
 				if earnedLeaves > int64(^uint64(0)>>1)-transaction.Amount {
 					return 0, nil, time.Time{}, fmt.Errorf("calculate earned leaves: total overflows int64")

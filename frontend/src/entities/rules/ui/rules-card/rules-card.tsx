@@ -2,7 +2,7 @@ import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { dataRules } from '../../model/rules';
-import rulesIcon from '../assets/rules-icon.svg';
+import rulesIcon from '../assets/rules-icon.webp';
 import { RulesPanelContent } from '../rules-panel-content/rules-panel-content';
 
 const TITLE_CARD = 'Правила';
@@ -24,8 +24,8 @@ export const RulesCard = ({ className }: TRulesCardProps) => {
           imageProps={{
             src: rulesIcon,
             alt: 'Книжка правил',
-            width: 94,
-            height: 74,
+            width: 65,
+            height: 67,
           }}
           wrapperProps={{ onClick: open }}
           className={className}

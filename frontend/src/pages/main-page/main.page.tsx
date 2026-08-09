@@ -13,7 +13,7 @@ export const MainPage = () => {
 
   const isPetInitialized = Boolean(pet?.trim());
 
-  usePetProfileSocket({ enabled: Boolean(pet?.length === 0) });
+  usePetProfileSocket({ enabled: isPetInitialized });
   useTodaySummarySocket();
 
   return (

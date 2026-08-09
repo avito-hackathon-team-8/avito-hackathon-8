@@ -4,7 +4,7 @@ import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { useActivityDays } from '../../model/use-activity-days';
 import { ActivityDaysPanelContent } from '../activity-days-panel-content/activity-days-panel-content';
-import calendarIcon from '../assets/calendar-icon.svg';
+import calendarIcon from '../assets/calendar-icon.webp';
 
 const TITLE_CARD = 'Дни активности';
 const DESCRIPTION_ERROR = 'Не удалось получить данные';
@@ -39,8 +39,8 @@ export const ActivityDaysCard = () => {
           imageProps={{
             src: calendarIcon,
             alt: 'Календарь задач',
-            width: 84,
-            height: 76,
+            width: 70,
+            height: 72,
           }}
           wrapperProps={{ onClick: open }}
         />

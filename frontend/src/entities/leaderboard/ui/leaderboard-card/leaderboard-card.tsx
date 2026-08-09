@@ -3,7 +3,7 @@ import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { useLeaderboard } from '../../model/use-leaderboard';
-import pedestalIcon from '../assets/pedestal-icon.svg';
+import pedestalIcon from '../assets/pedestal-icon.webp';
 import { LeaderboardPanelContent } from '../leaderboard-panel-content/leaderboard-panel-content';
 
 const TITLE_CARD = 'Лидерборд';
@@ -24,7 +24,7 @@ export const LeaderboardCard = () => {
     <BottomPanel
       title={TITLE_CARD}
       description="Топ-10 платформы. Обновляется каждые 10 минут"
-      disabled={!data || data.items.length === 0}
+      disabled={!data}
       onClick={handleClick}
       renderTrigger={(open) => (
         <GamificationCard
@@ -33,8 +33,8 @@ export const LeaderboardCard = () => {
           imageProps={{
             src: pedestalIcon,
             alt: 'Пьедестал',
-            width: 96,
-            height: 65,
+            width: 97,
+            height: 55,
           }}
           wrapperProps={{ onClick: open }}
         />

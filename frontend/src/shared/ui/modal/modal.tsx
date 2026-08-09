@@ -46,13 +46,8 @@ export const Modal = ({ isOpen, onClose, className, children }: IModalProps) => 
   }
 
   return createPortal(
-    <div className={styles.overlay}>
-      <div
-        className={`${styles.modal} ${className ?? ''}`}
-        role="dialog"
-        aria-modal="true"
-        onClick={handleOverlayClick}
-      >
+    <div className={styles.overlay} onClick={handleOverlayClick}>
+      <div className={`${styles.modal} ${className ?? ''}`} role="dialog" aria-modal="true">
         {children}
       </div>
     </div>,

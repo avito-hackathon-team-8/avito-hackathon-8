@@ -40,7 +40,9 @@ export const BuyReward = ({ className }: IBuyRewardProps) => {
         </Typography>
 
         <Typography
-          className={styles.buttonBuy__description}
+          className={clsx(styles.buttonBuy__description, {
+            [styles.buttonBuy__description]: pet?.nextLevelTargetLeaves === 0,
+          })}
           variant="caption"
           as="span"
           color="inherit"
