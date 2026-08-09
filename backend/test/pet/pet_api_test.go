@@ -80,8 +80,8 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	}
 	var pet petResponse
 	decode(t, initial.body, &pet)
-	if pet.Name != "" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
-		t.Fatalf("initial pet = %+v, want empty level-one pet", pet)
+	if pet.Name != "" || pet.Level != 10 || pet.Leaves != 1000 || pet.NextLevelTargetLeaves != 0 || pet.ChestPrice != 200 || pet.LevelUp {
+		t.Fatalf("initial pet = %+v, want empty level-ten pet with 1000 leaves", pet)
 	}
 
 	invalidName := request(t, cfg, token, http.MethodPatch, "/api/v1/pet", map[string]any{"name": "   "})
@@ -97,8 +97,8 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 		t.Fatalf("updated pet response contains removed targetLeaves field: %s", updated.body)
 	}
 	decode(t, updated.body, &pet)
-	if pet.Name != "Листик" || pet.Level != 1 || pet.Leaves != 0 || pet.NextLevelTargetLeaves != 100 || pet.ChestPrice != 200 || pet.LevelUp {
-		t.Fatalf("updated pet = %+v, want renamed level-one pet", pet)
+	if pet.Name != "Листик" || pet.Level != 10 || pet.Leaves != 1000 || pet.NextLevelTargetLeaves != 0 || pet.ChestPrice != 200 || pet.LevelUp {
+		t.Fatalf("updated pet = %+v, want renamed level-ten pet with 1000 leaves", pet)
 	}
 
 	connection := openPetWebSocket(t, cfg, token)
@@ -108,16 +108,16 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 
 	initialEvent := readPetEvent(t, connection)
 	if initialEvent.Event != "PET_PROGRESS_UPDATED" || initialEvent.Data.Name != "Листик" ||
-		initialEvent.Data.Level != 1 || initialEvent.Data.Leaves != 0 ||
-		initialEvent.Data.NextLevelTargetLeaves != 100 || initialEvent.Data.ChestPrice != 200 || initialEvent.Data.LevelUp {
+		initialEvent.Data.Level != 10 || initialEvent.Data.Leaves != 1000 ||
+		initialEvent.Data.NextLevelTargetLeaves != 0 || initialEvent.Data.ChestPrice != 200 || initialEvent.Data.LevelUp {
 		t.Fatalf("initial WebSocket event = %+v, want current pet snapshot", initialEvent)
 	}
 	if err := connection.WriteJSON(map[string]string{"action": "GET_CHEST_PRICE"}); err != nil {
 		t.Fatalf("request chest price over WebSocket: %v", err)
 	}
 	chestEvent := readPetEvent(t, connection)
-	if chestEvent.Data.ChestPrice != 200 || chestEvent.Data.NextLevelTargetLeaves != 100 {
-		t.Fatalf("chest price WebSocket event = %+v, want price 200 and target 100", chestEvent)
+	if chestEvent.Data.ChestPrice != 200 || chestEvent.Data.NextLevelTargetLeaves != 0 {
+		t.Fatalf("chest price WebSocket event = %+v, want price 200 and target 0", chestEvent)
 	}
 
 	task := getFirstTask(t, cfg, token)
@@ -130,9 +130,9 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 
 	update := readPetEvent(t, connection)
 	if update.Event != "PET_PROGRESS_UPDATED" || update.Data.Name != "Листик" ||
-		update.Data.Level != 1 || update.Data.Leaves != int64(task.RewardLeaves) ||
-		update.Data.NextLevelTargetLeaves != 100 || update.Data.ChestPrice != 200 || update.Data.LevelUp {
-		t.Fatalf("reward WebSocket event = %+v, want %d leaves at level 1", update, task.RewardLeaves)
+		update.Data.Level != 10 || update.Data.Leaves != 1000+int64(task.RewardLeaves) ||
+		update.Data.NextLevelTargetLeaves != 0 || update.Data.ChestPrice != 200 || update.Data.LevelUp {
+		t.Fatalf("reward WebSocket event = %+v, want %d leaves at level 10", update, 1000+int64(task.RewardLeaves))
 	}
 }
 
@@ -163,7 +163,7 @@ func TestPetWebSocketReportsLevelUp(t *testing.T) {
 	if result := request(t, cfg, token, http.MethodGet, "/api/v1/pet", nil); result.status != http.StatusOK {
 		t.Fatalf("initial pet status = %d, body = %s", result.status, result.body)
 	}
-	seedPetLeaves(t, cfg, userID, 70)
+	seedPetProgress(t, cfg, userID, 1, 70)
 
 	connection := openPetWebSocket(t, cfg, token)
 	defer func() {
@@ -236,11 +236,11 @@ func seedCompletedTask(t *testing.T, cfg testConfig, userID uuid.UUID, taskID st
 	}
 }
 
-func seedPetLeaves(t *testing.T, cfg testConfig, userID uuid.UUID, leaves int64) {
+func seedPetProgress(t *testing.T, cfg testConfig, userID uuid.UUID, level int, leaves int64) {
 	t.Helper()
-	statement := fmt.Sprintf("UPDATE pets SET leaves = %d WHERE user_id = %s;", leaves, sqlUUID(userID))
+	statement := fmt.Sprintf("UPDATE pets SET level = %d, leaves = %d WHERE user_id = %s;", level, leaves, sqlUUID(userID))
 	if err := runSQL(cfg, statement); err != nil {
-		t.Fatalf("seed pet leaves: %v", err)
+		t.Fatalf("seed pet progress: %v", err)
 	}
 }
 

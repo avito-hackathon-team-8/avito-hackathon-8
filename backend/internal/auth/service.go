@@ -15,6 +15,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -67,8 +68,20 @@ func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
 	err = service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		candidate := models.User{Email: normalizedEmail, Interests: defaultInterests}
 
-		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&candidate).Error; err != nil {
-			return fmt.Errorf("find or create user: %w", err)
+		createUser := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&candidate)
+		if createUser.Error != nil {
+			return fmt.Errorf("find or create user: %w", createUser.Error)
+		}
+
+		if createUser.RowsAffected > 0 {
+			initialPet := models.Pet{
+				UserID: candidate.ID,
+				Level:  pet.InitialPetLevel,
+				Leaves: pet.InitialPetLeaves,
+			}
+			if err := tx.Create(&initialPet).Error; err != nil {
+				return fmt.Errorf("create initial pet: %w", err)
+			}
 		}
 
 		var user models.User
