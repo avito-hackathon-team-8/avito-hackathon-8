@@ -133,7 +133,9 @@ func TestDailyReportWebSocketSendsInitialAndUpdatedSnapshots(t *testing.T) {
 	}
 
 	connection := openDailyReportWebSocket(t, cfg, token)
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 
 	initial := readDailyReportEvent(t, connection)
 	if initial.Event != "DAILY_REPORT_UPDATED" || initial.Data.LeavesEarnedToday != 0 ||
