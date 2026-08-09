@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/auth"
@@ -22,19 +21,7 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	otpLength, err := envInt("OTP_LENGTH", 8)
-
-	if err != nil {
-		return Config{}, err
-	}
-
 	sessionTTL, err := envDuration("JWT_TTL", 24*time.Hour)
-
-	if err != nil {
-		return Config{}, err
-	}
-
-	otpTTL, err := envDuration("OTP_TTL", 5*time.Minute)
 
 	if err != nil {
 		return Config{}, err
@@ -47,8 +34,6 @@ func Load() (Config, error) {
 		Auth: auth.Config{
 			JWTSecret:  os.Getenv("JWT_SECRET"),
 			SessionTTL: sessionTTL,
-			OTPTTL:     otpTTL,
-			OTPLength:  otpLength,
 		},
 		Email: email.Config{
 			Mode:     env("EMAIL_MODE", "smtp"),
@@ -70,9 +55,6 @@ func Load() (Config, error) {
 		return Config{}, errors.New("JWT_SECRET must be at least 32 characters")
 	}
 
-	if cfg.Auth.OTPLength < 6 || cfg.Auth.OTPLength > 10 {
-		return Config{}, errors.New("OTP_LENGTH must be between 6 and 10")
-	}
 	if len(cfg.InternalServiceToken) < 32 {
 		return Config{}, errors.New("INTERNAL_SERVICE_TOKEN must be at least 32 characters")
 	}
@@ -86,22 +68,6 @@ func env(key, fallback string) string {
 	}
 
 	return fallback
-}
-
-func envInt(key string, fallback int) (int, error) {
-	value := os.Getenv(key)
-
-	if value == "" {
-		return fallback, nil
-	}
-
-	parsed, err := strconv.Atoi(value)
-
-	if err != nil {
-		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
-	}
-
-	return parsed, nil
 }
 
 func envDuration(key string, fallback time.Duration) (time.Duration, error) {
