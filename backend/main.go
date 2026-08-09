@@ -9,7 +9,6 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/config"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/daily_report"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/database"
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	activityevents "github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/events"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/handlers"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
@@ -29,12 +28,7 @@ func main() {
 		log.Fatalf("connect to database: %v", err)
 	}
 
-	mailer, err := email.NewSender(cfg.Email)
-	if err != nil {
-		log.Fatalf("configure email: %v", err)
-	}
-
-	authService := auth.NewService(db, mailer, cfg.Auth)
+	authService := auth.NewService(db, cfg.Auth)
 	dailyReportService := daily_report.NewService(db)
 	rewardService := rewards.NewService(db, dailyReportService)
 	petService := pet.NewService(db, dailyReportService)

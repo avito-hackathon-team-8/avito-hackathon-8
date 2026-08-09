@@ -80,7 +80,7 @@ func TestTasksHappyPath(t *testing.T) {
 	userID := createUser(t, cfg)
 	token := makeToken(t, cfg, userID)
 
-	tasks := getTasks(t, cfg, token, "/api/v1/tasks?level=1")
+	tasks := getTasks(t, cfg, token, "/api/v1/tasks")
 	if len(tasks.Tasks) != 4 {
 		t.Fatalf("got %d tasks, want 4", len(tasks.Tasks))
 	}
@@ -103,15 +103,13 @@ func TestTasksHappyPath(t *testing.T) {
 	slotFour := findTaskBySlot(t, tasks.Tasks, 4)
 	if slotThree.RewardLeaves != 50 || slotThree.RequiredLevel != 5 ||
 		slotFour.RewardLeaves != 60 || slotFour.RequiredLevel != 10 ||
-		slotThree.Status != "LOCKED" || slotFour.Status != "LOCKED" {
-		t.Fatalf("unexpected locked tasks: %+v / %+v", slotThree, slotFour)
+		slotThree.Status != "IN_PROGRESS" || slotFour.Status != "IN_PROGRESS" {
+		t.Fatalf("unexpected tasks available to a level-ten pet: %+v / %+v", slotThree, slotFour)
 	}
 
 	recordBody := map[string]any{
-		"level": 1,
 		"events": []map[string]any{
-			{"type": slotOne.Type, "count": slotOne.TargetCount},
-			{"type": slotTwo.Type, "count": slotTwo.TargetCount - 1},
+			{"taskId": slotThree.TaskID, "type": slotThree.Type, "count": slotThree.TargetCount},
 		},
 	}
 	record := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", recordBody)
@@ -119,40 +117,35 @@ func TestTasksHappyPath(t *testing.T) {
 		t.Fatalf("record status = %d, want 204, body = %s", record.status, record.body)
 	}
 
-	tasks = getTasks(t, cfg, token, "/api/v1/tasks?level=1")
-	slotOne = findTaskBySlot(t, tasks.Tasks, 1)
-	slotTwo = findTaskBySlot(t, tasks.Tasks, 2)
+	tasks = getTasks(t, cfg, token, "/api/v1/tasks")
+	slotThree = findTaskBySlot(t, tasks.Tasks, 3)
 
-	if slotOne.CurrentCount != slotOne.TargetCount || slotOne.Status != "COMPLETED" {
-		t.Fatalf("slot 1 after record = %+v, want completed", slotOne)
-	}
-	if slotTwo.CurrentCount != slotTwo.TargetCount || slotTwo.Status != "COMPLETED" {
-		t.Fatalf("slot 2 after record = %+v, want completed", slotTwo)
+	if slotThree.CurrentCount != slotThree.TargetCount || slotThree.Status != "COMPLETED" {
+		t.Fatalf("slot 3 after record = %+v, want completed", slotThree)
 	}
 
 	progress := getProgress(t, cfg, token)
-	if progress.CompletedCount != 2 || progress.TotalCount != 4 {
-		t.Fatalf("progress = %+v, want 2/4", progress)
+	if progress.CompletedCount != 3 || progress.TotalCount != 4 {
+		t.Fatalf("progress = %+v, want 3/4", progress)
 	}
 
-	claimBody := map[string]any{"level": 1}
-	claim := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+slotOne.TaskID+"/claim", claimBody)
+	claim := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+slotThree.TaskID+"/claim", nil)
 	if claim.status != http.StatusOK {
 		t.Fatalf("claim status = %d, want 200, body = %s", claim.status, claim.body)
 	}
-	if claim.json["taskId"] != slotOne.TaskID ||
-		claim.json["rewardLeaves"] != float64(slotOne.RewardLeaves) ||
+	if claim.json["taskId"] != slotThree.TaskID ||
+		claim.json["rewardLeaves"] != float64(slotThree.RewardLeaves) ||
 		claim.json["status"] != "CLAIMED" {
 		t.Fatalf("unexpected claim response: %s", claim.body)
 	}
 
-	tasks = getTasks(t, cfg, token, "/api/v1/tasks?level=1")
-	slotOne = findTaskBySlot(t, tasks.Tasks, 1)
-	if slotOne.Status != "CLAIMED" {
-		t.Fatalf("slot 1 status = %s, want CLAIMED", slotOne.Status)
+	tasks = getTasks(t, cfg, token, "/api/v1/tasks")
+	slotThree = findTaskBySlot(t, tasks.Tasks, 3)
+	if slotThree.Status != "CLAIMED" {
+		t.Fatalf("slot 3 status = %s, want CLAIMED", slotThree.Status)
 	}
 
-	secondClaim := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+slotOne.TaskID+"/claim", claimBody)
+	secondClaim := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+slotThree.TaskID+"/claim", nil)
 	if secondClaim.status != http.StatusConflict {
 		t.Fatalf("second claim status = %d, want 409, body = %s", secondClaim.status, secondClaim.body)
 	}
@@ -167,7 +160,6 @@ func TestTasksRecordErrors(t *testing.T) {
 	token := makeToken(t, cfg, userID)
 
 	invalidType := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{
-		"level": 10,
 		"events": []map[string]any{
 			{"type": "UNKNOWN_TASK_TYPE", "count": 1},
 		},
@@ -176,24 +168,22 @@ func TestTasksRecordErrors(t *testing.T) {
 		t.Fatalf("invalid type response = %d %s", invalidType.status, invalidType.body)
 	}
 
-	tasks := getTasks(t, cfg, token, "/api/v1/tasks?level=1")
-	available := findTaskBySlot(t, tasks.Tasks, 2)
-	locked := findTaskBySlot(t, tasks.Tasks, 3)
-	lockedBatch := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{
-		"level": 1,
+	tasks := getTasks(t, cfg, token, "/api/v1/tasks")
+	inProgress := findTaskBySlot(t, tasks.Tasks, 3)
+	invalidBatch := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{
 		"events": []map[string]any{
-			{"type": available.Type, "count": 1},
-			{"type": locked.Type, "count": 1},
+			{"taskId": inProgress.TaskID, "type": inProgress.Type, "count": inProgress.TargetCount},
+			{"type": "UNKNOWN_TASK_TYPE", "count": 1},
 		},
 	})
-	if lockedBatch.status != http.StatusForbidden || lockedBatch.json["code"] != "TASK_LOCKED" {
-		t.Fatalf("locked batch response = %d %s", lockedBatch.status, lockedBatch.body)
+	if invalidBatch.status != http.StatusBadRequest || invalidBatch.json["code"] != "INVALID_TASK_TYPE" {
+		t.Fatalf("invalid batch response = %d %s", invalidBatch.status, invalidBatch.body)
 	}
 
-	tasks = getTasks(t, cfg, token, "/api/v1/tasks?level=1")
-	available = findTaskBySlot(t, tasks.Tasks, 2)
-	if available.CurrentCount != available.TargetCount || available.Status != "COMPLETED" {
-		t.Fatalf("slot 2 after failed batch = %+v, want unchanged demo completion", available)
+	tasks = getTasks(t, cfg, token, "/api/v1/tasks")
+	inProgress = findTaskBySlot(t, tasks.Tasks, 3)
+	if inProgress.CurrentCount != 0 || inProgress.Status != "IN_PROGRESS" {
+		t.Fatalf("slot 3 after failed batch = %+v, want rollback", inProgress)
 	}
 }
 
@@ -202,31 +192,17 @@ func TestTasksClaimErrors(t *testing.T) {
 	userID := createUser(t, cfg)
 	token := makeToken(t, cfg, userID)
 
-	tasks := getTasks(t, cfg, token, "/api/v1/tasks?level=10")
-	incompleteTask := findTaskBySlot(t, tasks.Tasks, 2)
-	lockedTask := findTaskBySlot(t, tasks.Tasks, 3)
-	resetTaskToIncomplete(t, cfg, userID, incompleteTask.TaskID)
+	tasks := getTasks(t, cfg, token, "/api/v1/tasks")
+	incompleteTask := findTaskBySlot(t, tasks.Tasks, 3)
 
-	badID := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/not-a-uuid/claim", map[string]any{
-		"level": 10,
-	})
+	badID := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/not-a-uuid/claim", nil)
 	if badID.status != http.StatusNotFound || badID.json["code"] != "TASK_NOT_FOUND" {
 		t.Fatalf("bad id response = %d %s", badID.status, badID.body)
 	}
 
-	incomplete := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+incompleteTask.TaskID+"/claim", map[string]any{
-		"level": 1,
-	})
+	incomplete := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+incompleteTask.TaskID+"/claim", nil)
 	if incomplete.status != http.StatusConflict || incomplete.json["code"] != "TASK_NOT_COMPLETED" {
 		t.Fatalf("incomplete claim response = %d %s", incomplete.status, incomplete.body)
-	}
-
-	locked := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/"+lockedTask.TaskID+"/claim", map[string]any{
-		// The server must ignore a client-supplied level and use the pet level.
-		"level": 10,
-	})
-	if locked.status != http.StatusForbidden || locked.json["code"] != "TASK_LOCKED" {
-		t.Fatalf("locked claim response = %d %s", locked.status, locked.body)
 	}
 }
 
@@ -235,15 +211,12 @@ func TestTasksRecordNoOpAndBadJSON(t *testing.T) {
 	userID := createUser(t, cfg)
 	token := makeToken(t, cfg, userID)
 
-	noEvents := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{
-		"level": 1,
-	})
+	noEvents := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{})
 	if noEvents.status != http.StatusNoContent {
 		t.Fatalf("no events status = %d, want 204, body = %s", noEvents.status, noEvents.body)
 	}
 
 	nullEvents := request(t, cfg, token, http.MethodPost, "/api/v1/tasks/record", map[string]any{
-		"level":  1,
 		"events": nil,
 	})
 	if nullEvents.status != http.StatusNoContent {
@@ -429,7 +402,7 @@ func getTasks(t *testing.T, cfg testConfig, token, path string) tasksResponse {
 func getProgress(t *testing.T, cfg testConfig, token string) progressResponse {
 	t.Helper()
 
-	result := request(t, cfg, token, http.MethodGet, "/api/v1/tasks/progress?level=1", nil)
+	result := request(t, cfg, token, http.MethodGet, "/api/v1/tasks/progress", nil)
 	if result.status != http.StatusOK {
 		t.Fatalf("get progress status = %d, want 200, body = %s", result.status, result.body)
 	}
@@ -505,19 +478,6 @@ func findTaskBySlot(t *testing.T, tasks []taskResponse, slot int) taskResponse {
 
 	t.Fatalf("task in slot %d not found in %+v", slot, tasks)
 	return taskResponse{}
-}
-
-func resetTaskToIncomplete(t *testing.T, cfg testConfig, userID uuid.UUID, taskID string) {
-	t.Helper()
-
-	statement := fmt.Sprintf(
-		"UPDATE user_daily_tasks SET current_count = 0, completed_at = NULL, claimed_at = NULL, status = 'IN_PROGRESS', updated_at = NOW() WHERE id = %s AND user_id = %s;",
-		sqlString(taskID),
-		sqlUUID(userID),
-	)
-	if err := runSQL(cfg, statement); err != nil {
-		t.Fatalf("reset task: %v", err)
-	}
 }
 
 func readEnvFile(paths ...string) (map[string]string, error) {
