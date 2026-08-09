@@ -84,6 +84,7 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 
 	today := utcDate(service.now())
 	weekStart, weekEnd := utcWeekBounds(today)
+
 	var claims []models.WeeklyLoginClaim
 
 	err = service.db.WithContext(ctx).
@@ -105,6 +106,7 @@ func (service *Service) Get(ctx context.Context, userID uuid.UUID) (CurrentWeek,
 
 func (service *Service) Claim(ctx context.Context, userID uuid.UUID) (ClaimResult, error) {
 	claimDate := utcDate(service.now())
+
 	var claim models.WeeklyLoginClaim
 	var progress pet.Progress
 
@@ -139,6 +141,7 @@ func (service *Service) Claim(ctx context.Context, userID uuid.UUID) (ClaimResul
 		}
 
 		weekStart, weekEnd := utcWeekBounds(claimDate)
+
 		var claimedDaysCount int64
 
 		if err := tx.Model(&models.WeeklyLoginClaim{}).

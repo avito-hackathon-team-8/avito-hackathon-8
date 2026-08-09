@@ -28,6 +28,7 @@ func (handler *chestHandler) open(response http.ResponseWriter, request *http.Re
 	}
 
 	reward, err := handler.chests.Open(request.Context(), user.ID)
+
 	switch {
 	case errors.Is(err, chest.ErrPetNotFound):
 		writeChestError(response, http.StatusNotFound, "PET_NOT_FOUND", "Питомец пользователя не найден")

@@ -125,6 +125,7 @@ func (handler *weeklyLoginHandler) claim(response http.ResponseWriter, request *
 	}
 
 	handler.pets.PublishProgress(user.ID, claimResult.Progress)
+
 	writeJSON(response, http.StatusOK, weeklyLoginClaimResponse{Claim: responseWeeklyLoginClaim(claimResult.Claim)})
 }
 

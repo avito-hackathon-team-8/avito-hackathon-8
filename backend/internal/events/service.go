@@ -181,6 +181,7 @@ func (service *Service) Record(ctx context.Context, userID uuid.UUID, batch []Ev
 
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}

@@ -23,9 +23,8 @@ const (
 )
 
 var (
-	ErrPetNotFound   = errors.New("pet not found")
-	ErrInvalidName   = errors.New("pet name must contain from 1 to 35 characters")
-	ErrInvalidLeaves = ErrInvalidAmount
+	ErrPetNotFound = errors.New("pet not found")
+	ErrInvalidName = errors.New("pet name must contain from 1 to 35 characters")
 )
 
 type Update struct {
@@ -48,6 +47,7 @@ func NewService(db *gorm.DB, dailyReport ...DailyReportNotifier) *Service {
 		subscribers: make(map[uuid.UUID]map[chan Update]struct{}),
 		now:         time.Now,
 	}
+
 	if len(dailyReport) > 0 {
 		service.dailyReport = dailyReport[0]
 	}
@@ -61,22 +61,30 @@ func (service *Service) SetLevelClaimsService(levelClaims *LevelClaimsService) {
 
 func (service *Service) Subscribe(userID uuid.UUID) (<-chan Update, func()) {
 	updates := make(chan Update, 8)
+
 	service.subscribersMu.Lock()
+
 	if service.subscribers[userID] == nil {
 		service.subscribers[userID] = make(map[chan Update]struct{})
 	}
+
 	service.subscribers[userID][updates] = struct{}{}
 	service.subscribersMu.Unlock()
 
 	var once sync.Once
+
 	unsubscribe := func() {
 		once.Do(func() {
 			service.subscribersMu.Lock()
+
 			delete(service.subscribers[userID], updates)
+
 			if len(service.subscribers[userID]) == 0 {
 				delete(service.subscribers, userID)
 			}
+
 			close(updates)
+
 			service.subscribersMu.Unlock()
 		})
 	}
