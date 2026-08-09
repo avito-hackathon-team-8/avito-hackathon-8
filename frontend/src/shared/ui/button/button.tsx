@@ -8,6 +8,7 @@ type TVariant = 'primary' | 'transparent' | 'default';
 type TBaseButtonProps = {
   variant?: TVariant;
   icon?: JSX.Element;
+  isFullWidth?: boolean;
 };
 
 type TButtonElementProps = TBaseButtonProps &
@@ -24,11 +25,24 @@ type TButtonProps = TButtonElementProps | TAnchorElementProps;
 
 export const Button = (props: TButtonProps) => {
   if (props.as === 'a') {
-    const { as: Component, className, children, variant, icon, ...anchorProps } = props;
+    const {
+      as: Component,
+      className,
+      children,
+      variant,
+      icon,
+      isFullWidth,
+      ...anchorProps
+    } = props;
 
     return (
       <Component
-        className={clsx(styles.button, styles[`button__${variant}`], className)}
+        className={clsx(
+          styles.button,
+          styles[`button_${variant}`],
+          { [styles.button_fullWidth]: isFullWidth },
+          className,
+        )}
         {...anchorProps}
       >
         {icon}
@@ -37,11 +51,24 @@ export const Button = (props: TButtonProps) => {
     );
   }
 
-  const { as: Component = 'button', className, children, variant, icon, ...buttonProps } = props;
+  const {
+    as: Component = 'button',
+    className,
+    children,
+    variant,
+    isFullWidth,
+    icon,
+    ...buttonProps
+  } = props;
 
   return (
     <Component
-      className={clsx(styles.button, styles[`button__${variant}`], className)}
+      className={clsx(
+        styles.button,
+        styles[`button_${variant}`],
+        { [styles.button_fullWidth]: isFullWidth },
+        className,
+      )}
       {...buttonProps}
     >
       {icon}

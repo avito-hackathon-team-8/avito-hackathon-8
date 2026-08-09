@@ -2,8 +2,6 @@ import { DailyTaskIcons } from '@/entities/daily-task/ui/assets/daily-task-icons
 import { RewardsIcons } from '@/entities/reward/ui/assets/reward-icon';
 import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { LevelUpIcon } from '@/shared/assets/icon/level-up-icon';
-import { formatTasks } from '@/shared/lib/format-tasks';
-import { formatWord } from '@/shared/lib/format-word';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TTodaySummaryStats } from '../../model/get-today-summary-stats ';
@@ -14,16 +12,11 @@ interface ITodaySummaryPanelContentProps {
   events: TTodaySummaryStats;
 }
 
-const completedWords = ['выполненное', 'выполненных', 'выполненных'] as const;
-
 export const TodaySummaryPanelContent = ({ events }: ITodaySummaryPanelContentProps) => {
   return (
     <div className={styles.panel}>
       <div className={styles.panel__header}>
-        <Typography variant="p2-semiBold">
-          {events.activitiesCount} {formatWord(events.activitiesCount, completedWords)}{' '}
-          {formatTasks(events.activitiesCount)}
-        </Typography>
+        <Typography variant="p2-semiBold">Получено листьев</Typography>
 
         <div className={styles.panel__headerCount}>
           <Typography variant="p2-bold" color="green700">

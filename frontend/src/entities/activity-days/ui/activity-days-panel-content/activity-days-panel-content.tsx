@@ -1,15 +1,16 @@
 import clsx from 'clsx';
 
 import { formatDays } from '@/shared/lib/format-days';
+import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 
-import type { TActivityDay, TResponseActivityDay } from '../../api/activity-day';
+import type { TResponseActivityDay } from '../../api/activity-day';
 
 import styles from './activity-days-panel-content.module.scss';
 
 interface IActivityDaysPanelContentProps {
   data: TResponseActivityDay;
-  handleReceiveReward: (claimId: NonNullable<TActivityDay['claimId']>) => void;
+  handleReceiveReward: () => void;
 }
 
 export const ActivityDaysPanelContent = ({
@@ -24,12 +25,12 @@ export const ActivityDaysPanelContent = ({
   return (
     <div className={styles.wrapper}>
       <ul className={styles.days}>
-        {claims.map(({ weekday, status, rewardLeaves, date, claimId }) => (
+        {claims.map(({ weekday, status, rewardLeaves, date }) => (
           <li key={date} className={clsx(styles.day, styles[`day_${status.toLowerCase()}`])}>
             <button
               className={styles.day__button}
               disabled={status !== 'AVAILABLE'}
-              onClick={() => handleReceiveReward(claimId)}
+              onClick={handleReceiveReward}
             >
               <time className={styles.day__date} dateTime={date}>
                 <Typography className={styles.day__dateText} variant="caption-bold" color="inherit">
@@ -46,18 +47,15 @@ export const ActivityDaysPanelContent = ({
       </ul>
 
       {activeDay && (
-        <div
-          className={clsx(styles.info__wrapper, {
-            [styles.info__wrapper_claimed]: activeDay.status === 'CLAIMED',
-          })}
+        <Button
+          className={styles.button}
+          disabled={activeDay.status !== 'AVAILABLE'}
+          variant="primary"
+          isFullWidth
+          onClick={handleReceiveReward}
         >
-          <Typography variant="caption-bold" color="white">
-            День {activeDay.weekday} — {activeDay.rewardLeaves} листьев
-          </Typography>
-          <Typography variant="caption" color="white">
-            Зайдите сегодня, чтобы получить награду
-          </Typography>
-        </div>
+          Забрать награду
+        </Button>
       )}
 
       <Typography className={styles.info__series} variant="caption-bold">

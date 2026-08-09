@@ -24,6 +24,7 @@ type BottomPanelProps = {
   closeOnBackdrop?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  isStartOpen?: boolean;
 };
 
 export const BottomPanel = ({
@@ -34,47 +35,44 @@ export const BottomPanel = ({
   closeOnBackdrop = true,
   disabled = false,
   onClick,
+  isStartOpen = false,
 }: BottomPanelProps) => {
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [portalRoot] = useState<HTMLElement | null>(() =>
+    document.getElementById('app-overlay-root'),
+  );
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(isStartOpen);
 
-  const panelRef = useRef<HTMLElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
   const titleId = useId();
 
   const handleOpen = () => {
-    if (onClick) {
-      onClick();
-    }
+    onClick?.();
 
-    if (disabled) return;
-
-    if (portalRoot) {
-      setIsOpen(true);
-
+    if (disabled) {
       return;
     }
 
-    const root = document.getElementById('app-overlay-root');
-
-    if (!root) {
+    if (!portalRoot) {
       console.error('BottomPanel: не найден элемент #app-overlay-root');
 
       return;
     }
 
-    setPortalRoot(root);
-
     setIsOpen(true);
   };
 
   const handleClose = () => {
+    previouslyFocusedElementRef.current?.focus({
+      preventScroll: true,
+    });
+
     setIsOpen(false);
   };
 
-  const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (event: MouseEvent) => {
     const isBackdropClick = event.target === event.currentTarget;
 
     if (closeOnBackdrop && isBackdropClick) {
@@ -107,7 +105,6 @@ export const BottomPanel = ({
       return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENTS_SELECTOR)).filter(
         (element) => {
           const isVisible = element.getClientRects().length > 0;
-
           const isAriaHidden = element.getAttribute('aria-hidden') === 'true';
 
           return isVisible && !isAriaHidden;
@@ -130,7 +127,8 @@ export const BottomPanel = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setIsOpen(false);
+
+        handleClose();
 
         return;
       }
@@ -184,12 +182,10 @@ export const BottomPanel = ({
     };
 
     document.addEventListener('keydown', handleKeyDown);
-
     document.addEventListener('focusin', handleFocusIn);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-
       document.removeEventListener('focusin', handleFocusIn);
 
       if (appContent) {
@@ -208,60 +204,54 @@ export const BottomPanel = ({
     <>
       {renderTrigger(handleOpen)}
 
-      {portalRoot
-        ? createPortal(
-            <div
-              className={styles.overlay}
-              data-open={isOpen}
-              aria-hidden={!isOpen}
-              inert={!isOpen}
-              onClick={handleOverlayClick}
+      {portalRoot &&
+        createPortal(
+          <div
+            className={styles.overlay}
+            data-open={isOpen}
+            inert={!isOpen}
+            onClick={handleOverlayClick}
+          >
+            <section
+              ref={panelRef}
+              className={styles.panel}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              tabIndex={-1}
             >
-              <section
-                ref={panelRef}
-                className={styles.panel}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                tabIndex={-1}
-              >
-                <div className={styles.panel__handle} aria-hidden="true" />
+              <div className={styles.panel__handle} aria-hidden="true" />
 
-                <header className={styles.panel__header}>
+              <header className={styles.panel__header}>
+                <Typography className={styles.panel__title} id={titleId} variant="section" as="h2">
+                  {title}
+                </Typography>
+
+                {description && (
                   <Typography
-                    className={styles.panel__title}
-                    id={titleId}
-                    variant="section"
-                    as="h2"
+                    className={styles.panel__description}
+                    color="gray500"
+                    variant="p4-bold"
                   >
-                    {title}
+                    {description}
                   </Typography>
-                  {description && (
-                    <Typography
-                      className={styles.panel__description}
-                      color="gray500"
-                      variant="p4-bold"
-                    >
-                      {description}
-                    </Typography>
-                  )}
+                )}
 
-                  <button
-                    type="button"
-                    className={styles.panel__close}
-                    aria-label="Закрыть панель"
-                    onClick={handleClose}
-                  >
-                    ×
-                  </button>
-                </header>
+                <button
+                  type="button"
+                  className={styles.panel__close}
+                  aria-label="Закрыть панель"
+                  onClick={handleClose}
+                >
+                  ×
+                </button>
+              </header>
 
-                <div className={styles.panel__content}>{children}</div>
-              </section>
-            </div>,
-            portalRoot,
-          )
-        : null}
+              <div className={styles.panel__content}>{children}</div>
+            </section>
+          </div>,
+          portalRoot,
+        )}
     </>
   );
 };

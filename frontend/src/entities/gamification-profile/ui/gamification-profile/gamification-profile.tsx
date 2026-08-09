@@ -1,5 +1,6 @@
 import { type CSSProperties, useMemo } from 'react';
 
+import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { Typography } from '@/shared/ui/typography';
 
@@ -45,7 +46,8 @@ export const GamificationProfile = () => {
                 className={styles.profile__infoExperience}
                 variant="p2-semiBold"
               >
-                {pet.leaves} / {pet.nextLevelTargetLeaves} листьев
+                {pet.leaves} / {pet.nextLevelTargetLeaves}{' '}
+                <img src={leafIcon} width={24} height={24} aria-label="Валюта из листьев" />
               </Typography>
 
               <div

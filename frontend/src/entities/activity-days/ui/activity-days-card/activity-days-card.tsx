@@ -2,7 +2,6 @@ import { formatDays } from '@/shared/lib/format-days';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
-import type { TActivityDay } from '../../api/activity-day';
 import { useActivityDays } from '../../model/use-activity-days';
 import { ActivityDaysPanelContent } from '../activity-days-panel-content/activity-days-panel-content';
 import calendarIcon from '../assets/calendar-icon.svg';
@@ -11,7 +10,9 @@ const TITLE_CARD = 'Дни активности';
 const DESCRIPTION_ERROR = 'Не удалось получить данные';
 
 export const ActivityDaysCard = () => {
-  const { data, refetch, isPending, receiveReward } = useActivityDays();
+  const { data, refetch, isPending, receiveReward } = useActivityDays({
+    enabled: false,
+  });
 
   const handleClick = () => {
     if (!data && !isPending) {
@@ -19,8 +20,8 @@ export const ActivityDaysCard = () => {
     }
   };
 
-  const handleReceiveRewardClick = (claimId: NonNullable<TActivityDay['claimId']>) => {
-    receiveReward({ claimId });
+  const handleReceiveRewardClick = () => {
+    receiveReward();
   };
 
   return (

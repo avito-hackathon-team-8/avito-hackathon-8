@@ -8,5 +8,9 @@ import styles from './gamification-scene.module.scss';
 export const GamificationScene = () => {
   const canvasRef = useScene({ backgroundSrc, characterSrc, boxSrc });
 
-  return <canvas className={styles.scene} ref={canvasRef} />;
+  return (
+    <div className={styles.scene}>
+      <canvas className={styles.scene__canvas} ref={canvasRef} />
+    </div>
+  );
 };

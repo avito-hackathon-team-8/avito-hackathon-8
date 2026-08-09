@@ -1,4 +1,4 @@
-import { formatTasks } from '@/shared/lib/format-tasks';
+import { formatWord } from '@/shared/lib/format-word';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
@@ -12,8 +12,13 @@ type TTodaySummaryCard = {
   className?: string;
 };
 
+const WORD_ACTIVITY = ['Активность', 'Активности', 'Активностей'] as const;
+
 export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
   const { data, refetch } = useTodaySummary();
+
+  const activitiesCount = data?.activitiesCount || 0;
+
   return (
     <BottomPanel
       title={TITLE_CARD}
@@ -28,7 +33,7 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
         <GamificationCard
           variant="horizontal"
           title={TITLE_CARD}
-          description={`${data?.activitiesCount || 0} ${formatTasks(data?.activitiesCount || 0)} · +${data?.leavesCount} листьев`}
+          description={`${formatWord(activitiesCount, WORD_ACTIVITY)}: ${activitiesCount} · +${data?.leavesCount} листьев`}
 
           imageProps={{
             src: chartIcon,
