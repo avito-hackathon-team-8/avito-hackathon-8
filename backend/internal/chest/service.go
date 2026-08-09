@@ -10,6 +10,7 @@ import (
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/reward_catalog"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -24,19 +25,10 @@ var (
 	ErrInsufficientLeaves = errors.New("insufficient leaves to open chest")
 )
 
-type RewardDefinition struct {
-	Title    string
-	Category models.RewardCategory
-}
+type RewardDefinition = reward_catalog.ChestRewardDefinition
 
 type DailyReportNotifier interface {
 	Notify(userID uuid.UUID)
-}
-
-var defaultRewardDefinitions = [...]RewardDefinition{
-	{Title: "1000 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Title: "Бесплатная доставка для трёх заказов", Category: models.RewardCategoryFreeDelivery},
-	{Title: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
 }
 
 type Service struct {
@@ -48,15 +40,17 @@ type Service struct {
 	dailyReport  DailyReportNotifier
 }
 
-func NewService(db *gorm.DB, dailyReport DailyReportNotifier, petService *pet.Service, rewardService *rewards.Service) *Service {
-	return &Service{
-		db:           db,
-		dailyReport:  dailyReport,
-		pets:         petService,
-		rewards:      rewardService,
-		now:          time.Now,
-		selectReward: randomReward,
+func NewService(db *gorm.DB, dailyReport DailyReportNotifier, petService *pet.Service, rewardService *rewards.Service, definitions []RewardDefinition) *Service {
+	service := &Service{
+		db:          db,
+		dailyReport: dailyReport,
+		pets:        petService,
+		rewards:     rewardService,
+		now:         time.Now,
 	}
+	service.selectReward = randomReward(definitions)
+
+	return service
 }
 
 func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Reward, error) {
@@ -86,16 +80,6 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			return ErrChestLevelRequired
 		}
 
-		if userPet.Leaves < models.ChestOpeningLeavesCost {
-			return ErrInsufficientLeaves
-		}
-
-		userPet.Leaves -= models.ChestOpeningLeavesCost
-
-		if err := tx.Model(&userPet).Update("leaves", userPet.Leaves).Error; err != nil {
-			return fmt.Errorf("spend leaves: %w", err)
-		}
-
 		now := service.now().UTC()
 		opening := models.ChestOpening{
 			UserID:      userID,
@@ -105,6 +89,19 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 
 		if err := tx.Create(&opening).Error; err != nil {
 			return fmt.Errorf("create chest opening: %w", err)
+		}
+		progress, err = service.pets.DebitTx(tx, pet.Debit{
+			UserID:       userID,
+			Amount:       models.ChestOpeningLeavesCost,
+			Reason:       models.LeafReasonChestPurchase,
+			OperationKey: fmt.Sprintf("chest:%s", opening.ID),
+			OccurredAt:   now,
+		})
+		if errors.Is(err, pet.ErrInsufficientLeaves) {
+			return ErrInsufficientLeaves
+		}
+		if err != nil {
+			return fmt.Errorf("spend leaves: %w", err)
 		}
 
 		definition, err := service.selectReward()
@@ -125,8 +122,6 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 			return fmt.Errorf("issue chest reward: %w", err)
 		}
 
-		progress = pet.ProgressForPet(userPet, false)
-
 		return nil
 	})
 
@@ -140,12 +135,17 @@ func (service *Service) Open(ctx context.Context, userID uuid.UUID) (models.Rewa
 	return issuedReward, nil
 }
 
-func randomReward() (RewardDefinition, error) {
-	index, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(defaultRewardDefinitions))))
+func randomReward(definitions []RewardDefinition) func() (RewardDefinition, error) {
+	return func() (RewardDefinition, error) {
+		if len(definitions) == 0 {
+			return RewardDefinition{}, errors.New("chest rewards are not configured")
+		}
 
-	if err != nil {
-		return RewardDefinition{}, err
+		index, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(definitions))))
+		if err != nil {
+			return RewardDefinition{}, err
+		}
+
+		return definitions[index.Int64()], nil
 	}
-
-	return defaultRewardDefinitions[index.Int64()], nil
 }

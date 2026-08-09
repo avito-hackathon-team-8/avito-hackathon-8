@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/reward_catalog"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -25,25 +26,7 @@ var (
 	ErrLevelRewardAlreadyClaimed = errors.New("level reward already claimed")
 )
 
-type LevelRewardDefinition struct {
-	Level       int
-	Title       string
-	Description string
-	Category    models.RewardCategory
-}
-
-var defaultLevelRewardDefinitions = [...]LevelRewardDefinition{
-	{Level: 1, Title: "100 бонусов Авито", Description: "100 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 2, Title: "Скидка 20% на продвижение объявления", Description: "Скидка 20% на продвижение объявления", Category: models.RewardCategoryPromotionDiscount},
-	{Level: 3, Title: "Скидка 20% на Авито Доставку", Description: "Скидка 20% на Авито Доставку", Category: models.RewardCategoryDeliveryDiscount},
-	{Level: 4, Title: "Бесплатное продвижение объявления на 1 день", Description: "Бесплатное продвижение объявления на 1 день", Category: models.RewardCategoryFreePromotion},
-	{Level: 5, Title: "300 бонусов Авито", Description: "300 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 6, Title: "Скидка 50% на Авито Доставку", Description: "Скидка 50% на Авито Доставку", Category: models.RewardCategoryDeliveryDiscount},
-	{Level: 7, Title: "Бесплатная доставка для одного заказа", Description: "Бесплатная доставка для одного заказа", Category: models.RewardCategoryFreeDelivery},
-	{Level: 8, Title: "500 бонусов Авито", Description: "500 бонусов Авито", Category: models.RewardCategoryAvitoBonus},
-	{Level: 9, Title: "Бесплатное продвижение объявления на 7 дней", Description: "Бесплатное продвижение объявления на 7 дней", Category: models.RewardCategoryFreePromotion},
-	{Level: 10, Title: "Бесплатная доставка для двух заказов", Description: "Бесплатная доставка для двух заказов", Category: models.RewardCategoryFreeDelivery},
-}
+type LevelRewardDefinition = reward_catalog.LevelRewardDefinition
 
 type LevelRewardItem struct {
 	Level     int
@@ -65,9 +48,10 @@ type LevelClaimsService struct {
 	claimWindow    time.Duration
 	rewardLifetime time.Duration
 	dailyReport    DailyReportNotifier
+	definitions    []LevelRewardDefinition
 }
 
-func NewLevelClaimsService(db *gorm.DB, dailyReport DailyReportNotifier, rewardService *rewards.Service) *LevelClaimsService {
+func NewLevelClaimsService(db *gorm.DB, dailyReport DailyReportNotifier, rewardService *rewards.Service, definitions []LevelRewardDefinition) *LevelClaimsService {
 	if rewardService == nil {
 		rewardService = rewards.NewService(db, dailyReport)
 	}
@@ -79,6 +63,7 @@ func NewLevelClaimsService(db *gorm.DB, dailyReport DailyReportNotifier, rewardS
 		claimWindow:    LevelRewardClaimWindow,
 		rewardLifetime: DefaultLevelRewardLifetime,
 		dailyReport:    dailyReport,
+		definitions:    append([]LevelRewardDefinition(nil), definitions...),
 	}
 }
 
@@ -200,7 +185,7 @@ func (service *LevelClaimsService) Claim(ctx context.Context, userID, levelRewar
 }
 
 func (service *LevelClaimsService) ensureLevelRewards(tx *gorm.DB, userID uuid.UUID, userLevel int, now time.Time) ([]models.LevelReward, error) {
-	for _, definition := range defaultLevelRewardDefinitions {
+	for _, definition := range service.definitions {
 		levelReward := models.LevelReward{
 			UserID:      userID,
 			Level:       definition.Level,

@@ -41,6 +41,9 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       PUPPETEER_INTERNAL_URL: ${PUPPETEER_INTERNAL_URL:-http://puppeteer:8091}
+      LEVEL_REWARDS_CONFIG: /app/config/level_rewards.yaml
+    volumes:
+      - ./config:/app/config:ro
     ports:
       - "8090:8090"
     depends_on:

@@ -231,8 +231,8 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 	err := tx.
 		Select("amount", "reason", "occurred_at").
 		Where(`user_id = ? AND occurred_at >= ? AND occurred_at < ?
-			AND reason IN (?, ?, ?)`, userID, dayStart, dayEnd,
-			models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonLevelUp).
+			AND reason IN (?, ?, ?, ?)`, userID, dayStart, dayEnd,
+			models.LeafReasonTaskReward, models.LeafReasonWeeklyLogin, models.LeafReasonLevelUp, models.LeafReasonChestPurchase).
 		Order("occurred_at ASC, id ASC").
 		Find(&transactions).Error
 
@@ -256,6 +256,8 @@ func leafActivityForDay(tx *gorm.DB, userID uuid.UUID, dayStart, dayEnd time.Tim
 			}
 		case models.LeafReasonLevelUp:
 			levelUps = append(levelUps, transaction)
+			updatedAt = latestTime(updatedAt, transaction.OccurredAt.UTC())
+		case models.LeafReasonChestPurchase:
 			updatedAt = latestTime(updatedAt, transaction.OccurredAt.UTC())
 		}
 	}

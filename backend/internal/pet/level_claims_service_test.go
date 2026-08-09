@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/reward_catalog"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/testutil"
 	"github.com/google/uuid"
@@ -200,8 +201,22 @@ func levelClaimsTestService(t *testing.T, level int) (*LevelClaimsService, *gorm
 	notifier := testutil.DailyReportNotifierMock{}
 	rewardService := rewards.NewService(db, notifier)
 
-	service := NewLevelClaimsService(db, notifier, rewardService)
+	service := NewLevelClaimsService(db, notifier, rewardService, testLevelRewardDefinitions())
 	service.now = func() time.Time { return now }
 
 	return service, db, user, now
+}
+
+func testLevelRewardDefinitions() []LevelRewardDefinition {
+	definitions := make([]LevelRewardDefinition, 0, MaxPetLevel)
+	for level := 1; level <= MaxPetLevel; level++ {
+		definitions = append(definitions, reward_catalog.LevelRewardDefinition{
+			Level:       level,
+			Title:       fmt.Sprintf("Награда за уровень %d", level),
+			Description: fmt.Sprintf("Награда за уровень %d", level),
+			Category:    models.RewardCategoryAvitoBonus,
+		})
+	}
+
+	return definitions
 }

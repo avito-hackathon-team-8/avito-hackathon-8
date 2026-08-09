@@ -19,6 +19,7 @@ type Config struct {
 	Auth                 auth.Config
 	InternalServiceToken string
 	PuppeteerInternalURL string
+	LevelRewardsConfig   string
 }
 
 func Load() (Config, error) {
@@ -41,6 +42,7 @@ func Load() (Config, error) {
 		},
 		InternalServiceToken: os.Getenv("INTERNAL_SERVICE_TOKEN"),
 		PuppeteerInternalURL: env("PUPPETEER_INTERNAL_URL", "http://puppeteer:8091"),
+		LevelRewardsConfig:   env("LEVEL_REWARDS_CONFIG", "../config/level_rewards.yaml"),
 	}
 
 	if cfg.DatabaseURL == "" {
