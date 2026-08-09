@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/mail"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -61,26 +63,6 @@ func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
 			if err := tx.Create(&initialPet).Error; err != nil {
 				return fmt.Errorf("create initial pet: %w", err)
 			}
-		}
-
-		var user models.User
-
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("email = ?", normalizedEmail).First(&user).Error; err != nil {
-			return fmt.Errorf("lock user: %w", err)
-		}
-
-		if err := tx.Where("user_id = ?", user.ID).Delete(&models.OTP{}).Error; err != nil {
-			return fmt.Errorf("delete previous OTP: %w", err)
-		}
-
-		otp = models.OTP{
-			UserID:    user.ID,
-			CodeHash:  service.hashOTP(user.ID, code),
-			ExpiresAt: service.now().UTC().Add(service.config.OTPTTL),
-		}
-
-		if err := tx.Create(&otp).Error; err != nil {
-			return fmt.Errorf("save OTP: %w", err)
 		}
 
 		return nil

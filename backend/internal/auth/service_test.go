@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"testing"
 	"time"
 
@@ -13,10 +12,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
-
-type testMailer struct{}
-
-func (testMailer) SendOTP(_, _ string) error { return nil }
 
 func TestNormalizeEmail(t *testing.T) {
 	t.Parallel()
@@ -40,34 +35,18 @@ func TestNormalizeEmailRejectsDisplayName(t *testing.T) {
 	}
 }
 
-func TestGenerateCode(t *testing.T) {
-	t.Parallel()
-
-	code, err := generateCode(8)
-
-	if err != nil {
-		t.Fatalf("generateCode returned an error: %v", err)
-	}
-
-	if !regexp.MustCompile(`^[0-9]{8}$`).MatchString(code) {
-		t.Fatalf("generateCode = %q, want 8 digits", code)
-	}
-}
-
 func TestRequestOTPCreatesInitialPet(t *testing.T) {
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.OTP{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 
-	service := NewService(db, testMailer{}, Config{
+	service := NewService(db, Config{
 		JWTSecret:  "test-secret",
-		OTPTTL:     time.Minute,
-		OTPLength:  8,
 		SessionTTL: time.Hour,
 	})
 	if err := service.RequestOTP(context.Background(), "user@example.com"); err != nil {
