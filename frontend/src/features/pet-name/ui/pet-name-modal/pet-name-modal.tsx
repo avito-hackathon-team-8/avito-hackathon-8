@@ -32,13 +32,12 @@ export const PetNameModal = ({ isOpen }: PetNameModalProps) => {
       setError('');
     },
     onError: (submitError) => {
-      queryClient.setQueryData(gamificationProfileKeys.pet(), null);
       toast.error(TEXT_ERROR);
       setError(submitError instanceof Error ? submitError.message : TEXT_ERROR);
     },
   });
 
-  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextName = name.trim();
@@ -50,7 +49,7 @@ export const PetNameModal = ({ isOpen }: PetNameModalProps) => {
 
     setError('');
 
-    await mutation.mutateAsync(nextName);
+    mutation.mutate(nextName);
   };
 
   const shouldOpen = Boolean(isOpen && pet && !pet.name.trim());

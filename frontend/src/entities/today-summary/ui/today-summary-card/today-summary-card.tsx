@@ -3,7 +3,7 @@ import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { useTodaySummary } from '../../model/use-today-summary';
-import chartIcon from '../assets/chart-icon.svg';
+import chartIcon from '../assets/chart-icon.webp';
 import { TodaySummaryPanelContent } from '../today-summary-panel-content/today-summary-panel-content';
 
 const TITLE_CARD = 'Сводка дня';
@@ -22,7 +22,7 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
   return (
     <BottomPanel
       title={TITLE_CARD}
-      description="Ежедневная сводка"
+      description="Сводка дня"
       onClick={() => {
         if (!data) {
           refetch();
@@ -38,8 +38,8 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
           imageProps={{
             src: chartIcon,
             alt: 'Календарь задач',
-            width: 100,
-            height: 94,
+            width: 84,
+            height: 73,
           }}
           wrapperProps={{ onClick: open }}
           className={className}

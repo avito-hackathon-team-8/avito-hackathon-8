@@ -4,6 +4,7 @@ import { AppShell } from '@/app/layouts/app-shell/app-shell';
 import { MainLayout } from '@/app/layouts/main-layout';
 import { TanstackQueryProvider } from '@/app/providers/tanstack-query';
 import { MainPage } from '@/pages/main-page/main.page';
+import { PageNotFound } from '@/pages/page-not-found';
 import { RegisterPage } from '@/pages/register-page';
 import { APP_ROUTES } from '@/shared/config/routes';
 
@@ -14,6 +15,10 @@ export const browserRouter = createBrowserRouter([
   {
     element: <TanstackQueryProvider />,
     children: [
+      {
+        path: '*',
+        element: <PageNotFound />,
+      },
       {
         element: <AppShell />,
         children: [
