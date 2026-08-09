@@ -93,8 +93,9 @@ func TestWeeklyLoginActivityGetAndClaim(t *testing.T) {
 	}
 	var pet petResponse
 	decode(t, petResult.body, &pet)
-	if pet.Level != 1 || pet.Leaves != int64(available.RewardLeaves) {
-		t.Fatalf("pet after weekly claim = %+v, want level 1 with %d leaves", pet, available.RewardLeaves)
+	wantLeaves := int64(1000 + available.RewardLeaves)
+	if pet.Level != 10 || pet.Leaves != wantLeaves {
+		t.Fatalf("pet after weekly claim = %+v, want level 10 with %d leaves", pet, wantLeaves)
 	}
 }
 
@@ -236,19 +237,20 @@ func prepareConfig() (testConfig, error) {
 		apiURL:       envOr(dotenv, "WEEKLY_LOGIN_API_BASE_URL", "http://127.0.0.1:8090"),
 		postgresDB:   envOr(dotenv, "POSTGRES_DB", "hackathon"),
 		postgresUser: envOr(dotenv, "POSTGRES_USER", "hackathon"),
-		jwtSecret:    envOr(dotenv, "JWT_SECRET", ""),
 	}
 	cfg.apiURL = strings.TrimRight(cfg.apiURL, "/")
 
-	if len(cfg.jwtSecret) < 32 {
-		return testConfig{}, errors.New("JWT_SECRET must be set and must be at least 32 characters")
-	}
 	if err := waitForBackend(cfg.apiURL); err != nil {
 		return testConfig{}, err
 	}
 	if err := runSQL(cfg, "SELECT 1;"); err != nil {
 		return testConfig{}, err
 	}
+	jwtSecret, err := backendJWTSecret(cfg)
+	if err != nil {
+		return testConfig{}, err
+	}
+	cfg.jwtSecret = jwtSecret
 
 	return cfg, nil
 }
@@ -400,6 +402,22 @@ func runSQL(cfg testConfig, statement string) error {
 	}
 
 	return nil
+}
+
+func backendJWTSecret(cfg testConfig) (string, error) {
+	command := exec.Command("docker", "compose", "exec", "-T", "backend", "printenv", "JWT_SECRET")
+	command.Dir = cfg.repoRoot
+	output, err := command.Output()
+	if err != nil {
+		return "", fmt.Errorf("read JWT_SECRET from running backend: %w", err)
+	}
+
+	secret := strings.TrimSpace(string(output))
+	if len(secret) < 32 {
+		return "", errors.New("running backend JWT_SECRET must be at least 32 characters")
+	}
+
+	return secret, nil
 }
 
 func readEnv(paths ...string) map[string]string {
