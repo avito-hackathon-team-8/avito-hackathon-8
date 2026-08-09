@@ -12,6 +12,11 @@ interface ITodaySummaryPanelContentProps {
   events: TTodaySummaryStats;
 }
 
+const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 export const TodaySummaryPanelContent = ({ events }: ITodaySummaryPanelContentProps) => {
   return (
     <div className={styles.panel}>
@@ -62,7 +67,8 @@ export const TodaySummaryPanelContent = ({ events }: ITodaySummaryPanelContentPr
                   variant="p4-regular"
                   color="gray500"
                 >
-                  Время получения <time dateTime={occurredAt}>{occurredAt.split('T')[0]}</time>
+                  Время получения{' '}
+                  <time dateTime={occurredAt}>{timeFormatter.format(new Date(occurredAt))}</time>
                 </Typography>
               </li>
             );
@@ -86,7 +92,7 @@ export const TodaySummaryPanelContent = ({ events }: ITodaySummaryPanelContentPr
                   variant="p4-regular"
                   color="gray500"
                 >
-                  Полвучено листьев{' '}
+                  Получено листьев{' '}
                   <Typography variant="p4-regular" color="green700" as="span">
                     {rewardLeaves}
                   </Typography>

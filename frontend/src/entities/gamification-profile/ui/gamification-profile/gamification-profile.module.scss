@@ -28,6 +28,23 @@
     background-color: var(--gray-200);
     border-radius: 20px;
 
+    .profile__rewardIndicator {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 1;
+
+      width: 12px;
+      height: 12px;
+
+      background-color: var(--orange);
+      border-radius: 50%;
+
+      animation: reward-indicator-pulse 10s ease-in-out infinite;
+
+      pointer-events: none;
+    }
+
     .profile__info {
       display: grid;
       grid-template:
@@ -79,6 +96,7 @@
       position: absolute;
       top: 0;
       left: 0;
+      z-index: 2;
 
       width: 100%;
       height: 100%;
@@ -89,5 +107,29 @@
 
       cursor: pointer;
     }
+  }
+}
+
+@keyframes reward-indicator-pulse {
+  0%,
+  2%,
+  4%,
+  100% {
+    opacity: 1;
+
+    transform: scale(1);
+  }
+
+  1%,
+  3% {
+    opacity: 0.35;
+
+    transform: scale(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile .profile__content .profile__rewardIndicator {
+    animation: none;
   }
 }

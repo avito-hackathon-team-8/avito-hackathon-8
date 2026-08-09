@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { dailyTasksQueryKeys } from '@/entities/daily-task/api/daily-tasks-keys';
 import { API_URL } from '@/shared/config/api';
 import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
@@ -79,9 +80,14 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
           updatePetProfile(payload.data);
 
           if (isLevelUpdated) {
-            void queryClient.invalidateQueries({
-              queryKey: gamificationProfileKeys.levels(),
-            });
+            void Promise.all([
+              queryClient.invalidateQueries({
+                queryKey: gamificationProfileKeys.levels(),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: dailyTasksQueryKeys.list(),
+              }),
+            ]);
           }
         } catch (error) {
           console.error('Ошибка разбора события питомца из WebSocket:', error);

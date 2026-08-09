@@ -4,6 +4,7 @@ import { GamificationCard } from '@/shared/ui/gamification-card';
 
 import { useTodaySummary } from '../../model/use-today-summary';
 import chartIcon from '../assets/chart-icon.webp';
+import { TodaySummaryEmpty } from '../today-summary-empty/today-summary-empty';
 import { TodaySummaryPanelContent } from '../today-summary-panel-content/today-summary-panel-content';
 
 const TITLE_CARD = 'Сводка дня';
@@ -46,7 +47,8 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
         />
       )}
     >
-      {data && <TodaySummaryPanelContent events={data} />}
+      {data && data.events.length !== 0 && <TodaySummaryPanelContent events={data} />}
+      {data && data.events.length === 0 && <TodaySummaryEmpty />}
     </BottomPanel>
   );
 };

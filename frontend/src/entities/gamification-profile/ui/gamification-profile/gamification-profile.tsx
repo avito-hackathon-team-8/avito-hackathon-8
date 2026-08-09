@@ -37,6 +37,10 @@ export const GamificationProfile = () => {
               Уровень питомца
             </Typography>
 
+            {unopenedLevel && (
+              <span className={styles.profile__rewardIndicator} aria-hidden="true" />
+            )}
+
             <div className={styles.profile__info}>
               <Typography className={styles.profile__infoLevels} variant="display">
                 {pet.level}/{levelsProfile?.levels.length}

@@ -19,7 +19,6 @@ export type TTodaySummaryTask = {
   type: TTaskType;
   description: string;
   rewardLeaves: number;
-  rewardClaimed: boolean;
   completedAt: string;
 };
 
