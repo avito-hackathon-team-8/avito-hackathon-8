@@ -20,11 +20,20 @@ var (
 	ErrInvalidOperation   = errors.New("leaf operation is invalid")
 	ErrDuplicateOperation = errors.New("leaf operation already applied")
 	ErrLeavesOverflow     = errors.New("leaves amount overflows int64")
+	ErrInsufficientLeaves = errors.New("insufficient leaves")
 )
 
 var levelTargets = [...]int64{0, 0, 100, 230, 390, 580, 810, 1090, 1430, 1850, 2400}
 
 type Credit struct {
+	UserID       uuid.UUID
+	Amount       int64
+	Reason       models.LeafTransactionReason
+	OperationKey string
+	OccurredAt   time.Time
+}
+
+type Debit struct {
 	UserID       uuid.UUID
 	Amount       int64
 	Reason       models.LeafTransactionReason
@@ -177,8 +186,81 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 	return ProgressForPet(userPet, newLevel > oldLevel), nil
 }
 
+func (service *Service) DebitTx(tx *gorm.DB, debit Debit) (Progress, error) {
+	if debit.Amount <= 0 {
+		return Progress{}, ErrInvalidAmount
+	}
+
+	debit.OperationKey = strings.TrimSpace(debit.OperationKey)
+	if debit.UserID == uuid.Nil || debit.OperationKey == "" || len(debit.OperationKey) > 160 ||
+		!validDebitReason(debit.Reason) {
+		return Progress{}, ErrInvalidOperation
+	}
+
+	if debit.OccurredAt.IsZero() {
+		debit.OccurredAt = service.now().UTC()
+	} else {
+		debit.OccurredAt = debit.OccurredAt.UTC()
+	}
+
+	var userPet models.Pet
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("user_id = ?", debit.UserID).
+		First(&userPet).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return Progress{}, ErrPetNotFound
+	}
+	if err != nil {
+		return Progress{}, fmt.Errorf("lock pet: %w", err)
+	}
+	if userPet.Leaves < debit.Amount {
+		return Progress{}, ErrInsufficientLeaves
+	}
+
+	transaction := models.LeafTransaction{
+		UserID:       debit.UserID,
+		Amount:       -debit.Amount,
+		Reason:       debit.Reason,
+		OperationKey: debit.OperationKey,
+		OccurredAt:   debit.OccurredAt,
+	}
+	result := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "operation_key"}},
+		DoNothing: true,
+	}).Create(&transaction)
+	if result.Error != nil {
+		return Progress{}, fmt.Errorf("record leaf debit: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return Progress{}, ErrDuplicateOperation
+	}
+
+	userPet.Leaves -= debit.Amount
+	if err := tx.Model(&userPet).Update("leaves", userPet.Leaves).Error; err != nil {
+		return Progress{}, fmt.Errorf("save pet balance: %w", err)
+	}
+	if err := tx.Exec(`
+		INSERT INTO user_game_states (user_id, pet_level, leaf_balance, updated_at)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT (user_id) DO UPDATE SET pet_level = EXCLUDED.pet_level,
+		leaf_balance = EXCLUDED.leaf_balance, updated_at = EXCLUDED.updated_at`,
+		debit.UserID,
+		userPet.Level,
+		userPet.Leaves,
+		service.now().UTC(),
+	).Error; err != nil {
+		return Progress{}, fmt.Errorf("sync game state: %w", err)
+	}
+
+	return ProgressForPet(userPet, false), nil
+}
+
 func validCreditReason(reason models.LeafTransactionReason) bool {
 	return reason == models.LeafReasonTaskReward || reason == models.LeafReasonWeeklyLogin
+}
+
+func validDebitReason(reason models.LeafTransactionReason) bool {
+	return reason == models.LeafReasonChestPurchase
 }
 
 func LevelCost(level int) int64 {
