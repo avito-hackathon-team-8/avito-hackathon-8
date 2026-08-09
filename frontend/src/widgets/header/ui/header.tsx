@@ -7,7 +7,12 @@ import styles from './header.module.scss';
 export const Header = () => {
   return (
     <header className={styles.header}>
-      <Button className={styles.header__backButton} aria-label="Вернуться назад">
+      <Button
+        as="a"
+        href="https://www.avito.ru/"
+        className={styles.header__backButton}
+        aria-label="Вернуться назад"
+      >
         <ArrowIcon></ArrowIcon>
       </Button>
 

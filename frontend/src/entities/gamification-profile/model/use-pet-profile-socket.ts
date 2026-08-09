@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { API_URL } from '@/shared/config/api';
 import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib/session-storage';
 
 import { API_ROUTE_PROFILE } from '../api/api-routes';
+import { gamificationProfileKeys } from '../api/gamification-profile-keys';
 import type { TPet } from '../api/pet';
 
 import { usePetProfile } from './use-pet-profile';
@@ -21,6 +24,7 @@ type TUsePetProfileSocketProps = {
 };
 
 export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
+  const queryClient = useQueryClient();
   const { updatePetProfile } = usePetProfile();
 
   useEffect(() => {
@@ -68,7 +72,19 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
             return;
           }
 
+          const previousPet = queryClient.getQueryData<TPet>(gamificationProfileKeys.pet());
+
+          const isLevelUpdated =
+            payload.data.levelUp ||
+            (previousPet !== undefined && payload.data.level > previousPet.level);
+
           updatePetProfile(payload.data);
+
+          if (isLevelUpdated) {
+            void queryClient.invalidateQueries({
+              queryKey: gamificationProfileKeys.levels(),
+            });
+          }
         } catch (error) {
           console.error('Ошибка разбора события питомца из WebSocket:', error);
         }
@@ -122,5 +138,5 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
 
       socket?.close(1000, 'Component unmounted');
     };
-  }, [enabled, updatePetProfile]);
+  }, [enabled, queryClient, updatePetProfile]);
 };

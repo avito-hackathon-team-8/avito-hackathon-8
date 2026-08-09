@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { userQueryKeys } from '@/entities/user';
-import { verifyOtp } from '@/features/auth/api/auth';
+import { getCurrentUser, verifyOtp } from '@/features/auth/api/auth';
 import { mainQueryKey } from '@/shared/config/api';
 import { sessionStorageKeysMap, setSessionStorageValue } from '@/shared/lib/session-storage';
 
@@ -22,14 +22,17 @@ export const useVerifyOtp = () => {
       return verifyOtp(email, code);
     },
 
-    onSuccess: ({ token, record }) => {
+    onSuccess: async ({ token }) => {
       setSessionStorageValue(sessionStorageKeysMap.authToken, token);
 
-      queryClient.invalidateQueries({
-        queryKey: mainQueryKey.all,
+      await queryClient.fetchQuery({
+        queryKey: userQueryKeys.current(),
+        queryFn: () => getCurrentUser(token),
       });
 
-      queryClient.setQueryData(userQueryKeys.current(), record);
+      await queryClient.invalidateQueries({
+        queryKey: mainQueryKey.all,
+      });
     },
   });
 };

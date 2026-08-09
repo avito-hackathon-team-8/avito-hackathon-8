@@ -17,8 +17,10 @@ export const ActivityDaysPanelContent = ({
   handleReceiveReward,
 }: IActivityDaysPanelContentProps) => {
   const { claimedDaysCount, claims } = data;
+  const firstFutureIndex = claims.findIndex(({ status }) => status === 'FUTURE');
 
-  const activeDay = claims.find((item) => item.status === 'AVAILABLE');
+  const activeDay = firstFutureIndex === -1 ? claims.at(-1) : claims[firstFutureIndex - 1];
+
   return (
     <div className={styles.wrapper}>
       <ul className={styles.days}>
@@ -43,20 +45,24 @@ export const ActivityDaysPanelContent = ({
         ))}
       </ul>
 
-      <div className={styles.info__wrapper}>
-        <Typography variant="caption-bold" color="white">
-          День {activeDay?.weekday} — {activeDay?.rewardLeaves} листьев
-        </Typography>
-        <Typography variant="caption" color="white">
-          Зайдите сегодня, чтобы получить награду
-        </Typography>
-      </div>
-
       {activeDay && (
-        <Typography className={styles.info__series} variant="caption-bold">
-          Текущая серия: {formatDays(claimedDaysCount)}
-        </Typography>
+        <div
+          className={clsx(styles.info__wrapper, {
+            [styles.info__wrapper_claimed]: activeDay.status === 'CLAIMED',
+          })}
+        >
+          <Typography variant="caption-bold" color="white">
+            День {activeDay.weekday} — {activeDay.rewardLeaves} листьев
+          </Typography>
+          <Typography variant="caption" color="white">
+            Зайдите сегодня, чтобы получить награду
+          </Typography>
+        </div>
       )}
+
+      <Typography className={styles.info__series} variant="caption-bold">
+        Текущая серия: {formatDays(claimedDaysCount)}
+      </Typography>
     </div>
   );
 };

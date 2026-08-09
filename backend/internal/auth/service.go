@@ -2,24 +2,16 @@ package auth
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"math/big"
 	"net/mail"
 	"strings"
 	"time"
 
-	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/email"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -28,26 +20,21 @@ var (
 	ErrUnauthorized = errors.New("authentication required")
 )
 
-const maxOTPAttempts = 3
-
 var defaultInterests = `{"electronics":0.5,"home":0.5,"fashion":0.5,"auto":0.5}`
 
 type Config struct {
 	JWTSecret  string
 	SessionTTL time.Duration
-	OTPTTL     time.Duration
-	OTPLength  int
 }
 
 type Service struct {
 	db     *gorm.DB
-	mailer email.Sender
 	config Config
 	now    func() time.Time
 }
 
-func NewService(db *gorm.DB, mailer email.Sender, config Config) *Service {
-	return &Service{db: db, mailer: mailer, config: config, now: time.Now}
+func NewService(db *gorm.DB, config Config) *Service {
+	return &Service{db: db, config: config, now: time.Now}
 }
 
 func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
@@ -57,15 +44,7 @@ func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
 		return err
 	}
 
-	code, err := generateCode(service.config.OTPLength)
-
-	if err != nil {
-		return fmt.Errorf("generate OTP: %w", err)
-	}
-
-	var otp models.OTP
-
-	err = service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		candidate := models.User{Email: normalizedEmail, Interests: defaultInterests}
 
 		createUser := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&candidate)
@@ -106,18 +85,6 @@ func (service *Service) RequestOTP(ctx context.Context, rawEmail string) error {
 
 		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	if err := service.mailer.SendOTP(normalizedEmail, code); err != nil {
-		_ = service.db.WithContext(ctx).Delete(&otp).Error
-
-		return fmt.Errorf("send OTP email: %w", err)
-	}
-
-	return nil
 }
 
 func (service *Service) VerifyOTP(ctx context.Context, rawEmail, code string) (models.User, string, error) {
@@ -127,52 +94,16 @@ func (service *Service) VerifyOTP(ctx context.Context, rawEmail, code string) (m
 		return models.User{}, "", ErrInvalidOTP
 	}
 
-	var user models.User
+	if strings.TrimSpace(code) == "" {
+		return models.User{}, "", ErrInvalidOTP
+	}
 
-	valid := false
+	var user models.User
 
 	err = service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("email = ?", normalizedEmail).First(&user).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil
-			}
-
 			return err
 		}
-
-		var otp models.OTP
-
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id = ?", user.ID).First(&otp).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil
-			}
-
-			return err
-		}
-
-		expectedHash := service.hashOTP(user.ID, code)
-		expired := !service.now().UTC().Before(otp.ExpiresAt)
-		matches := len(code) == service.config.OTPLength && hmac.Equal([]byte(expectedHash), []byte(otp.CodeHash))
-
-		if expired {
-			return tx.Delete(&otp).Error
-		}
-
-		if !matches {
-			otp.FailedAttempts++
-
-			if otp.FailedAttempts >= maxOTPAttempts {
-				return tx.Delete(&otp).Error
-			}
-
-			return tx.Model(&otp).Update("failed_attempts", otp.FailedAttempts).Error
-		}
-
-		if err := tx.Delete(&otp).Error; err != nil {
-			return err
-		}
-
-		valid = true
 
 		if !user.Verified {
 			user.Verified = true
@@ -186,11 +117,11 @@ func (service *Service) VerifyOTP(ctx context.Context, rawEmail, code string) (m
 	})
 
 	if err != nil {
-		return models.User{}, "", err
-	}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.User{}, "", ErrInvalidOTP
+		}
 
-	if !valid {
-		return models.User{}, "", ErrInvalidOTP
+		return models.User{}, "", err
 	}
 
 	token, err := service.createToken(user)
@@ -258,13 +189,6 @@ func (service *Service) createToken(user models.User) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(service.config.JWTSecret))
 }
 
-func (service *Service) hashOTP(userID uuid.UUID, code string) string {
-	digest := hmac.New(sha256.New, []byte(service.config.JWTSecret))
-	_, _ = digest.Write([]byte(userID.String() + ":" + code))
-
-	return hex.EncodeToString(digest.Sum(nil))
-}
-
 func normalizeEmail(value string) (string, error) {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	address, err := mail.ParseAddress(normalized)
@@ -274,20 +198,4 @@ func normalizeEmail(value string) (string, error) {
 	}
 
 	return normalized, nil
-}
-
-func generateCode(length int) (string, error) {
-	code := make([]byte, length)
-
-	for index := range code {
-		digit, err := rand.Int(rand.Reader, big.NewInt(10))
-
-		if err != nil {
-			return "", err
-		}
-
-		code[index] = byte('0' + digit.Int64())
-	}
-
-	return string(code), nil
 }

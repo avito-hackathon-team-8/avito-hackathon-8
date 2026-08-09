@@ -20,7 +20,6 @@ func Open(databaseURL string) (*gorm.DB, error) {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Pet{},
-		&models.OTP{},
 		&models.LevelReward{},
 		&models.ChestOpening{},
 		&models.Reward{},
