@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 
+import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
 import { Button } from '@/shared/ui/button';
 import { Modal } from '@/shared/ui/modal/modal';
 import { Typography } from '@/shared/ui/typography';
@@ -28,8 +29,18 @@ export const BuyReward = ({ className }: IBuyRewardProps) => {
           {isPending ? 'Открываем сундук...' : 'Открыть сундук'}
         </Typography>
 
-        <Typography variant="caption" as="span" color="inherit">
-          {pet?.nextLevelTargetLeaves === 0 && `Стоимость открытия ${pet.chestPrice}`}
+        <Typography
+          className={styles.buttonBuy__description}
+          variant="caption"
+          as="span"
+          color="inherit"
+        >
+          {pet?.nextLevelTargetLeaves === 0 && (
+            <>
+              Стоимость открытия {pet.chestPrice}
+              <img src={leafIcon} width={24} height={24} aria-label="Валюта листика" />
+            </>
+          )}
 
           {pet?.nextLevelTargetLeaves !== 0 && 'Разблокируется на 10 уровне'}
         </Typography>
