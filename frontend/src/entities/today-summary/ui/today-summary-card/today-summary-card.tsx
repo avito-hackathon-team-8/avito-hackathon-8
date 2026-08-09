@@ -1,4 +1,4 @@
-import { formatWord } from '@/shared/lib/format-word';
+import { formatWord } from '@/shared/lib';
 import { BottomPanel } from '@/shared/ui/bottom-panel';
 import { GamificationCard } from '@/shared/ui/gamification-card';
 
@@ -23,7 +23,6 @@ export const TodaySummaryCard = ({ className }: TTodaySummaryCard) => {
   return (
     <BottomPanel
       title={TITLE_CARD}
-      description="Сводка дня"
       onClick={() => {
         if (!data) {
           refetch();

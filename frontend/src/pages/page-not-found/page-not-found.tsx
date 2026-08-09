@@ -1,4 +1,4 @@
-import { APP_ROUTES } from '@/shared/config/routes';
+import { APP_ROUTES } from '@/shared/config';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 

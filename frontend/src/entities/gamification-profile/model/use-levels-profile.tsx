@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { rewardsQueryKeys } from '@/entities/reward/api/rewards-keys';
+import { rewardsQueryKeys } from '@/entities/reward';
 
 import { gamificationProfileKeys } from '../api/gamification-profile-keys';
 import { getLevelsRewards, receiveLevelReward, type TLevelRewardItem } from '../api/levels-rewards';

@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
 import type { User } from '@/entities/user';
-import leafIcon from '@/shared/assets/icon/leaf-icon.svg';
+import { leafIcon } from '@/shared/assets/icon';
 import { Typography } from '@/shared/ui/typography';
 
 import type { TLeaderboardUser } from '../../api/leaderboard';

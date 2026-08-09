@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { formatDays } from '@/shared/lib/format-days';
+import { formatDays } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
 

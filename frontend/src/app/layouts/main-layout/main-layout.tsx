@@ -1,8 +1,8 @@
 import { Outlet } from 'react-router';
 
-import { usePetName } from '@/entities/gamification-profile/model/use-pet-name';
-import { AppError } from '@/shared/ui/app-error/app-error';
-import { AppLoader } from '@/shared/ui/app-loader/app-loader';
+import { usePetName } from '@/entities/gamification-profile';
+import { AppError } from '@/shared/ui/app-error';
+import { AppLoader } from '@/shared/ui/app-loader';
 import { Header } from '@/widgets/header';
 
 import styles from './main-layout.module.scss';

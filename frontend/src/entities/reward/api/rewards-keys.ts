@@ -1,4 +1,4 @@
-import { mainQueryKey } from '@/shared/config/api';
+import { mainQueryKey } from '@/shared/config';
 
 export const rewardsQueryKeys = {
   all: [mainQueryKey.all, 'rewards'] as const,

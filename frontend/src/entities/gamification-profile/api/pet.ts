@@ -1,6 +1,5 @@
-import { apiRequest } from '@/shared/api/api-request.ts';
-import { getAuthHeaders } from '@/shared/api/get-auth-headers.tsx';
-import { API_URL } from '@/shared/config/api.ts';
+import { apiRequest, getAuthHeaders } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 
 import { API_ROUTE_PROFILE } from './api-routes.ts';
 

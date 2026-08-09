@@ -1,8 +1,8 @@
-import { Navigate, Outlet, useLocation } from "react-router";
+import { Navigate, Outlet, useLocation } from 'react-router';
 
-import { useCurrentUser } from "@/entities/user";
-import { APP_ROUTES } from "@/shared/config/routes";
-import { Typography } from "@/shared/ui/typography";
+import { useCurrentUser } from '@/entities/user';
+import { APP_ROUTES } from '@/shared/config';
+import { Typography } from '@/shared/ui/typography';
 
 export const RequireAuth = () => {
   const location = useLocation();

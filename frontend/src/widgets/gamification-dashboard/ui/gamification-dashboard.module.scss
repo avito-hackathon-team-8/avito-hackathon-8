@@ -3,11 +3,11 @@
 
   display: grid;
   grid-template:
-    "tasks awards" minmax(150px, 1fr)
-    "leaderboard activity" minmax(150px, 1fr)
-    "summary summary" minmax(114px, auto)
-    "rules rules" minmax(114px, auto) / 1fr 1fr;
-  gap: 12px;
+    'tasks awards' minmax(150px, 1fr)
+    'leaderboard activity' minmax(150px, 1fr)
+    'summary summary' minmax(114px, auto)
+    'rules rules' minmax(114px, auto) / 1fr 1fr;
+  gap: 6px;
 
   .gamificationDashboard__title {
     position: absolute;

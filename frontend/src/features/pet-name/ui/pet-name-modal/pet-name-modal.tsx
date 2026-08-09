@@ -3,11 +3,13 @@ import { type SubmitEvent, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { gamificationProfileKeys } from '@/entities/gamification-profile/api/gamification-profile-keys';
-import { updatePetName } from '@/entities/gamification-profile/api/pet';
-import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
+import {
+  gamificationProfileKeys,
+  updatePetName,
+  usePetProfile,
+} from '@/entities/gamification-profile';
 import { Button } from '@/shared/ui/button';
-import { Modal } from '@/shared/ui/modal/modal';
+import { Modal } from '@/shared/ui/modal';
 import { Typography } from '@/shared/ui/typography';
 
 import styles from './pet-name-modal.module.scss';

@@ -27,6 +27,7 @@ export type TypographyVariant =
   | 'section'
   | 'body'
   | 'caption'
+  | 'caption-medium'
   | 'caption-semiBold'
   | 'caption-bold'
   | 'p2-bold'

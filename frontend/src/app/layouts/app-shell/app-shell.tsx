@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { ToasterProvider } from '@/app/providers/toaster';
 import { useCurrentUser } from '@/entities/user';
-import { APP_ROUTES } from '@/shared/config/routes';
+import { APP_ROUTES } from '@/shared/config';
 import { Typography } from '@/shared/ui/typography';
 
 import styles from './app-shell.module.scss';

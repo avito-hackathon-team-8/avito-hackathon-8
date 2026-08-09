@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { usePetProfile } from '@/entities/gamification-profile/model/use-pet-profile';
+import { usePetProfile } from '@/entities/gamification-profile';
 import { Typography } from '@/shared/ui/typography';
 
 interface IPetNameProps {
