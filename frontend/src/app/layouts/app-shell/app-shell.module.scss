@@ -58,6 +58,7 @@
   .appShell__container {
     max-width: none;
     height: 100dvh;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
     max-height: none;
 
     border-radius: 0;
