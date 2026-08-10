@@ -3,6 +3,7 @@
 .DS_Store
 frontend/node_modules
 frontend/dist
+frontend/coverage
 .pnpm-store
 backend/pb_data
 backend/pocketbase
