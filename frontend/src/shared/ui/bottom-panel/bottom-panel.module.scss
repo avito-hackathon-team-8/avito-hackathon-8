@@ -32,7 +32,7 @@
   flex-direction: column;
   width: 100%;
   min-height: 180px;
-  max-height: 50%;
+  max-height: 70%;
   overflow: hidden;
 
   background-color: var(--white);
@@ -41,14 +41,25 @@
   transform: translateY(calc(100% + 16px));
   transition: transform 200ms ease;
 
-  .panel__handle {
-    flex-shrink: 0;
-    width: 64px;
-    height: 6px;
-    margin: 16px auto 8px;
+  .panel__handleButton {
+    display: flex;
+    align-items: center;
+    width: 100%;
 
-    background-color: var(--gray-300);
-    border-radius: 999px;
+    background-color: transparent;
+    border: none;
+
+    cursor: pointer;
+
+    .panel__handleLine {
+      flex-shrink: 0;
+      width: 64px;
+      height: 6px;
+      margin: 16px auto 8px;
+
+      background-color: var(--gray-300);
+      border-radius: 999px;
+    }
   }
 
   .panel__header {

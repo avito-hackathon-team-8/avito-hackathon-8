@@ -1,0 +1,31 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1001;
+
+  display: grid;
+  place-items: center;
+  padding: 24px;
+
+  background-color: var(--white);
+
+  animation: welcome-overlay-hide 500ms ease-in 1500ms forwards;
+}
+
+.title {
+  text-align: center;
+
+  animation: welcome-overlay-hide 500ms ease-in 1000ms forwards;
+}
+
+@keyframes welcome-overlay-hide {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    animation: none;
+  }
+}

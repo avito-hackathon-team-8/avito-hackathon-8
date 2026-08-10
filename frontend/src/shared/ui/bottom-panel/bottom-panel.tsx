@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 
 import { Typography } from '../typography';
 
+import { useBottomPanelDrag } from './model/use-bottom-panel-drag';
+
 import styles from './bottom-panel.module.scss';
 
 const FOCUSABLE_ELEMENTS_SELECTOR = [
@@ -48,7 +50,12 @@ export const BottomPanel = ({
 
   const titleId = useId();
 
-  const handleOpen = () => {
+  const { handleDragStart, panelStyle } = useBottomPanelDrag({
+    panelRef,
+    onClose: handleClose,
+  });
+
+  function handleOpen() {
     onClick?.();
 
     if (disabled) {
@@ -62,15 +69,15 @@ export const BottomPanel = ({
     }
 
     setIsOpen(true);
-  };
+  }
 
-  const handleClose = () => {
+  function handleClose() {
     previouslyFocusedElementRef.current?.focus({
       preventScroll: true,
     });
 
     setIsOpen(false);
-  };
+  }
 
   const handleOverlayClick = (event: MouseEvent) => {
     const isBackdropClick = event.target === event.currentTarget;
@@ -219,8 +226,15 @@ export const BottomPanel = ({
               aria-modal="true"
               aria-labelledby={titleId}
               tabIndex={-1}
+              style={panelStyle}
             >
-              <div className={styles.panel__handle} aria-hidden="true" />
+              <button
+                className={styles.panel__handleButton}
+                aria-label="Закрыть панель"
+                onMouseDown={handleDragStart}
+              >
+                <div className={styles.panel__handleLine} aria-hidden="true" />
+              </button>
 
               <header className={styles.panel__header}>
                 <Typography className={styles.panel__title} id={titleId} variant="section" as="h2">

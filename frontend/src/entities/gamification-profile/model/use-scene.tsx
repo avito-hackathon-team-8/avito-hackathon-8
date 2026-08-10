@@ -22,8 +22,8 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
 const LEVEL_FOR_OPEN_CAT = 2;
 const MAX_PET_LEVEL = 10;
 const CHARACTER_BASE_WIDTH = 120;
-const CHARACTER_INITIAL_SCALE = 0.8;
-const CHARACTER_MAX_SCALE = 1.25;
+const CHARACTER_INITIAL_SCALE = 0.6;
+const CHARACTER_MAX_SCALE = 0.8;
 const CHARACTER_VERTICAL_OFFSET = 8;
 
 const getCharacterScale = (level: number) => {

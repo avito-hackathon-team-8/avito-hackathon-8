@@ -9,7 +9,7 @@ export const Header = () => {
     <header className={styles.header}>
       <Button
         as="a"
-        href="https://www.avito.ru/"
+        href="https://www.avito.ru/profile"
         className={styles.header__backButton}
         aria-label="Вернуться назад"
       >
