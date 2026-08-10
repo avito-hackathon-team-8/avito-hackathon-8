@@ -178,7 +178,7 @@ paths:
                       nextCalculationAt: '2026-08-08T00:10:00Z'
                       player:
                         playerId: 72482c10-6976-4823-a835-333333333333
-                        nickname: Коробыш
+                        nickname: Игрок 72482C10
                         position: 148
                         leaves: 120
                         isTop10: false
@@ -1051,11 +1051,11 @@ paths:
                     nextCalculationAt: '2026-08-12T00:10:00Z'
                     items:
                       - playerId: 8f123af2-24c5-4ff7-b114-111111111111
-                        nickname: Капибосс
+                        nickname: Игрок 8F123AF2
                         position: 1
                         leaves: 120
                       - playerId: 6ab41fc5-1a5f-4db4-9129-222222222222
-                        nickname: Листик
+                        nickname: Игрок 6AB41FC5
                         position: 2
                         leaves: 95
         '401':
@@ -1900,6 +1900,7 @@ components:
         nickname:
           type: string
           minLength: 1
+          description: Детерминированный анонимный псевдоним; не содержит email или имя питомца.
         position:
           type: integer
           format: int64
