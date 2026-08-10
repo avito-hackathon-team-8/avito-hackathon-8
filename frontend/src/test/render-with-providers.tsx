@@ -22,6 +22,12 @@ export const createTestQueryClient = () =>
     },
   });
 
+export const createQueryWrapper = (queryClient = createTestQueryClient()) => {
+  return ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
+
 export const renderWithProviders = (
   component: ReactElement,
   {

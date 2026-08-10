@@ -22,10 +22,7 @@ type EmailAuthFormStepProps = BaseAuthFormStepProps & {
 
 type CodeAuthFormStepProps = BaseAuthFormStepProps & {
   variant: 'code';
-  email: string;
-  isResending: boolean;
   onBack: () => void;
-  onResend: () => void | Promise<void>;
 };
 
 type AuthFormStepProps = EmailAuthFormStepProps | CodeAuthFormStepProps;
@@ -69,7 +66,7 @@ export const AuthFormStep = (props: AuthFormStepProps) => {
             maxLength={isEmailStep ? undefined : OTP_LENGTH}
             value={props.value}
             placeholder={isEmailStep ? 'example@mail.ru' : '12345678'}
-            disabled={props.isSubmitting || (!isEmailStep && props.isResending)}
+            disabled={props.isSubmitting}
             aria-invalid={Boolean(props.error)}
             aria-describedby={props.error ? errorId : undefined}
             onChange={(event) => {
@@ -95,7 +92,7 @@ export const AuthFormStep = (props: AuthFormStepProps) => {
             type="submit"
             variant="primary"
             className={styles.authFormStep__submitButton}
-            disabled={props.isSubmitting || !props.isValid || (!isEmailStep && props.isResending)}
+            disabled={props.isSubmitting || !props.isValid}
           >
             {isEmailStep
               ? props.isSubmitting
@@ -112,7 +109,7 @@ export const AuthFormStep = (props: AuthFormStepProps) => {
               variant="primary"
               className={styles.authFormStep__backButton}
               aria-label="Вернуться к вводу почты"
-              disabled={props.isSubmitting || props.isResending}
+              disabled={props.isSubmitting}
               onClick={props.onBack}
             >
               Вернуться назад

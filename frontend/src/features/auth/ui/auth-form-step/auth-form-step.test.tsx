@@ -65,16 +65,13 @@ describe('AuthFormStep', () => {
     render(
       <AuthFormStep
         variant="code"
-        email="user@example.com"
         value="1234"
         error=""
         isSubmitting={false}
-        isResending={false}
         isValid={false}
         onChange={vi.fn()}
         onSubmit={vi.fn()}
         onBack={onBack}
-        onResend={vi.fn()}
       />,
     );
 
