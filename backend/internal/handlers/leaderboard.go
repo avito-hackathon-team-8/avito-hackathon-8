@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,7 +58,6 @@ type leaderboardMe struct {
 
 type leaderboardRow struct {
 	PlayerID     uuid.UUID
-	Nickname     string
 	Position     int64
 	Leaves       int64
 	CalculatedAt time.Time
@@ -76,9 +76,9 @@ func (handler *leaderboardHandler) list(response http.ResponseWriter, request *h
 	var rows []leaderboardRow
 
 	if err := handler.db.WithContext(request.Context()).Table("leaderboard_entries AS entries").Select(`
-		entries.user_id AS player_id, split_part(users.email, '@', 1) AS nickname,
-		entries.rank AS position, entries.leaves, entries.calculated_at`).
-		Joins("JOIN users ON users.id = entries.user_id").Where("entries.period_start = ?", period).
+		entries.user_id AS player_id, entries.rank AS position,
+		entries.leaves, entries.calculated_at`).
+		Where("entries.period_start = ?", period).
 		Order("entries.rank ASC").Limit(10).Scan(&rows).Error; err != nil {
 		writeError(response, http.StatusInternalServerError, "Could not load leaderboard")
 
@@ -102,7 +102,10 @@ func (handler *leaderboardHandler) list(response http.ResponseWriter, request *h
 	items := make([]leaderboardUser, 0, len(rows))
 
 	for _, row := range rows {
-		items = append(items, leaderboardUser{PlayerID: row.PlayerID.String(), Nickname: row.Nickname, Position: row.Position, Leaves: row.Leaves})
+		items = append(items, leaderboardUser{
+			PlayerID: row.PlayerID.String(), Nickname: anonymousNickname(row.PlayerID),
+			Position: row.Position, Leaves: row.Leaves,
+		})
 	}
 	writeJSON(response, http.StatusOK, leaderboardResponse{
 		Period: makePeriod(period), CalculatedAt: calculatedAt,
@@ -126,9 +129,8 @@ func loadLeaderboardMe(ctx context.Context, db *gorm.DB, user models.User, now t
 	var row leaderboardRow
 
 	err = db.WithContext(ctx).Table("leaderboard_entries AS entries").Select(`
-		entries.user_id AS player_id, split_part(users.email, '@', 1) AS nickname,
-		entries.rank AS position, entries.leaves, entries.calculated_at`).
-		Joins("JOIN users ON users.id = entries.user_id").
+		entries.user_id AS player_id, entries.rank AS position,
+		entries.leaves, entries.calculated_at`).
 		Where("entries.period_start = ? AND entries.user_id = ?", period, user.ID).Take(&row).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -139,7 +141,7 @@ func loadLeaderboardMe(ctx context.Context, db *gorm.DB, user models.User, now t
 		}
 
 		row = leaderboardRow{
-			PlayerID: user.ID, Nickname: nicknameFromEmail(user.Email),
+			PlayerID: user.ID,
 			Position: count + 1, Leaves: 0, CalculatedAt: calculatedAt,
 		}
 	} else if err != nil {
@@ -150,7 +152,7 @@ func loadLeaderboardMe(ctx context.Context, db *gorm.DB, user models.User, now t
 		Period: makePeriod(period), CalculatedAt: calculatedAt,
 		NextCalculationAt: nextLeaderboardCalculation(calculatedAt),
 		Player: leaderboardMe{
-			PlayerID: row.PlayerID.String(), Nickname: row.Nickname,
+			PlayerID: row.PlayerID.String(), Nickname: anonymousNickname(row.PlayerID),
 			Position: row.Position, Leaves: row.Leaves, IsTop10: row.Position <= 10,
 		},
 	}, nil
@@ -185,14 +187,8 @@ func (handler *leaderboardHandler) snapshotCalculatedAt(ctx context.Context, per
 	return calculatedAt.Time.UTC(), nil
 }
 
-func nicknameFromEmail(email string) string {
-	for index, value := range email {
-		if value == '@' {
-			return email[:index]
-		}
-	}
-
-	return email
+func anonymousNickname(playerID uuid.UUID) string {
+	return fmt.Sprintf("Игрок %02X%02X%02X%02X", playerID[0], playerID[1], playerID[2], playerID[3])
 }
 
 func makePeriod(start time.Time) leaderboardPeriod {
