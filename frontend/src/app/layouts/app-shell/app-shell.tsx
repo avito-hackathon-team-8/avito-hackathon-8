@@ -30,7 +30,7 @@ export const AppShell = () => {
         {!isLoading && <Outlet />}
 
         <div id="app-overlay-root" className={styles.appShell__overlayRoot} />
-        <div id="app-modal-root" />
+        <div id="app-modal-root" className={styles.appShell__modalRoot} />
         <ToasterProvider />
       </div>
     </div>

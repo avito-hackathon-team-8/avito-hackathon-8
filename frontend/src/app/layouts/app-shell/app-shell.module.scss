@@ -36,10 +36,10 @@
   overscroll-behavior: contain;
 }
 
-.appShell__overlayRoot {
+.appShell__overlayRoot,
+.appShell__modalRoot {
   position: absolute;
   inset: 0;
-  z-index: 100;
 
   overflow: hidden;
 
@@ -48,10 +48,19 @@
   pointer-events: none;
 }
 
+.appShell__overlayRoot {
+  z-index: var(--z-index-bottom-panel-overlay);
+}
+
+.appShell__modalRoot {
+  z-index: var(--z-index-modal-overlay);
+}
+
 @media (width < 600px) {
   .appShell {
     display: block;
-    min-height: 100svh;
+    box-sizing: border-box;
+    min-height: 100dvh;
     padding: 0;
 
     background-color: var(--white);
@@ -59,17 +68,19 @@
 
   .appShell__container {
     display: block;
+    box-sizing: border-box;
     max-width: none;
-    height: auto;
-    min-height: 100svh;
-    max-height: none;
-    padding-bottom: 0;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    padding-block: 0;
     overflow: visible;
 
     border-radius: 0;
+    box-shadow: none;
   }
 
-  .appShell__overlayRoot {
+  .appShell__overlayRoot,
+  .appShell__modalRoot {
     position: fixed;
   }
 }
