@@ -59,6 +59,7 @@
     max-width: none;
     height: 100dvh;
     max-height: none;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
 
     border-radius: 0;
   }
