@@ -28,7 +28,9 @@ cp .env.example .env
 make up
 ```
 
-После запуска Docker-окружения frontend доступен на `http://localhost:3000` или `http://localhost:5173`.
+После запуска Docker-окружения frontend доступен на `http://localhost:3000`.
+Адрес `http://localhost:5173` используется при локальном запуске через
+`npm run dev`.
 
 Основные команды:
 
