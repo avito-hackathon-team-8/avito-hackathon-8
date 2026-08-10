@@ -2,6 +2,8 @@ import { type MouseEvent, type PropsWithChildren, useEffect, useState } from 're
 
 import { createPortal } from 'react-dom';
 
+import { usePageScrollLock } from '@/shared/lib';
+
 import styles from './modal.module.scss';
 
 interface IModalProps extends PropsWithChildren {
@@ -12,6 +14,8 @@ interface IModalProps extends PropsWithChildren {
 
 export const Modal = ({ isOpen, onClose, className, children }: IModalProps) => {
   const [portalRoot] = useState(() => document.getElementById('app-modal-root'));
+
+  usePageScrollLock(isOpen);
 
   useEffect(() => {
     if (!isOpen) {
@@ -24,13 +28,9 @@ export const Modal = ({ isOpen, onClose, className, children }: IModalProps) => 
       }
     };
 
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

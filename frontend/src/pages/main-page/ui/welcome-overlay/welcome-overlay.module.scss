@@ -24,6 +24,12 @@
   }
 }
 
+@media (width < 600px) {
+  .overlay {
+    position: fixed;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overlay {
     animation: none;

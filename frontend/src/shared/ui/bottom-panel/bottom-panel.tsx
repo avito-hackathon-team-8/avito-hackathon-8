@@ -2,6 +2,8 @@ import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } f
 
 import { createPortal } from 'react-dom';
 
+import { usePageScrollLock } from '@/shared/lib';
+
 import { Typography } from '../typography';
 
 import { useBottomPanelDrag } from './model/use-bottom-panel-drag';
@@ -10,7 +12,7 @@ import styles from './bottom-panel.module.scss';
 
 const FOCUSABLE_ELEMENTS_SELECTOR = [
   'a[href]',
-  'button:not([disabled])',
+  'button:not([disabled]):not([tabindex="-1"])',
   'input:not([disabled])',
   'select:not([disabled])',
   'textarea:not([disabled])',
@@ -45,15 +47,18 @@ export const BottomPanel = ({
 
   const [isOpen, setIsOpen] = useState(isStartOpen);
 
+  usePageScrollLock(isOpen);
+
   const panelRef = useRef<HTMLElement | null>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
   const titleId = useId();
 
-  const { handleDragStart, panelStyle } = useBottomPanelDrag({
-    panelRef,
-    onClose: handleClose,
-  });
+  const { handleDragCancel, handleDragEnd, handleDragMove, handleDragStart, panelStyle } =
+    useBottomPanelDrag({
+      panelRef,
+      onClose: handleClose,
+    });
 
   function handleOpen() {
     onClick?.();
@@ -229,11 +234,16 @@ export const BottomPanel = ({
               style={panelStyle}
             >
               <button
+                type="button"
                 className={styles.panel__handleButton}
                 aria-label="Закрыть панель"
-                onMouseDown={handleDragStart}
+                onPointerCancel={handleDragCancel}
+                onPointerDown={handleDragStart}
+                onPointerMove={handleDragMove}
+                onPointerUp={handleDragEnd}
+                tabIndex={-1}
               >
-                <div className={styles.panel__handleLine} aria-hidden="true" />
+                <div className={styles.panel__handleLine} aria-hidden="true" tabIndex={-1} />
               </button>
 
               <header className={styles.panel__header}>
