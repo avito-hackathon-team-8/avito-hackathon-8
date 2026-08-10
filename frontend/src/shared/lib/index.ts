@@ -7,3 +7,4 @@ export {
   sessionStorageKeysMap,
   setSessionStorageValue,
 } from './session-storage';
+export { usePageScrollLock } from './use-page-scroll-lock';

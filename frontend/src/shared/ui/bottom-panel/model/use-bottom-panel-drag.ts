@@ -1,8 +1,7 @@
 import {
   type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type RefObject,
-  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -14,52 +13,64 @@ type UseBottomPanelDragParams = {
 
 export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragParams) => {
   const dragStartYRef = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDragStart = (event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) {
+  const handleDragStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!event.isPrimary || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    activePointerIdRef.current = event.pointerId;
+    dragStartYRef.current = event.clientY;
+    setIsDragging(true);
+  };
+
+  const handleDragMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
 
     event.preventDefault();
 
-    dragStartYRef.current = event.clientY;
-    setIsDragging(true);
+    setDragOffset(Math.max(0, event.clientY - dragStartYRef.current));
   };
 
-  useEffect(() => {
-    if (!isDragging) {
+  const handleDragEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
-      event.preventDefault();
+    const panelHeight = panelRef.current?.getBoundingClientRect().height ?? 0;
+    const finalDragOffset = Math.max(0, event.clientY - dragStartYRef.current);
 
-      setDragOffset(Math.max(0, event.clientY - dragStartYRef.current));
-    };
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
 
-    const handleMouseUp = (event: MouseEvent) => {
-      const panelHeight = panelRef.current?.getBoundingClientRect().height ?? 0;
-      const finalDragOffset = Math.max(0, event.clientY - dragStartYRef.current);
+    activePointerIdRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
 
-      setIsDragging(false);
-      setDragOffset(0);
+    if (panelHeight > 0 && finalDragOffset >= panelHeight / 2) {
+      onClose();
+    }
+  };
 
-      if (panelHeight > 0 && finalDragOffset >= panelHeight / 2) {
-        onClose();
-      }
-    };
+  const handleDragCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (activePointerIdRef.current !== event.pointerId) {
+      return;
+    }
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, onClose, panelRef]);
+    activePointerIdRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
+  };
 
   const panelStyle: CSSProperties = {
     transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
@@ -67,6 +78,9 @@ export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragPara
   };
 
   return {
+    handleDragCancel,
+    handleDragEnd,
+    handleDragMove,
     handleDragStart,
     panelStyle,
   };

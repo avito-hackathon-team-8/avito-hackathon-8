@@ -50,6 +50,7 @@
     border: none;
 
     cursor: pointer;
+    touch-action: none;
 
     .panel__handleLine {
       flex-shrink: 0;

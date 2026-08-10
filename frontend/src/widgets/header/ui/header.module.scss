@@ -9,7 +9,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding-block: 12px;
+  padding-bottom: 12px;
 
   background-color: var(--white);
 
@@ -26,5 +26,11 @@
 
   .header__notificationButton {
     justify-self: end;
+  }
+}
+
+@media (width < 600px) {
+  .header {
+    padding-block: 12px;
   }
 }

@@ -2,7 +2,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100%;
   min-height: 100dvh;
+  max-height: 100dvh;
   padding: 24px;
 
   background-color: var(--white);
@@ -60,19 +62,23 @@
   .appShell {
     display: block;
     box-sizing: border-box;
+    width: 100%;
+    height: auto;
     min-height: 100dvh;
+    max-height: none;
     padding: 0;
 
     background-color: var(--white);
   }
 
   .appShell__container {
-    display: block;
+    display: flex;
     box-sizing: border-box;
     max-width: none;
+    height: auto;
     min-height: 100dvh;
-    max-height: 100dvh;
-    padding-block: 0;
+    max-height: none;
+    padding-top: 0;
     overflow: visible;
 
     border-radius: 0;

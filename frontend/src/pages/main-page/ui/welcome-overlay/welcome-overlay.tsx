@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { usePageScrollLock } from '@/shared/lib';
 import { Typography } from '@/shared/ui/typography';
 
 import styles from './welcome-overlay.module.scss';
@@ -8,6 +9,8 @@ const DISPLAY_DURATION_MS = 2000;
 
 export const WelcomeOverlay = () => {
   const [isVisible, setIsVisible] = useState(true);
+
+  usePageScrollLock(isVisible);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
