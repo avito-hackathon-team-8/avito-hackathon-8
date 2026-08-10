@@ -97,20 +97,18 @@ func (assigner *TaskAssigner) ensureUserTx(tx *gorm.DB, userID uuid.UUID, now ti
 		return err
 	}
 
-	if err := tx.Exec(`
-		INSERT INTO user_game_states (user_id, pet_level, leaf_balance, updated_at)
-		SELECT users.id, COALESCE(pets.level, 1), COALESCE(pets.leaves, 0), ?
-		FROM users LEFT JOIN pets ON pets.user_id = users.id
-		WHERE users.id = ?
-		ON CONFLICT (user_id) DO UPDATE SET pet_level = EXCLUDED.pet_level,
-		leaf_balance = EXCLUDED.leaf_balance, updated_at = EXCLUDED.updated_at`, now.UTC(), userID).Error; err != nil {
-		return fmt.Errorf("sync game state: %w", err)
+	petLevel := 1
+
+	var petRow struct {
+		Level int
 	}
 
-	var state models.UserGameState
-
-	if err := tx.First(&state, "user_id = ?", userID).Error; err != nil {
-		return fmt.Errorf("load game state: %w", err)
+	if err := tx.Table("pets").Select("level").Where("user_id = ?", userID).Take(&petRow).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("load pet: %w", err)
+		}
+	} else {
+		petLevel = petRow.Level
 	}
 
 	var definitions []models.DailyTaskDefinition
@@ -144,7 +142,7 @@ func (assigner *TaskAssigner) ensureUserTx(tx *gorm.DB, userID uuid.UUID, now ti
 
 		status := models.TaskInProgress
 
-		if state.PetLevel < definition.UnlockLevel {
+		if petLevel < definition.UnlockLevel {
 			status = models.TaskLocked
 		}
 

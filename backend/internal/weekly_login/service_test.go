@@ -210,7 +210,7 @@ func TestClaimCreditsLeavesAndLedgerAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.UserGameState{}, &models.UserLogin{}, &models.WeeklyLoginClaim{}, &models.LeafTransaction{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.UserLogin{}, &models.WeeklyLoginClaim{}, &models.LeafTransaction{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 	now := time.Date(2026, time.August, 7, 12, 0, 0, 0, time.UTC)

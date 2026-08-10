@@ -178,19 +178,6 @@ func (service *Service) CreditTx(tx *gorm.DB, credit Credit) (Progress, error) {
 		}
 	}
 
-	if err := tx.Exec(`
-		INSERT INTO user_game_states (user_id, pet_level, leaf_balance, updated_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT (user_id) DO UPDATE SET pet_level = EXCLUDED.pet_level,
-		leaf_balance = EXCLUDED.leaf_balance, updated_at = EXCLUDED.updated_at`,
-		credit.UserID,
-		userPet.Level,
-		userPet.Leaves,
-		service.now().UTC(),
-	).Error; err != nil {
-		return Progress{}, fmt.Errorf("sync game state: %w", err)
-	}
-
 	return ProgressForPet(userPet, newLevel > oldLevel), nil
 }
 
@@ -247,19 +234,6 @@ func (service *Service) DebitTx(tx *gorm.DB, debit Debit) (Progress, error) {
 	if err := tx.Model(&userPet).Update("leaves", userPet.Leaves).Error; err != nil {
 		return Progress{}, fmt.Errorf("save pet balance: %w", err)
 	}
-	if err := tx.Exec(`
-		INSERT INTO user_game_states (user_id, pet_level, leaf_balance, updated_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT (user_id) DO UPDATE SET pet_level = EXCLUDED.pet_level,
-		leaf_balance = EXCLUDED.leaf_balance, updated_at = EXCLUDED.updated_at`,
-		debit.UserID,
-		userPet.Level,
-		userPet.Leaves,
-		service.now().UTC(),
-	).Error; err != nil {
-		return Progress{}, fmt.Errorf("sync game state: %w", err)
-	}
-
 	return ProgressForPet(userPet, false), nil
 }
 

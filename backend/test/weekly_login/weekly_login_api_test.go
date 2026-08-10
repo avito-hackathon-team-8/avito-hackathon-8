@@ -277,10 +277,9 @@ func createUser(t *testing.T, cfg testConfig) uuid.UUID {
 DELETE FROM weekly_login_claims WHERE user_id = %s;
 DELETE FROM user_logins WHERE user_id = %s;
 DELETE FROM leaf_transactions WHERE user_id = %s;
-DELETE FROM user_game_states WHERE user_id = %s;
 DELETE FROM pets WHERE user_id = %s;
 DELETE FROM users WHERE id = %s;
-`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
+`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
 		if err := runSQL(cfg, cleanup); err != nil {
 			t.Errorf("cleanup weekly login test user: %v", err)
 		}

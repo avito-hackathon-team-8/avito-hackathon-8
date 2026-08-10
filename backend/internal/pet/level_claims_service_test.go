@@ -184,7 +184,6 @@ func levelClaimsTestService(t *testing.T, level int) (*LevelClaimsService, *gorm
 		&models.LevelReward{},
 		&models.Reward{},
 		&models.LeafTransaction{},
-		&models.UserGameState{},
 	); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}

@@ -239,7 +239,6 @@ DELETE FROM user_daily_tasks WHERE user_id = %s;
 DELETE FROM weekly_login_claims WHERE user_id = %s;
 DELETE FROM user_logins WHERE user_id = %s;
 DELETE FROM leaf_transactions WHERE user_id = %s;
-DELETE FROM user_game_states WHERE user_id = %s;
 DELETE FROM leaderboard_entries WHERE user_id = %s;
 DELETE FROM rewards WHERE user_id = %s;
 DELETE FROM level_rewards WHERE user_id = %s;
@@ -248,7 +247,7 @@ DELETE FROM otps WHERE user_id = %s;
 DELETE FROM pets WHERE user_id = %s;
 DELETE FROM users WHERE id = %s;
 `, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID),
-			sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
+			sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
 		if err := runSQL(cfg, cleanup); err != nil {
 			t.Errorf("cleanup daily report test user: %v", err)
 		}
