@@ -10,3 +10,9 @@
     display: none;
   }
 }
+
+@media (width < 600px) {
+  .page__main {
+    overflow-y: visible;
+  }
+}

@@ -51,18 +51,25 @@
 @media (width < 600px) {
   .appShell {
     display: block;
-    min-height: 100dvh;
+    min-height: 100svh;
     padding: 0;
 
     background-color: var(--white);
   }
 
   .appShell__container {
+    display: block;
     max-width: none;
-    height: 100dvh;
+    height: auto;
+    min-height: 100svh;
     max-height: none;
     padding-bottom: 0;
+    overflow: visible;
 
     border-radius: 0;
+  }
+
+  .appShell__overlayRoot {
+    position: fixed;
   }
 }
