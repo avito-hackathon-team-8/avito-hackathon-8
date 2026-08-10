@@ -11,6 +11,8 @@
 .appShell__container {
   position: relative;
 
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 390px;
   height: calc(100dvh - 48px);
@@ -59,7 +61,7 @@
     max-width: none;
     height: 100dvh;
     max-height: none;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
 
     border-radius: 0;
   }
