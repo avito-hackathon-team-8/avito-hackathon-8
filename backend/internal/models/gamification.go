@@ -6,13 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type UserGameState struct {
-	UserID      uuid.UUID `gorm:"type:uuid;primaryKey"`
-	PetLevel    int       `gorm:"not null;default:1"`
-	LeafBalance int64     `gorm:"not null;default:0"`
-	UpdatedAt   time.Time `gorm:"not null"`
-}
-
 type LeaderboardEntry struct {
 	PeriodStart  time.Time `gorm:"type:date;primaryKey"`
 	UserID       uuid.UUID `gorm:"type:uuid;primaryKey"`

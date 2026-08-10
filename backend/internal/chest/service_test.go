@@ -72,14 +72,6 @@ func TestOpenSpendsLeavesAndIssuesReward(t *testing.T) {
 		t.Fatalf("chest purchase = %+v, want a 200-leaf CHEST_PURCHASE debit", purchase)
 	}
 
-	var state models.UserGameState
-	if err := db.Where("user_id = ?", user.ID).First(&state).Error; err != nil {
-		t.Fatalf("load game state: %v", err)
-	}
-	if state.PetLevel != pet.MaxPetLevel || state.LeafBalance != 75 {
-		t.Fatalf("game state = %+v, want level 10 with 75 leaves", state)
-	}
-
 	update := <-updates
 	if update.Progress.Level != pet.MaxPetLevel || update.Progress.Leaves != 75 || update.Progress.LevelUp {
 		t.Fatalf("progress update = %+v, want level 10 with 75 leaves", update.Progress)
@@ -206,7 +198,7 @@ func testService(t *testing.T) (*Service, *gorm.DB, models.User, *pet.Service) {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.ChestOpening{}, &models.Reward{}, &models.LeafTransaction{}, &models.UserGameState{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pet{}, &models.ChestOpening{}, &models.Reward{}, &models.LeafTransaction{}); err != nil {
 		t.Fatalf("migrate test database: %v", err)
 	}
 

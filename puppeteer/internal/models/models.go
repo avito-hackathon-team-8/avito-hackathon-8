@@ -41,13 +41,6 @@ type User struct {
 	CreatedAt time.Time
 }
 
-type UserGameState struct {
-	UserID      uuid.UUID `gorm:"type:uuid;primaryKey"`
-	PetLevel    int       `gorm:"not null;default:1"`
-	LeafBalance int64     `gorm:"not null;default:0"`
-	UpdatedAt   time.Time `gorm:"not null"`
-}
-
 type DailyTaskDefinition struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Code        string    `gorm:"type:varchar(64);not null;uniqueIndex"`

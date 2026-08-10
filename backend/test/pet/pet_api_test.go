@@ -312,13 +312,12 @@ func createUser(t *testing.T, cfg testConfig) uuid.UUID {
 DELETE FROM external_events WHERE user_id = %s;
 DELETE FROM user_daily_tasks WHERE user_id = %s;
 DELETE FROM leaf_transactions WHERE user_id = %s;
-DELETE FROM user_game_states WHERE user_id = %s;
 DELETE FROM leaderboard_entries WHERE user_id = %s;
 DELETE FROM rewards WHERE user_id = %s;
 DELETE FROM otps WHERE user_id = %s;
 DELETE FROM pets WHERE user_id = %s;
 DELETE FROM users WHERE id = %s;
-`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
+`, sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID), sqlUUID(userID))
 		_ = runSQL(cfg, statement)
 	})
 	return userID
