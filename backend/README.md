@@ -4,22 +4,8 @@ Backend игрового слоя для Авито. Сервис авториз
 
 ## Запуск
 
-Для локального запуска нужны Go 1.25+, PostgreSQL с применёнными миграциями из `../migrations/` и работающий сервис puppeteer на `http://localhost:8091`.
-
-```bash
-cd backend
-
-export DATABASE_URL=postgres://hackathon:change-me@localhost:5432/hackathon?sslmode=disable
-export JWT_SECRET="$(openssl rand -hex 32)"
-export INTERNAL_SERVICE_TOKEN="$(openssl rand -hex 32)"
-export PUPPETEER_INTERNAL_URL=http://localhost:8091
-
-go run .
-```
-
-Backend будет доступен на `http://localhost:8090`. Миграции сервис автоматически не применяет.
-
-Рекомендуемый запуск всего проекта из корня репозитория:
+Запуск выполняется вместе с остальными сервисами через Docker Compose из корня
+репозитория:
 
 ```bash
 cp .env.example .env
@@ -27,6 +13,8 @@ make up
 ```
 
 Перед запуском замените значения `JWT_SECRET` и `INTERNAL_SERVICE_TOKEN` в `.env` на разные случайные строки длиной не менее 32 символов. `make up` применит миграции и запустит PostgreSQL, backend, puppeteer и frontend.
+
+Backend будет доступен на `http://localhost:8090`.
 
 Проверка состояния сервиса:
 
@@ -38,16 +26,15 @@ curl http://localhost:8090/api/health
 `http://localhost:8090/swagger`. Полный контракт API находится в
 [`docs/openapi.yaml`](../docs/openapi.yaml).
 
-Основные переменные окружения:
+Основные настройки Docker-окружения:
 
 ```dotenv
-DATABASE_URL=postgres://user:password@localhost:5432/database?sslmode=disable
 JWT_SECRET=<строка длиной не менее 32 символов>
 INTERNAL_SERVICE_TOKEN=<строка длиной не менее 32 символов>
 JWT_TTL=24h
 HTTP_ADDRESS=:8090
-PUPPETEER_INTERNAL_URL=http://localhost:8091
-LEVEL_REWARDS_CONFIG=../config/level_rewards.yaml
+PUPPETEER_INTERNAL_URL=http://puppeteer:8091
+LEVEL_REWARDS_CONFIG=/app/config/level_rewards.yaml
 ```
 
 ## Технологии

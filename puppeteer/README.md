@@ -4,20 +4,8 @@
 
 ## Запуск
 
-Для локального запуска нужны Go 1.25+ и PostgreSQL с применёнными миграциями из `../migrations/`. Puppeteer и backend используют одну базу данных.
-
-```bash
-cd puppeteer
-
-export DATABASE_URL=postgres://hackathon:change-me@localhost:5432/hackathon?sslmode=disable
-export INTERNAL_SERVICE_TOKEN="$(openssl rand -hex 32)"
-
-go run .
-```
-
-Сервис будет доступен на `http://localhost:8091`. Миграции он автоматически не применяет.
-
-Рекомендуемый запуск всего проекта из корня репозитория:
+Запуск выполняется вместе с остальными сервисами через Docker Compose из корня
+репозитория:
 
 ```bash
 cp .env.example .env
@@ -26,21 +14,22 @@ make up
 
 Перед запуском замените значения `JWT_SECRET` и `INTERNAL_SERVICE_TOKEN` в `.env` на разные случайные строки длиной не менее 32 символов. `make up` применит миграции и запустит PostgreSQL, backend, puppeteer и frontend.
 
+Puppeteer будет доступен на `http://localhost:8091`.
+
 Проверка состояния сервиса:
 
 ```bash
 curl http://localhost:8091/health
 ```
 
-Основные переменные окружения:
+Основные настройки Docker-окружения:
 
 ```dotenv
-DATABASE_URL=postgres://user:password@localhost:5432/database?sslmode=disable
 INTERNAL_SERVICE_TOKEN=<строка длиной не менее 32 символов>
 PUPPETEER_HTTP_ADDRESS=:8091
 PUPPETEER_POLL_INTERVAL=10m
-TASK_DEFINITIONS_CONFIG=../config/task_definitions.yaml
-LEADERBOARD_REWARDS_CONFIG=../config/leaderboard_rewards.yaml
+TASK_DEFINITIONS_CONFIG=/app/config/task_definitions.yaml
+LEADERBOARD_REWARDS_CONFIG=/app/config/leaderboard_rewards.yaml
 ```
 
 `PUPPETEER_POLL_INTERVAL` задаётся в формате Go duration, не может быть меньше одной секунды и управляет периодичностью пересчёта лидерборда.
