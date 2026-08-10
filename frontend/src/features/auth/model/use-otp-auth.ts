@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-import { type AuthStep, EMAIL_PATTERN, OTP_LENGTH } from "./constants";
-import { useRequestOtp } from "./use-request-otp";
-import { useVerifyOtp } from "./use-verify-otp";
+import { type AuthStep, EMAIL_PATTERN, OTP_LENGTH } from './constants';
+import { useRequestOtp } from './use-request-otp';
+import { useVerifyOtp } from './use-verify-otp';
 
 type UseOtpAuthParams = {
   onSuccess?: () => void;
@@ -16,10 +16,10 @@ export const useOtpAuth = ({ onSuccess }: UseOtpAuthParams = {}) => {
   const requestOtpMutation = useRequestOtp();
   const verifyOtpMutation = useVerifyOtp();
 
-  const [step, setStep] = useState<AuthStep>("welcome");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
+  const [step, setStep] = useState<AuthStep>('welcome');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
 
   const normalizedEmail = email.trim();
   const normalizedCode = code.trim();
@@ -32,65 +32,42 @@ export const useOtpAuth = ({ onSuccess }: UseOtpAuthParams = {}) => {
   const isPending = isRequestingCode || isVerifyingCode;
 
   const openEmailStep = () => {
-    setError("");
-    setStep("email");
+    setError('');
+    setStep('email');
   };
 
   const returnToEmailStep = () => {
-    setCode("");
-    setError("");
-    setStep("email");
+    setCode('');
+    setError('');
+    setStep('email');
   };
 
   const changeEmail = (value: string) => {
     setEmail(value);
-    setError("");
+    setError('');
   };
 
   const changeCode = (value: string) => {
-    const normalizedValue = value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+    const normalizedValue = value.replace(/\D/g, '').slice(0, OTP_LENGTH);
 
     setCode(normalizedValue);
-    setError("");
+    setError('');
   };
 
   const sendCode = async () => {
     if (!isEmailValid) {
-      setError("Введите корректный email");
+      setError('Введите корректный email');
 
       return;
     }
 
-    setError("");
+    setError('');
 
     try {
       await requestOtpMutation.mutateAsync(normalizedEmail);
-      setStep("code");
+      setStep('code');
     } catch (requestError) {
-      setError(
-        getMutationErrorMessage(requestError, "Не удалось отправить код"),
-      );
-    }
-  };
-
-  const resendCode = async () => {
-    if (!isEmailValid) {
-      setError("Введите корректный email");
-
-      return;
-    }
-
-    setError("");
-
-    try {
-      await requestOtpMutation.mutateAsync(normalizedEmail);
-    } catch (requestError) {
-      setError(
-        getMutationErrorMessage(
-          requestError,
-          "Не удалось повторно отправить код",
-        ),
-      );
+      setError(getMutationErrorMessage(requestError, 'Не удалось отправить код'));
     }
   };
 
@@ -101,7 +78,7 @@ export const useOtpAuth = ({ onSuccess }: UseOtpAuthParams = {}) => {
       return;
     }
 
-    setError("");
+    setError('');
 
     try {
       await verifyOtpMutation.mutateAsync({
@@ -111,9 +88,7 @@ export const useOtpAuth = ({ onSuccess }: UseOtpAuthParams = {}) => {
 
       onSuccess?.();
     } catch (verifyError) {
-      setError(
-        getMutationErrorMessage(verifyError, "Не удалось подтвердить код"),
-      );
+      setError(getMutationErrorMessage(verifyError, 'Не удалось подтвердить код'));
     }
   };
 
@@ -134,7 +109,6 @@ export const useOtpAuth = ({ onSuccess }: UseOtpAuthParams = {}) => {
     changeEmail,
     changeCode,
     sendCode,
-    resendCode,
     signInByCode,
   };
 };

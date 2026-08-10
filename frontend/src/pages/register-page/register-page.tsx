@@ -33,15 +33,12 @@ export const RegisterPage = () => {
       {auth.step === 'code' ? (
         <AuthFormStep
           variant="code"
-          email={auth.email}
           value={auth.code}
           error={auth.error}
           isSubmitting={auth.isVerifyingCode}
-          isResending={auth.isRequestingCode}
           isValid={auth.isCodeValid}
           onChange={auth.changeCode}
           onBack={auth.returnToEmailStep}
-          onResend={auth.resendCode}
           onSubmit={auth.signInByCode}
         />
       ) : null}

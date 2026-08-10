@@ -65,7 +65,7 @@ export const LevelsPanelContent = ({
             </Typography>
 
             <button
-              aria-label="Збрать награду"
+              aria-label="Забрать награду"
               className={styles.panel__button}
               disabled={!isUnopened}
               onClick={
