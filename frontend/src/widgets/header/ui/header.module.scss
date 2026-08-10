@@ -1,9 +1,17 @@
 .header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: var(--z-index-header);
+
   display: grid;
   grid-template-columns: minmax(19px, 1fr) minmax(0, auto) 1fr;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  width: 100%;
+  padding-block: 12px;
+
+  background-color: var(--white);
 
   .header__backButton {
     justify-self: start;

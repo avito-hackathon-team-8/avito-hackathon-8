@@ -19,6 +19,14 @@
   --orange: #f1ae41;
   --purple: #a169f7;
 
+  /* Z-index */
+  --z-index-content: 1;
+  --z-index-content-action: 2;
+  --z-index-modal-overlay: 400;
+  --z-index-welcome-overlay: 500;
+  --z-index-header: 300;
+  --z-index-bottom-panel-overlay: 400;
+
   /* Typography */
   --font-primary: 'Manrope', 'Inter', -apple-system, 'Segoe UI', arial, sans-serif;
   --font-display: normal 700 32px / 44px var(--font-primary);
