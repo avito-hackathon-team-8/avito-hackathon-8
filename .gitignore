@@ -13,3 +13,4 @@ dist
 .idea
 *.cover
 TODO.md
+qodana.yaml

@@ -45,8 +45,8 @@ services:
     volumes:
       - ./config:/app/config:ro
       - ./docs:/app/docs:ro
-    ports:
-      - "8090:8090"
+    expose:
+      - "8090"
     depends_on:
       migrator:
         condition: service_completed_successfully
@@ -69,8 +69,8 @@ services:
       LEADERBOARD_REWARDS_CONFIG: /app/config/leaderboard_rewards.yaml
     volumes:
       - ./config:/app/config:ro
-    ports:
-      - "8091:8091"
+    expose:
+      - "8091"
     depends_on:
       backend:
         condition: service_healthy
