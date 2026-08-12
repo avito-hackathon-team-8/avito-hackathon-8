@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { TPet } from '@/entities/gamification-profile';
+import { gamificationProfileKeys, type TPet } from '@/entities/gamification-profile';
 import { rewardsQueryKeys, type TReward } from '@/entities/reward';
 import { createQueryWrapper, createTestQueryClient } from '@/test/render-with-providers';
 
@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/entities/gamification-profile', () => ({
+  gamificationProfileKeys: {
+    pet: () => ['app', 'gamification-profile', 'pet'],
+  },
   usePetProfile: mocks.usePetProfile,
 }));
 
@@ -37,6 +40,8 @@ const pet: TPet = {
   leaves: 500,
   nextLevelTargetLeaves: 0,
   chestPrice: 100,
+  bowlImageUrl: null,
+  bedImageUrl: null,
   happiness: 50,
   happinessMultiplier: 1,
   calculatedAt: '2026-08-12T12:52:25.179950567Z',
@@ -151,15 +156,26 @@ describe('useBuyReward', () => {
     });
   });
 
-  it('обновляет профиль после MVP-начисления листьев', async () => {
-    const updatedPet = { ...pet, leaves: 700 };
+  it('обновляет профиль после MVP-начисления листьев и сохраняет товары', async () => {
+    const currentPet = {
+      ...pet,
+      bowlImageUrl: '/api/v1/shop-images/bowl-fashionable.webp',
+      bedImageUrl: '/api/v1/shop-images/bed-profi.webp',
+    };
+    const updatedPet: Partial<TPet> = { ...pet, leaves: 700 };
+    delete updatedPet.bowlImageUrl;
+    delete updatedPet.bedImageUrl;
     mocks.addMVPLeaves.mockResolvedValue(updatedPet);
-    const { result } = renderBuyRewardHook();
+    const { result, queryClient } = renderBuyRewardHook(currentPet);
+    queryClient.setQueryData(gamificationProfileKeys.pet(), currentPet);
 
     act(() => result.current.addMVPLeaves());
 
     await waitFor(() => {
-      expect(mocks.updatePetProfile).toHaveBeenCalledWith(updatedPet);
+      expect(queryClient.getQueryData(gamificationProfileKeys.pet())).toEqual({
+        ...currentPet,
+        ...updatedPet,
+      });
     });
   });
 

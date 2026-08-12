@@ -35,6 +35,16 @@ class MockImage {
       this.width = 300;
       this.height = 300;
     }
+
+    if (value.endsWith('/api/v1/shop-images/bed-car.webp')) {
+      this.width = 176;
+      this.height = 88;
+    }
+
+    if (value === '/assets/bowl.webp') {
+      this.width = 100;
+      this.height = 80;
+    }
   }
 
   emitLoad() {
@@ -142,6 +152,61 @@ describe('useScene', () => {
     await loadSceneImages();
 
     expectCharacterFrame(1, 66, 87.12);
+  });
+
+  it('рисует лежанку слева, миску справа выше и питомца поверх аксессуаров', async () => {
+    mocks.usePetProfile.mockReturnValue({
+      data: {
+        happiness: 50,
+        level: 2,
+        bedImageUrl: '/api/v1/shop-images/bed-car.webp',
+        bowlImageUrl: '/assets/bowl.webp',
+      },
+    });
+    render(<SceneHarness />);
+
+    expect(MockImage.instances.map(({ src }) => src)).toEqual([
+      '/background.webp',
+      '/pet.webp',
+      '/box.webp',
+      expect.stringMatching(/^http:\/\/localhost:\d+\/api\/v1\/shop-images\/bed-car\.webp$/),
+      '/assets/bowl.webp',
+    ]);
+    await loadSceneImages();
+
+    expect(context.drawImage).toHaveBeenNthCalledWith(1, MockImage.instances[0], 0, 0, 300, 200);
+    expect(context.drawImage).toHaveBeenNthCalledWith(2, MockImage.instances[3], 10, 154, 88, 44);
+    expect(context.drawImage).toHaveBeenNthCalledWith(
+      3,
+      MockImage.instances[4],
+      234,
+      144.4,
+      52,
+      41.6,
+    );
+
+    const characterCall = context.drawImage.mock.calls[3];
+    expect(characterCall[0]).toBe(MockImage.instances[1]);
+  });
+
+  it('не загружает и не рисует отсутствующие аксессуары', async () => {
+    mocks.usePetProfile.mockReturnValue({
+      data: {
+        happiness: 50,
+        level: 2,
+        bedImageUrl: null,
+        bowlImageUrl: null,
+      },
+    });
+    render(<SceneHarness />);
+    await loadSceneImages();
+
+    expect(MockImage.instances.map(({ src }) => src)).toEqual([
+      '/background.webp',
+      '/pet.webp',
+      '/box.webp',
+    ]);
+    expect(context.drawImage).toHaveBeenCalledTimes(2);
   });
 
   it.each([

@@ -10,6 +10,8 @@ export type TPet = {
   nextLevelTargetLeaves?: number;
   levelUp?: boolean;
   chestPrice: number;
+  bowlImageUrl: string | null;
+  bedImageUrl: string | null;
   happiness: number;
   happinessMultiplier: number;
   calculatedAt: string;

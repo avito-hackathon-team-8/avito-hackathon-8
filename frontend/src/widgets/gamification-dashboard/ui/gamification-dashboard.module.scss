@@ -5,6 +5,7 @@
   grid-template:
     'tasks awards' minmax(150px, 1fr)
     'leaderboard activity' minmax(150px, 1fr)
+    'shop shop' minmax(114px, auto)
     'summary summary' minmax(114px, auto)
     'rules rules' minmax(114px, auto) / 1fr 1fr;
   gap: 6px;
@@ -15,6 +16,10 @@
     font-size: 0;
 
     visibility: hidden;
+  }
+
+  .gamificationDashboard__shop {
+    grid-area: shop;
   }
 
   .gamificationDashboard__summary {

@@ -26,6 +26,8 @@ const pet: TPet = {
   leaves: 250,
   nextLevelTargetLeaves: 500,
   chestPrice: 100,
+  bowlImageUrl: null,
+  bedImageUrl: null,
   happiness: 40,
   happinessMultiplier: 0.9,
   calculatedAt: '2026-08-12T12:52:25.179950567Z',

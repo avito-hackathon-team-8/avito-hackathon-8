@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { dailyTasksQueryKeys } from '@/entities/daily-task';
+import { shopItemsQueryKeys } from '@/entities/shop-things';
 import { API_URL } from '@/shared/config';
 import { getSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
@@ -14,7 +15,14 @@ import { usePetProfile } from './use-pet-profile';
 
 type TPetProgress = Pick<
   TPet,
-  'chestPrice' | 'leaves' | 'level' | 'levelUp' | 'name' | 'nextLevelTargetLeaves'
+  | 'bedImageUrl'
+  | 'bowlImageUrl'
+  | 'chestPrice'
+  | 'leaves'
+  | 'level'
+  | 'levelUp'
+  | 'name'
+  | 'nextLevelTargetLeaves'
 >;
 
 type TPetState = Pick<
@@ -88,7 +96,6 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
       socket.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data) as PetSocketEvent;
-          console.log(payload.event, payload.data);
 
           if (payload.event === 'PET_STATE_UPDATED') {
             void queryClient.invalidateQueries({
@@ -123,6 +130,9 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
               queryClient.invalidateQueries({
                 queryKey: dailyTasksQueryKeys.list(),
               }),
+              queryClient.invalidateQueries({
+                queryKey: shopItemsQueryKeys.list(),
+              }),
             ]);
           }
         } catch (error) {
@@ -135,12 +145,6 @@ export const usePetProfileSocket = ({ enabled }: TUsePetProfileSocketProps) => {
       };
 
       socket.onclose = (event) => {
-        console.log('Pet WebSocket закрыт', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-        });
-
         if (disposed) {
           return;
         }
