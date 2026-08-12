@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { dailyTasksQueryKeys } from '@/entities/daily-task';
+import { shopItemsQueryKeys } from '@/entities/shop-things';
 import { sessionStorageKeysMap } from '@/shared/lib';
 import { MockWebSocket } from '@/test/mock-web-socket';
 import { createQueryWrapper, createTestQueryClient } from '@/test/render-with-providers';
@@ -25,6 +26,8 @@ const pet: TPet = {
   leaves: 300,
   nextLevelTargetLeaves: 500,
   chestPrice: 100,
+  bowlImageUrl: null,
+  bedImageUrl: null,
   happiness: 50,
   happinessMultiplier: 1,
   calculatedAt: '2026-08-12T12:52:25.179950567Z',
@@ -40,6 +43,8 @@ const petProgress = {
   levelUp: false,
   name: pet.name,
   nextLevelTargetLeaves: pet.nextLevelTargetLeaves,
+  bowlImageUrl: '/api/v1/shop-images/bowl-fashionable.webp',
+  bedImageUrl: '/api/v1/shop-images/bed-car.webp',
 };
 
 describe('usePetProfileSocket', () => {
@@ -94,6 +99,7 @@ describe('usePetProfileSocket', () => {
       queryKey: gamificationProfileKeys.levels(),
     });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: dailyTasksQueryKeys.list() });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: shopItemsQueryKeys.list() });
   });
 
   it('не обновляет связанные запросы без повышения уровня', async () => {
@@ -113,7 +119,11 @@ describe('usePetProfileSocket', () => {
       });
     });
 
-    expect(mocks.updatePetProfile).toHaveBeenCalledWith({ ...pet, leaves: 350, levelUp: false });
+    expect(mocks.updatePetProfile).toHaveBeenCalledWith({
+      ...pet,
+      ...petProgress,
+      leaves: 350,
+    });
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
 

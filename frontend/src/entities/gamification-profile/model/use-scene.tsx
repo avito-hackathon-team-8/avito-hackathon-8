@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { resolveAssetUrl } from '@/shared/config';
+
 import { usePetProfile } from './use-pet-profile';
 
 interface IUseSceneParams {
@@ -29,6 +31,12 @@ const CHARACTER_FRAME_COUNT = 3;
 const CHARACTER_CONTENT_TOP_RATIO = 0.24;
 const CHARACTER_CONTENT_HEIGHT_RATIO = 0.44;
 const CHARACTER_BOTTOM_TRANSPARENT_PIXELS = [0, 2, 1] as const;
+const BED_WIDTH = 88;
+const BED_LEFT_OFFSET = 10;
+const BED_BOTTOM_OFFSET = 2;
+const BOWL_WIDTH = 52;
+const BOWL_RIGHT_OFFSET = 14;
+const BOWL_BOTTOM_OFFSET = 14;
 
 const getCharacterFrameIndex = (progress: number) => {
   if (progress >= 80) {
@@ -54,6 +62,8 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
   const { data } = usePetProfile();
   const level = data?.level;
   const happiness = data?.happiness;
+  const bedImageUrl = data?.bedImageUrl;
+  const bowlImageUrl = data?.bowlImageUrl;
 
   useEffect(() => {
     if (!level || happiness === undefined) return;
@@ -73,10 +83,12 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
     let destroyed = false;
 
     const render = async () => {
-      const [background, character, box] = await Promise.all([
+      const [background, character, box, bed, bowl] = await Promise.all([
         loadImage(backgroundSrc),
         loadImage(characterSrc),
         loadImage(boxSrc),
+        bedImageUrl ? loadImage(resolveAssetUrl(bedImageUrl)) : null,
+        bowlImageUrl ? loadImage(resolveAssetUrl(bowlImageUrl)) : null,
       ]);
 
       if (destroyed) {
@@ -94,6 +106,30 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
       ctx.clearRect(0, 0, rect.width, rect.height);
 
       ctx.drawImage(background, 0, 0, rect.width, rect.height);
+
+      if (bed) {
+        const bedHeight = bed.height * (BED_WIDTH / bed.width);
+
+        ctx.drawImage(
+          bed,
+          BED_LEFT_OFFSET,
+          rect.height - bedHeight - BED_BOTTOM_OFFSET,
+          BED_WIDTH,
+          bedHeight,
+        );
+      }
+
+      if (bowl) {
+        const bowlHeight = bowl.height * (BOWL_WIDTH / bowl.width);
+
+        ctx.drawImage(
+          bowl,
+          rect.width - BOWL_WIDTH - BOWL_RIGHT_OFFSET,
+          rect.height - bowlHeight - BOWL_BOTTOM_OFFSET,
+          BOWL_WIDTH,
+          bowlHeight,
+        );
+      }
 
       if (level >= LEVEL_FOR_OPEN_CAT) {
         const frameWidth = character.width / CHARACTER_FRAME_COUNT;
@@ -137,7 +173,7 @@ export const useScene = ({ backgroundSrc, characterSrc, boxSrc }: IUseSceneParam
     return () => {
       destroyed = true;
     };
-  }, [backgroundSrc, boxSrc, characterSrc, happiness, level]);
+  }, [backgroundSrc, bedImageUrl, bowlImageUrl, boxSrc, characterSrc, happiness, level]);
 
   return canvasRef;
 };
