@@ -554,7 +554,7 @@ paths:
       summary: Получить каталог магазина
       description: |
         Возвращает полный каталог из шести предметов: трёх мисок и трёх лежанок.
-        Для каждого предмета передаются его уникальный тип, требуемый уровень,
+        Для каждого предмета передаются его категория, требуемый уровень,
         цена в листьях, срок аренды и рассчитанный для текущего пользователя статус.
       responses:
         '200':
@@ -566,7 +566,7 @@ paths:
               example:
                 items:
                   - id: fashionable-bowl
-                    type: FASHIONABLE_BOWL
+                    category: BOWL
                     status: ACTIVE
                     title: Модная миска
                     description: 5% кэшбека листьями за покупки в категории «Одежда, обувь, аксессуары».
@@ -574,7 +574,7 @@ paths:
                     priceLeaves: 100
                     durationDays: 3
                   - id: cyber-bowl
-                    type: CYBER_BOWL
+                    category: BOWL
                     status: AVAILABLE
                     title: Кибермиска
                     description: 5% кэшбека листьями за покупки в категории «Электроника».
@@ -582,7 +582,7 @@ paths:
                     priceLeaves: 150
                     durationDays: 3
                   - id: helper-bowl
-                    type: HELPER_BOWL
+                    category: BOWL
                     status: LOCKED
                     title: Миска-помощник
                     description: 5% кэшбека листьями за покупки в категории «Услуги».
@@ -590,7 +590,7 @@ paths:
                     priceLeaves: 200
                     durationDays: 3
                   - id: trader-bed
-                    type: TRADER_BED
+                    category: BED
                     status: AVAILABLE
                     title: Лежанка торговца
                     description: Возможность получить -50% комиссии за продажу товаров на Авито.
@@ -598,7 +598,7 @@ paths:
                     priceLeaves: 300
                     durationDays: 3
                   - id: accident-free-bed
-                    type: ACCIDENT_FREE_BED
+                    category: BED
                     status: AVAILABLE
                     title: Лежанка без ДТП
                     description: Возможность получить бесплатную автотеку в качестве награды из сундука.
@@ -606,7 +606,7 @@ paths:
                     priceLeaves: 400
                     durationDays: 3
                   - id: pro-bed
-                    type: PRO_BED
+                    category: BED
                     status: LOCKED
                     title: Лежанка профи
                     description: Возможность получить бесплатную подписку Авито-профи на 3 дня из сундука.
@@ -1694,13 +1694,13 @@ components:
 
     ShopItem:
       type: object
-      required: [id, type, status, title, description, requiredLevel, priceLeaves, durationDays]
+      required: [id, category, status, title, description, requiredLevel, priceLeaves, durationDays]
       properties:
         id:
           type: string
           description: Стабильный идентификатор предмета в каталоге.
-        type:
-          $ref: '#/components/schemas/ShopItemType'
+        category:
+          $ref: '#/components/schemas/RewardCategory'
         status:
           $ref: '#/components/schemas/ShopItemStatus'
         title:

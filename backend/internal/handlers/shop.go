@@ -16,14 +16,14 @@ type shopHandler struct {
 }
 
 type shopItemResponse struct {
-	ID            string              `json:"id"`
-	Type          models.ShopItemType `json:"type"`
-	Status        shop.ItemStatus     `json:"status"`
-	Title         string              `json:"title"`
-	Description   string              `json:"description"`
-	RequiredLevel int                 `json:"requiredLevel"`
-	PriceLeaves   int64               `json:"priceLeaves"`
-	DurationDays  int                 `json:"durationDays"`
+	ID            string                `json:"id"`
+	Category      models.RewardCategory `json:"category"`
+	Status        shop.ItemStatus       `json:"status"`
+	Title         string                `json:"title"`
+	Description   string                `json:"description"`
+	RequiredLevel int                   `json:"requiredLevel"`
+	PriceLeaves   int64                 `json:"priceLeaves"`
+	DurationDays  int                   `json:"durationDays"`
 }
 
 type shopResponse struct {
@@ -103,7 +103,7 @@ func (handler *shopHandler) purchase(response http.ResponseWriter, request *http
 func responseShopItem(item shop.Item) shopItemResponse {
 	return shopItemResponse{
 		ID:            item.ID,
-		Type:          item.Type,
+		Category:      item.Category,
 		Status:        item.Status,
 		Title:         item.Title,
 		Description:   item.Description,

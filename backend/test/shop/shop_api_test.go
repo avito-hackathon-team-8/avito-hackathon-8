@@ -46,7 +46,7 @@ type shopResponse struct {
 
 type shopItem struct {
 	ID            string `json:"id"`
-	Type          string `json:"type"`
+	Category      string `json:"category"`
 	Status        string `json:"status"`
 	Title         string `json:"title"`
 	Description   string `json:"description"`
@@ -100,7 +100,7 @@ func TestShopCatalogReturnsPersonalStatuses(t *testing.T) {
 	}
 
 	fashionable := findShopItem(t, catalog.Items, fashionableBowlID)
-	if fashionable.Type != "FASHIONABLE_BOWL" || fashionable.Status != "AVAILABLE" ||
+	if fashionable.Category != "BOWL" || fashionable.Status != "AVAILABLE" ||
 		fashionable.RequiredLevel != 5 || fashionable.PriceLeaves != 100 || fashionable.DurationDays != 3 {
 		t.Fatalf("fashionable bowl = %+v", fashionable)
 	}
@@ -116,6 +116,9 @@ func TestShopCatalogReturnsPersonalStatuses(t *testing.T) {
 	}
 	if status := findShopItem(t, catalog.Items, "pro-bed").Status; status != "LOCKED" {
 		t.Fatalf("pro bed status = %q, want LOCKED", status)
+	}
+	if category := findShopItem(t, catalog.Items, "pro-bed").Category; category != "BED" {
+		t.Fatalf("pro bed category = %q, want BED", category)
 	}
 }
 
