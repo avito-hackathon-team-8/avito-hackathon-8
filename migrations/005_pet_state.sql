@@ -35,4 +35,3 @@ WHERE base_reward_leaves IS NULL;
 
 ALTER TABLE weekly_login_claims
     ALTER COLUMN base_reward_leaves SET NOT NULL;
-

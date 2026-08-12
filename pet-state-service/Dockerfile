@@ -19,4 +19,3 @@ COPY --from=build /out/pet-state-service ./pet-state-service
 EXPOSE 8092
 
 CMD ["./pet-state-service"]
-
