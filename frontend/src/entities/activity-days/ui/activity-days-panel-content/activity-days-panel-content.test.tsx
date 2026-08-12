@@ -6,6 +6,10 @@ import type { TResponseActivityDay } from '../../api/activity-day';
 
 import { ActivityDaysPanelContent } from './activity-days-panel-content';
 
+vi.mock('@/entities/gamification-profile', () => ({
+  usePetProfile: () => ({ data: undefined }),
+}));
+
 const activityDays: TResponseActivityDay = {
   claimedDaysCount: 2,
   claims: [
@@ -14,6 +18,7 @@ const activityDays: TResponseActivityDay = {
       date: '2026-08-10',
       status: 'CLAIMED',
       rewardLeaves: 10,
+      baseRewardLeaves: 10,
       claimId: 'claim-1',
     },
     {
@@ -21,6 +26,7 @@ const activityDays: TResponseActivityDay = {
       date: '2026-08-11',
       status: 'AVAILABLE',
       rewardLeaves: 20,
+      baseRewardLeaves: 20,
       claimId: 'claim-2',
     },
     {
@@ -28,6 +34,7 @@ const activityDays: TResponseActivityDay = {
       date: '2026-08-12',
       status: 'FUTURE',
       rewardLeaves: 30,
+      baseRewardLeaves: 30,
       claimId: 'claim-3',
     },
   ],

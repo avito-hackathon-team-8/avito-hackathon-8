@@ -1,7 +1,8 @@
 import { apiRequest } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 import { removeSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
-const CURRENT_USER_API = '/api/app/auth/me';
+const CURRENT_USER_API = `${API_URL}/app/auth/me`;
 
 export type User = {
   id: string;

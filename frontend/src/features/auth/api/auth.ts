@@ -1,8 +1,9 @@
 import type { User } from '@/entities/user';
 import { apiRequest } from '@/shared/api';
+import { API_URL } from '@/shared/config';
 import { removeSessionStorageValue, sessionStorageKeysMap } from '@/shared/lib';
 
-const AUTH_API = '/api/app/auth';
+const AUTH_API = `${API_URL}/app/auth`;
 
 type TAuthUserRecord = Pick<User, 'id' | 'email' | 'verified'>;
 

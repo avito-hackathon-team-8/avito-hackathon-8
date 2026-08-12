@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getPetName, updatePetName } from './pet';
+import { getPet, updatePetName } from './pet';
 
 const mocks = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -19,6 +19,13 @@ const pet = {
   leaves: 300,
   nextLevelTargetLeaves: 500,
   chestPrice: 100,
+  levelUp: false,
+  happiness: 100,
+  happinessMultiplier: 1.5,
+  calculatedAt: '2026-08-12T12:52:25.179950567Z',
+  decaysToZeroAt: '2026-08-15T12:52:15.223227999Z',
+  feedNextAvailableAt: null,
+  strokeNextAvailableAt: null,
 };
 
 describe('pet API', () => {
@@ -41,7 +48,7 @@ describe('pet API', () => {
       }),
     );
 
-    await expect(getPetName()).resolves.toEqual(pet);
+    await expect(getPet()).resolves.toEqual(pet);
     expect(mocks.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/v1\/pet$/), {
       headers: { Authorization: 'Bearer token-1' },
     });
@@ -50,7 +57,7 @@ describe('pet API', () => {
   it('выбрасывает ошибку со статусом неуспешного запроса профиля', async () => {
     mocks.fetch.mockResolvedValue(new Response(null, { status: 503 }));
 
-    await expect(getPetName()).rejects.toThrow('Ошибка запроса getPetName: 503');
+    await expect(getPet()).rejects.toThrow('Ошибка запроса getPet: 503');
   });
 
   it('обновляет имя питомца PATCH-запросом', async () => {

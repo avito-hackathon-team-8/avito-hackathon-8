@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 
+import { usePetProfile } from '@/entities/gamification-profile';
 import { formatDays } from '@/shared/lib';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
@@ -29,13 +30,16 @@ export const ActivityDaysPanelContent = ({
 }: IActivityDaysPanelContentProps) => {
   const { claimedDaysCount, claims } = data;
   const firstFutureIndex = claims.findIndex(({ status }) => status === 'FUTURE');
+  const { data: pet } = usePetProfile();
 
   const activeDay = firstFutureIndex === -1 ? claims.at(-1) : claims[firstFutureIndex - 1];
+  const bonusLeaves =
+    activeDay && pet && Math.round(activeDay.rewardLeaves - activeDay.baseRewardLeaves);
 
   return (
     <div className={styles.wrapper}>
       <ul className={styles.days}>
-        {claims.map(({ weekday, status, rewardLeaves, date }) => (
+        {claims.map(({ weekday, status, baseRewardLeaves, date }) => (
           <li key={date} className={clsx(styles.day, styles[`day_${status.toLowerCase()}`])}>
             <button
               className={styles.day__button}
@@ -49,7 +53,7 @@ export const ActivityDaysPanelContent = ({
               </time>
 
               <Typography className={styles.day__reward} variant="caption-bold" color="inherit">
-                {rewardLeaves}
+                {baseRewardLeaves}
               </Typography>
             </button>
           </li>
@@ -68,9 +72,20 @@ export const ActivityDaysPanelContent = ({
         </Button>
       )}
 
-      <Typography className={styles.info__series} variant="caption-bold">
-        Текущая серия: {formatDays(claimedDaysCount)}
-      </Typography>
+      <div className={styles.info__series}>
+        <Typography variant="caption-medium">
+          Текущая серия: {formatDays(claimedDaysCount)}
+        </Typography>
+
+        {bonusLeaves && (
+          <Typography variant="caption-medium">
+            Бонус за настроение питомца:{' '}
+            <Typography as="span" variant="caption-medium" color="green700">
+              {bonusLeaves}
+            </Typography>
+          </Typography>
+        )}
+      </div>
     </div>
   );
 };

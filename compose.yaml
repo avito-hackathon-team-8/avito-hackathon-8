@@ -2,12 +2,16 @@ services:
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    command:
+      [
+        '--config.file=/etc/prometheus/prometheus.yml',
+        '--storage.tsdb.path=/prometheus',
+      ]
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9095:9090"
+      - '9095:9090'
     depends_on:
       api-service:
         condition: service_healthy
@@ -30,9 +34,13 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1',
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -48,7 +56,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -57,7 +65,7 @@ services:
     build:
       context: .
       dockerfile: migrations/Dockerfile
-    restart: "no"
+    restart: 'no'
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
@@ -86,14 +94,21 @@ services:
       - ./config:/app/config:ro
       - ./docs:/app/docs:ro
     expose:
-      - "8090"
+      - '8090'
     depends_on:
       migrator:
         condition: service_completed_successfully
       pet-state-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8090/api/health/ready"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--quiet',
+          '--output-document=-',
+          'http://127.0.0.1:8090/api/health/ready',
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -109,14 +124,21 @@ services:
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
       PET_STATE_KAFKA_TOPIC: ${PET_STATE_KAFKA_TOPIC:-pet-state-events-v1}
     expose:
-      - "8092"
+      - '8092'
     depends_on:
       migrator:
         condition: service_completed_successfully
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8092/health/ready"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--quiet',
+          '--output-document=-',
+          'http://127.0.0.1:8092/health/ready',
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -135,12 +157,19 @@ services:
     volumes:
       - ./config:/app/config:ro
     expose:
-      - "8091"
+      - '8091'
     depends_on:
       migrator:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8091/health/ready"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--quiet',
+          '--output-document=-',
+          'http://127.0.0.1:8091/health/ready',
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -150,7 +179,7 @@ services:
       context: ./frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - '3000:80'
     depends_on:
       api-service:
         condition: service_healthy

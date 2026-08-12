@@ -13,6 +13,10 @@ vi.mock('../../model/use-activity-days-auto-panel', () => ({
   useActivityDaysAutoPanel: mocks.useActivityDaysAutoPanel,
 }));
 
+vi.mock('@/entities/gamification-profile', () => ({
+  usePetProfile: () => ({ data: undefined }),
+}));
+
 const data = {
   claimedDaysCount: 2,
   claims: [
@@ -21,6 +25,7 @@ const data = {
       date: '2026-08-11',
       status: 'AVAILABLE',
       rewardLeaves: 20,
+      baseRewardLeaves: 20,
       claimId: 'claim-2',
     },
   ],

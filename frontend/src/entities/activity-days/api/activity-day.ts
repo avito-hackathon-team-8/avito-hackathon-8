@@ -12,6 +12,7 @@ export type TActivityDay = {
   date: string;
   status: TActivityDayStatus;
   rewardLeaves: number;
+  baseRewardLeaves: number;
   claimId: string;
 };
 

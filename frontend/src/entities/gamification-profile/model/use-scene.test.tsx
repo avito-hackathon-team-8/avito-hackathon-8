@@ -16,12 +16,25 @@ class MockImage {
 
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
-  src = '';
+  private imageSrc = '';
   width = 200;
   height = 100;
 
   constructor() {
     MockImage.instances.push(this);
+  }
+
+  get src() {
+    return this.imageSrc;
+  }
+
+  set src(value: string) {
+    this.imageSrc = value;
+
+    if (value === '/pet.webp') {
+      this.width = 300;
+      this.height = 300;
+    }
   }
 
   emitLoad() {
@@ -56,6 +69,23 @@ const loadSceneImages = async () => {
   });
 };
 
+const expectCharacterFrame = (frameIndex: number, width: number, height: number) => {
+  const [, sourceX, sourceY, sourceWidth, sourceHeight, x, y, drawnWidth, drawnHeight] =
+    context.drawImage.mock.calls[1];
+
+  expect(sourceX).toBe(frameIndex * 100);
+  expect(sourceY).toBe(72);
+  expect(sourceWidth).toBe(100);
+  expect(sourceHeight).toBe(132);
+  expect(x).toBeCloseTo((300 - width) / 2);
+  const bottomTransparentPixels = [0, 2, 1][frameIndex];
+  const bottomTransparentOffset = bottomTransparentPixels * (height / sourceHeight);
+
+  expect(y).toBeCloseTo(200 - height - 8 + bottomTransparentOffset);
+  expect(drawnWidth).toBeCloseTo(width);
+  expect(drawnHeight).toBeCloseTo(height);
+};
+
 describe('useScene', () => {
   beforeEach(() => {
     MockImage.reset();
@@ -88,7 +118,9 @@ describe('useScene', () => {
   });
 
   it('рисует коробку на первом уровне', async () => {
-    mocks.usePetProfile.mockReturnValue({ data: { level: 1 } });
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness: 50, level: 1 },
+    });
     render(<SceneHarness />);
 
     expect(MockImage.instances.map(({ src }) => src)).toEqual([
@@ -102,20 +134,39 @@ describe('useScene', () => {
     expect(context.drawImage).toHaveBeenNthCalledWith(2, MockImage.instances[2], 110, 160, 80, 40);
   });
 
-  it('рисует питомца со второго уровня с начальным масштабом', async () => {
-    mocks.usePetProfile.mockReturnValue({ data: { level: 2 } });
+  it('рисует второй кадр питомца для временного прогресса 50', async () => {
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness: 50, level: 2 },
+    });
     render(<SceneHarness />);
     await loadSceneImages();
 
-    expect(context.drawImage).toHaveBeenNthCalledWith(2, MockImage.instances[1], 114, 172, 72, 36);
+    expectCharacterFrame(1, 66, 87.12);
   });
 
-  it('ограничивает рост питомца максимальным масштабом десятого уровня', async () => {
-    mocks.usePetProfile.mockReturnValue({ data: { level: 15 } });
+  it.each([
+    [34, 0],
+    [35, 1],
+    [79, 1],
+    [80, 2],
+  ])('выбирает кадр %s для счастья %s', async (happiness, frameIndex) => {
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness, level: 2 },
+    });
     render(<SceneHarness />);
     await loadSceneImages();
 
-    expect(context.drawImage).toHaveBeenNthCalledWith(2, MockImage.instances[1], 102, 160, 96, 48);
+    expectCharacterFrame(frameIndex, 66, 87.12);
+  });
+
+  it('ограничивает рост питомца масштабом 0.75 на десятом уровне', async () => {
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness: 100, level: 15 },
+    });
+    render(<SceneHarness />);
+    await loadSceneImages();
+
+    expectCharacterFrame(2, 90, 118.8);
   });
 
   it('масштабирует canvas под devicePixelRatio', async () => {
@@ -123,7 +174,9 @@ describe('useScene', () => {
       configurable: true,
       value: 2,
     });
-    mocks.usePetProfile.mockReturnValue({ data: { level: 2 } });
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness: 50, level: 2 },
+    });
     const { container } = render(<SceneHarness />);
     await loadSceneImages();
     const canvas = container.querySelector('canvas');
@@ -134,7 +187,9 @@ describe('useScene', () => {
   });
 
   it('не рисует изображения, загрузившиеся после unmount', async () => {
-    mocks.usePetProfile.mockReturnValue({ data: { level: 2 } });
+    mocks.usePetProfile.mockReturnValue({
+      data: { happiness: 50, level: 2 },
+    });
     const { unmount } = render(<SceneHarness />);
 
     unmount();
