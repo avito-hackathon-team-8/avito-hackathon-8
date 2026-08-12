@@ -105,25 +105,63 @@ func TestCareRejectsFullWithoutCooldown(t *testing.T) {
 	}
 }
 
+func TestGetClearsExpiredCooldowns(t *testing.T) {
+	service, db, userID, now := newTestService(t)
+
+	expired := now.Add(-time.Minute)
+	active := now.Add(time.Hour)
+
+	if err := db.Create(&PetState{UserID: userID, Happiness: 40, UpdatedAt: now}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.Create([]PetStateAction{
+		{UserID: userID, ActionType: CareStroke, NextAvailableAt: expired},
+		{UserID: userID, ActionType: CareFeed, NextAvailableAt: active},
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot, err := service.Get(context.Background(), userID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if snapshot.StrokeNextAvailableAt != nil {
+		t.Fatalf("expired stroke cooldown = %v, want nil", snapshot.StrokeNextAvailableAt)
+	}
+
+	if snapshot.FeedNextAvailableAt == nil || !snapshot.FeedNextAvailableAt.Equal(active) {
+		t.Fatalf("active feed cooldown = %v, want %v", snapshot.FeedNextAvailableAt, active)
+	}
+}
+
 func TestCareIdempotencyReturnsOriginalResult(t *testing.T) {
 	service, db, userID, now := newTestService(t)
+
 	if err := db.Create(&PetState{UserID: userID, Happiness: 40, UpdatedAt: now}).Error; err != nil {
 		t.Fatal(err)
 	}
 
 	first, err := service.Care(context.Background(), userID, CareStroke, "request-1")
+
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	second, err := service.Care(context.Background(), userID, CareStroke, "request-1")
+
 	if err != nil || second.Happiness != first.Happiness {
 		t.Fatalf("second = %+v, err = %v, want %+v", second, err, first)
 	}
 
 	var outboxCount int64
+
 	if err := db.Model(&OutboxEvent{}).Count(&outboxCount).Error; err != nil || outboxCount != 1 {
 		t.Fatalf("outbox count = %d, err = %v", outboxCount, err)
 	}
+
 	if _, err := service.Care(context.Background(), userID, CareFeed, "request-1"); !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("conflicting care error = %v", err)
 	}

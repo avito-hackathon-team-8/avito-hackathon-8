@@ -40,7 +40,7 @@ ps:
 	docker compose ps
 
 migrate:
-	docker compose run --rm migrator
+	docker compose run --build --rm migrator
 
 test-api-service-e2e:
 	cd api-service && RUN_API_SERVICE_E2E=1 go test ./test/...
