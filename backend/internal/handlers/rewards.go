@@ -17,35 +17,21 @@ type rewardHandler struct {
 }
 
 type rewardResponse struct {
-	ID           string                `json:"id"`
-	Title        string                `json:"title"`
-	Category     models.RewardCategory `json:"category"`
-	CategoryName string                `json:"categoryName"`
-	Source       models.RewardSource   `json:"source"`
-	Active       bool                  `json:"active"`
-	Status       string                `json:"status"`
-	ExpiresAt    time.Time             `json:"expiresAt"`
-	AwardedAt    time.Time             `json:"awardedAt"`
-	RedeemedAt   *time.Time            `json:"redeemedAt"`
+	ID         string               `json:"id"`
+	Title      string               `json:"title"`
+	Source     models.RewardSource  `json:"source"`
+	Active     bool                 `json:"active"`
+	Status     string               `json:"status"`
+	ExpiresAt  time.Time            `json:"expiresAt"`
+	RedeemedAt *time.Time           `json:"redeemedAt"`
+	ItemType   *models.ShopItemType `json:"itemType"`
 }
 
-type rewardDetailsResponse struct {
-	ID           string                `json:"id"`
-	Title        string                `json:"title"`
-	Category     models.RewardCategory `json:"category"`
-	CategoryName string                `json:"categoryName"`
-	Source       models.RewardSource   `json:"source"`
-	Active       bool                  `json:"active"`
-	Status       string                `json:"status"`
-	ExpiresAt    time.Time             `json:"expiresAt"`
-	AwardedAt    time.Time             `json:"awardedAt"`
-	RedeemedAt   *time.Time            `json:"redeemedAt"`
-}
+type rewardDetailsResponse = rewardResponse
 
 type rewardGroupResponse struct {
-	Category     models.RewardCategory `json:"category"`
-	CategoryName string                `json:"categoryName"`
-	Items        []rewardResponse      `json:"items"`
+	Category models.RewardCategory `json:"category"`
+	Items    []rewardResponse      `json:"items"`
 }
 
 type rewardsResponse struct {
@@ -91,9 +77,8 @@ func (handler *rewardHandler) list(response http.ResponseWriter, request *http.R
 		}
 
 		groups = append(groups, rewardGroupResponse{
-			Category:     category,
-			CategoryName: rewardCategoryName(category),
-			Items:        items,
+			Category: category,
+			Items:    items,
 		})
 	}
 
@@ -173,48 +158,27 @@ func (handler *rewardHandler) redeem(response http.ResponseWriter, request *http
 
 func responseReward(reward models.Reward, status string) rewardResponse {
 	return rewardResponse{
-		ID:           reward.ID.String(),
-		Title:        reward.Title,
-		Category:     reward.Category,
-		CategoryName: rewardCategoryName(reward.Category),
-		Source:       reward.Source,
-		Active:       status == rewards.StatusActive,
-		Status:       status,
-		ExpiresAt:    reward.ExpiresAt,
-		AwardedAt:    reward.CreatedAt,
-		RedeemedAt:   reward.RedeemedAt,
+		ID:         reward.ID.String(),
+		Title:      reward.Title,
+		Source:     reward.Source,
+		Active:     status == rewards.StatusActive,
+		Status:     status,
+		ExpiresAt:  reward.ExpiresAt,
+		RedeemedAt: reward.RedeemedAt,
+		ItemType:   reward.ItemType,
 	}
 }
 
 func responseRewardDetails(reward models.Reward, status string) rewardDetailsResponse {
 	return rewardDetailsResponse{
-		ID:           reward.ID.String(),
-		Title:        reward.Title,
-		Category:     reward.Category,
-		CategoryName: rewardCategoryName(reward.Category),
-		Source:       reward.Source,
-		Active:       status == rewards.StatusActive,
-		Status:       status,
-		ExpiresAt:    reward.ExpiresAt,
-		AwardedAt:    reward.CreatedAt,
-		RedeemedAt:   reward.RedeemedAt,
-	}
-}
-
-func rewardCategoryName(category models.RewardCategory) string {
-	switch category {
-	case models.RewardCategoryAvitoBonus:
-		return "Бонусы Авито"
-	case models.RewardCategoryFreeDelivery:
-		return "Бесплатная доставка"
-	case models.RewardCategoryFreePromotion:
-		return "Бесплатное продвижение товаров"
-	case models.RewardCategoryPromotionDiscount:
-		return "Скидки на продвижение"
-	case models.RewardCategoryDeliveryDiscount:
-		return "Скидки на доставку"
-	default:
-		return string(category)
+		ID:         reward.ID.String(),
+		Title:      reward.Title,
+		Source:     reward.Source,
+		Active:     status == rewards.StatusActive,
+		Status:     status,
+		ExpiresAt:  reward.ExpiresAt,
+		RedeemedAt: reward.RedeemedAt,
+		ItemType:   reward.ItemType,
 	}
 }
 
