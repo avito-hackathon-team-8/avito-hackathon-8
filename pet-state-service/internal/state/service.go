@@ -314,6 +314,10 @@ func snapshot(tx *gorm.DB, petState PetState, now time.Time) (Snapshot, error) {
 	}
 
 	for _, action := range actions {
+		if !action.NextAvailableAt.After(now) {
+			continue
+		}
+
 		value := action.NextAvailableAt.UTC()
 
 		switch action.ActionType {
