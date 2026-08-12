@@ -4,7 +4,7 @@ Frontend игрового слоя для Авито. Пользователь �
 
 ## Запуск
 
-Для локального запуска нужны Node.js 24+, npm и работающий backend на `http://localhost:8090`.
+Для локального запуска нужны Node.js 24+, npm и работающий api-service на `http://localhost:8090`.
 
 ```bash
 cd frontend
@@ -12,7 +12,7 @@ npm i
 npm run dev
 ```
 
-Приложение откроется на `http://localhost:5173`. Vite проксирует HTTP- и WebSocket-запросы с `/api` на backend.
+Приложение откроется на `http://localhost:5173`. Vite проксирует HTTP- и WebSocket-запросы с `/api` на api-service.
 
 При необходимости адрес API можно переопределить:
 

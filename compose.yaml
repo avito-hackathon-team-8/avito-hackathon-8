@@ -1,4 +1,42 @@
 services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9095:9090"
+    depends_on:
+      api-service:
+        condition: service_healthy
+      pet-state-service:
+        condition: service_healthy
+      daily-tasks-service:
+        condition: service_healthy
+
+  kafka:
+    image: apache/kafka:4.0.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -32,15 +70,18 @@ services:
       postgres:
         condition: service_healthy
 
-  backend:
+  api-service:
     build:
-      context: ./backend
+      context: ./api-service
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable&statement_timeout=${DB_STATEMENT_TIMEOUT_MS:-15000}&lock_timeout=${DB_LOCK_TIMEOUT_MS:-5000}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      PUPPETEER_INTERNAL_URL: ${PUPPETEER_INTERNAL_URL:-http://puppeteer:8091}
+      DAILY_TASKS_INTERNAL_URL: ${DAILY_TASKS_INTERNAL_URL:-http://daily-tasks-service:8091}
+      PET_STATE_INTERNAL_URL: ${PET_STATE_INTERNAL_URL:-http://pet-state-service:8092}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
+      PET_STATE_KAFKA_TOPIC: ${PET_STATE_KAFKA_TOPIC:-pet-state-events-v1}
       LEVEL_REWARDS_CONFIG: /app/config/level_rewards.yaml
     volumes:
       - ./config:/app/config:ro
@@ -50,21 +91,46 @@ services:
     depends_on:
       migrator:
         condition: service_completed_successfully
+      pet-state-service:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8090/api/health"]
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8090/api/health/ready"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  puppeteer:
+  pet-state-service:
     build:
-      context: ./puppeteer
+      context: ./pet-state-service
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable&statement_timeout=${DB_STATEMENT_TIMEOUT_MS:-15000}&lock_timeout=${DB_LOCK_TIMEOUT_MS:-5000}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      PUPPETEER_POLL_INTERVAL: 10m
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
+      PET_STATE_KAFKA_TOPIC: ${PET_STATE_KAFKA_TOPIC:-pet-state-events-v1}
+    expose:
+      - "8092"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8092/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  daily-tasks-service:
+    build:
+      context: ./daily-tasks-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable&statement_timeout=${DB_STATEMENT_TIMEOUT_MS:-15000}&lock_timeout=${DB_LOCK_TIMEOUT_MS:-5000}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      DAILY_TASKS_POLL_INTERVAL: 10m
       TASK_DEFINITIONS_CONFIG: /app/config/task_definitions.yaml
       LEADERBOARD_REWARDS_CONFIG: /app/config/leaderboard_rewards.yaml
     volumes:
@@ -72,12 +138,10 @@ services:
     expose:
       - "8091"
     depends_on:
-      backend:
-        condition: service_healthy
       migrator:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8091/health"]
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8091/health/ready"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -89,10 +153,11 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      backend:
+      api-service:
         condition: service_healthy
-      puppeteer:
+      daily-tasks-service:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  prometheus_data:

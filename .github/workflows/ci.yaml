@@ -123,6 +123,33 @@ jobs:
           working-directory: puppeteer
           args: --config ../.golangci.yaml
 
+  pet-state-service:
+    name: Pet state service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pet-state-service
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+      - name: Установить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: pet-state-service/go.sum
+      - name: Проверить тесты и конкурентность
+        run: go test -race ./...
+      - name: Проверить код
+        run: go vet ./...
+      - name: Проверить форматирование
+        run: test -z "$(gofmt -l .)"
+      - name: Запустить линтер
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12.2
+          working-directory: pet-state-service
+          args: --config ../.golangci.yaml
+
   repository:
     name: Repository checks
     runs-on: ubuntu-latest
