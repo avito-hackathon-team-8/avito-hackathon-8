@@ -27,20 +27,10 @@ type rewardResponse struct {
 	ExpiresAt    time.Time             `json:"expiresAt"`
 	AwardedAt    time.Time             `json:"awardedAt"`
 	RedeemedAt   *time.Time            `json:"redeemedAt"`
+	ItemType     *models.ShopItemType  `json:"itemType"`
 }
 
-type rewardDetailsResponse struct {
-	ID           string                `json:"id"`
-	Title        string                `json:"title"`
-	Category     models.RewardCategory `json:"category"`
-	CategoryName string                `json:"categoryName"`
-	Source       models.RewardSource   `json:"source"`
-	Active       bool                  `json:"active"`
-	Status       string                `json:"status"`
-	ExpiresAt    time.Time             `json:"expiresAt"`
-	AwardedAt    time.Time             `json:"awardedAt"`
-	RedeemedAt   *time.Time            `json:"redeemedAt"`
-}
+type rewardDetailsResponse = rewardResponse
 
 type rewardGroupResponse struct {
 	Category     models.RewardCategory `json:"category"`
@@ -183,6 +173,7 @@ func responseReward(reward models.Reward, status string) rewardResponse {
 		ExpiresAt:    reward.ExpiresAt,
 		AwardedAt:    reward.CreatedAt,
 		RedeemedAt:   reward.RedeemedAt,
+		ItemType:     reward.ItemType,
 	}
 }
 
@@ -198,6 +189,7 @@ func responseRewardDetails(reward models.Reward, status string) rewardDetailsRes
 		ExpiresAt:    reward.ExpiresAt,
 		AwardedAt:    reward.CreatedAt,
 		RedeemedAt:   reward.RedeemedAt,
+		ItemType:     reward.ItemType,
 	}
 }
 
@@ -213,6 +205,10 @@ func rewardCategoryName(category models.RewardCategory) string {
 		return "Скидки на продвижение"
 	case models.RewardCategoryDeliveryDiscount:
 		return "Скидки на доставку"
+	case models.RewardCategoryBowl:
+		return "Миски"
+	case models.RewardCategoryBed:
+		return "Лежанки"
 	default:
 		return string(category)
 	}

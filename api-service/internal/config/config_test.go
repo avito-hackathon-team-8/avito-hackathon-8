@@ -22,6 +22,8 @@ func TestLoadParsesDatabasePool(t *testing.T) {
 	t.Setenv("DB_MAX_IDLE_CONNS", "12")
 	t.Setenv("DB_CONN_MAX_LIFETIME", "45m")
 	t.Setenv("DB_CONN_MAX_IDLE_TIME", "3m")
+	t.Setenv("SHOP_ITEMS_CONFIG", "/tmp/test-shop-items.yaml")
+	t.Setenv("SHOP_IMAGES_DIR", "/tmp/test-shop-images")
 
 	cfg, err := Load()
 
@@ -31,5 +33,13 @@ func TestLoadParsesDatabasePool(t *testing.T) {
 
 	if cfg.DatabasePool.MaxOpenConns != 40 || cfg.DatabasePool.MaxIdleConns != 12 || cfg.DatabasePool.ConnMaxLifetime.String() != "45m0s" || cfg.DatabasePool.ConnMaxIdleTime.String() != "3m0s" {
 		t.Fatalf("database pool = %+v", cfg.DatabasePool)
+	}
+
+	if cfg.ShopItemsConfig != "/tmp/test-shop-items.yaml" {
+		t.Fatalf("shop items config = %q", cfg.ShopItemsConfig)
+	}
+
+	if cfg.ShopImagesDir != "/tmp/test-shop-images" {
+		t.Fatalf("shop images dir = %q", cfg.ShopImagesDir)
 	}
 }

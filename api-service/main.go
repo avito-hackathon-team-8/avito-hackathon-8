@@ -21,6 +21,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/petstate"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/reward_catalog"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/shop"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/tasks"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/weekly_login"
 )
@@ -61,6 +62,14 @@ func main() {
 	authService := auth.NewService(db, cfg.Auth)
 	dailyReportService := daily_report.NewService(db)
 	rewardService := rewards.NewService(db, dailyReportService)
+	shopCatalog, err := shop.LoadCatalog(cfg.ShopItemsConfig)
+
+	if err != nil {
+		log.Printf("load shop catalog: %v", err)
+
+		return
+	}
+
 	rewardCatalog, err := reward_catalog.Load(cfg.LevelRewardsConfig)
 
 	if err != nil {
@@ -70,6 +79,7 @@ func main() {
 	}
 
 	petService := pet.NewService(db, dailyReportService)
+	shopService := shop.NewService(db, dailyReportService, petService, rewardService, shopCatalog)
 	petStateService, err := petstate.NewService(cfg.PetStateInternalURL, cfg.InternalServiceToken, cfg.KafkaBrokers, cfg.PetStateKafkaTopic, cfg.APIServiceInstanceID, metrics)
 
 	if err != nil {
@@ -91,7 +101,8 @@ func main() {
 	router := handlers.NewRouter(db, authService, rewardService,
 		taskService, petService, levelClaimsService,
 		weeklyLoginService, eventService, dailyReportService,
-		cfg.InternalServiceToken, chestService, petStateService, metrics,
+		cfg.InternalServiceToken, chestService, shopService, petStateService, metrics,
+		cfg.ShopImagesDir,
 		handlers.HTTPReadinessChecker{URL: cfg.DailyTasksInternalURL, Client: &http.Client{Timeout: 750 * time.Millisecond}})
 
 	root := http.NewServeMux()

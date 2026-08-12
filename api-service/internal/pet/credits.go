@@ -247,7 +247,7 @@ func validCreditReason(reason models.LeafTransactionReason) bool {
 }
 
 func validDebitReason(reason models.LeafTransactionReason) bool {
-	return reason == models.LeafReasonChestPurchase
+	return reason == models.LeafReasonChestPurchase || reason == models.LeafReasonShopPurchase
 }
 
 func LevelCost(level int) int64 {

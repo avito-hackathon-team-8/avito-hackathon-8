@@ -30,6 +30,8 @@ var CategoryOrder = []models.RewardCategory{
 	models.RewardCategoryFreePromotion,
 	models.RewardCategoryPromotionDiscount,
 	models.RewardCategoryDeliveryDiscount,
+	models.RewardCategoryBowl,
+	models.RewardCategoryBed,
 }
 
 type Grant struct {
@@ -39,6 +41,7 @@ type Grant struct {
 	ExpiresAt      time.Time
 	LevelRewardID  *uuid.UUID
 	ChestOpeningID *uuid.UUID
+	ItemType       *models.ShopItemType
 }
 
 type DailyReportNotifier interface {
@@ -78,6 +81,7 @@ func (service *Service) GrantTx(ctx context.Context, tx *gorm.DB, userID uuid.UU
 		UserID:         userID,
 		LevelRewardID:  grant.LevelRewardID,
 		ChestOpeningID: grant.ChestOpeningID,
+		ItemType:       grant.ItemType,
 		Title:          grant.Title,
 		Category:       grant.Category,
 		Source:         grant.Source,
@@ -154,7 +158,7 @@ func (service *Service) Redeem(ctx context.Context, userID, rewardID uuid.UUID) 
 
 		now := service.now().UTC()
 
-		if reward.RedeemedAt != nil || !reward.ExpiresAt.After(now) {
+		if reward.Source == models.RewardSourceShop || reward.RedeemedAt != nil || !reward.ExpiresAt.After(now) {
 			return ErrRewardNotFound
 		}
 
@@ -186,7 +190,7 @@ func validCategory(category models.RewardCategory) bool {
 
 func validSource(source models.RewardSource) bool {
 	switch source {
-	case models.RewardSourceLevel, models.RewardSourceChest, models.RewardSourceLeaderboard:
+	case models.RewardSourceLevel, models.RewardSourceChest, models.RewardSourceLeaderboard, models.RewardSourceShop:
 		return true
 	default:
 		return false
@@ -200,11 +204,13 @@ func validGrantOrigin(grant Grant) bool {
 
 	switch grant.Source {
 	case models.RewardSourceLevel:
-		return grant.LevelRewardID != nil && grant.ChestOpeningID == nil
+		return grant.LevelRewardID != nil && grant.ChestOpeningID == nil && grant.ItemType == nil
 	case models.RewardSourceChest:
-		return grant.LevelRewardID == nil && grant.ChestOpeningID != nil
+		return grant.LevelRewardID == nil && grant.ChestOpeningID != nil && grant.ItemType == nil
 	case models.RewardSourceLeaderboard:
-		return grant.LevelRewardID == nil && grant.ChestOpeningID == nil
+		return grant.LevelRewardID == nil && grant.ChestOpeningID == nil && grant.ItemType == nil
+	case models.RewardSourceShop:
+		return grant.LevelRewardID == nil && grant.ChestOpeningID == nil && grant.ItemType != nil
 	default:
 		return false
 	}

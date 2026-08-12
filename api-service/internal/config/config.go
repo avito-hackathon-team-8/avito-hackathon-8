@@ -23,6 +23,8 @@ type Config struct {
 	InternalServiceToken  string
 	DailyTasksInternalURL string
 	LevelRewardsConfig    string
+	ShopItemsConfig       string
+	ShopImagesDir         string
 	PetStateInternalURL   string
 	KafkaBrokers          []string
 	PetStateKafkaTopic    string
@@ -55,6 +57,8 @@ func Load() (Config, error) {
 		InternalServiceToken:  os.Getenv("INTERNAL_SERVICE_TOKEN"),
 		DailyTasksInternalURL: env("DAILY_TASKS_INTERNAL_URL", "http://daily-tasks-service:8091"),
 		LevelRewardsConfig:    env("LEVEL_REWARDS_CONFIG", "../config/level_rewards.yaml"),
+		ShopItemsConfig:       env("SHOP_ITEMS_CONFIG", "../config/shop_items.yaml"),
+		ShopImagesDir:         env("SHOP_IMAGES_DIR", "../shop-images"),
 		PetStateInternalURL:   env("PET_STATE_INTERNAL_URL", "http://pet-state-service:8092"),
 		KafkaBrokers:          strings.Split(env("KAFKA_BROKERS", "kafka:9092"), ","),
 		PetStateKafkaTopic:    env("PET_STATE_KAFKA_TOPIC", "pet-state-events-v1"),

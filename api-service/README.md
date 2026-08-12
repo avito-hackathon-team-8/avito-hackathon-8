@@ -35,6 +35,8 @@ JWT_TTL=24h
 HTTP_ADDRESS=:8090
 DAILY_TASKS_INTERNAL_URL=http://daily-tasks-service:8091
 LEVEL_REWARDS_CONFIG=/app/config/level_rewards.yaml
+SHOP_ITEMS_CONFIG=/app/config/shop_items.yaml
+SHOP_IMAGES_DIR=/app/shop-images
 ```
 
 ## Технологии
@@ -65,6 +67,7 @@ api-service/
     pet/              # питомец, уровни, листья и награды уровней
     reward_catalog/   # загрузка каталога наград из YAML
     rewards/          # выдача и использование персональных наград
+    shop/             # каталог, статусы и аренда предметов магазина
     tasks/            # ежедневные задания и их прогресс
     testutil/         # тестовые заглушки
     weekly_login/     # недельная активность и награды за вход
