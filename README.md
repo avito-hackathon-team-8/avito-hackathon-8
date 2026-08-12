@@ -45,7 +45,7 @@ frontend (React/Vite, :3000)
         v
 api-service (Go API, :8090) -----> postgres (:5432)
         |       ^                    ^
-        |       | Kafka events      |
+        |       | Kafka events       |
         |       +---- kafka (:9092)-+
         |                            |
         +---- internal HTTP ----> pet-state-service (:8092)
