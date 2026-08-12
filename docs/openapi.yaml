@@ -256,13 +256,15 @@ paths:
         после каждого повышения. Новый пользователь начинает с питомцем 1-го уровня,
         0 листьями и пустым именем.
         Если `name` пустое, клиент показывает пользователю форму первичной настройки имени.
+        Поля `bowlImageUrl` и `bedImageUrl` содержат URL изображений активных предметов
+        соответствующих категорий либо `null`, если предмет не активен.
       responses:
         '200':
           description: Текущее состояние питомца.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PetProgress'
+                $ref: '#/components/schemas/PetProfile'
               examples:
                 default:
                   value:
@@ -272,6 +274,8 @@ paths:
                     nextLevelTargetLeaves: 230
                     chestPrice: 200
                     levelUp: false
+                    bowlImageUrl: /api/v1/shop-images/bowl-fashionable.webp
+                    bedImageUrl: /api/v1/shop-images/bed-car.webp
                 uninitialized:
                   value:
                     name: ''
@@ -280,6 +284,8 @@ paths:
                     nextLevelTargetLeaves: 100
                     chestPrice: 200
                     levelUp: false
+                    bowlImageUrl: null
+                    bedImageUrl: null
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -383,7 +389,9 @@ paths:
         сразу отправляет полный снимок прогресса и повторяет его после каждого изменения
         баланса листьев или уровня питомца. Листья после повышения сгорают, а сервер
         пересчитывает уровень по оставшемуся балансу. Поле `levelUp` сообщает, повысился
-        ли уровень именно в операции, вызвавшей это сообщение.
+        ли уровень именно в операции, вызвавшей это сообщение. Поля `bowlImageUrl` и
+        `bedImageUrl` содержат URL изображений активных миски и лежанки либо `null`,
+        если предмет соответствующей категории не активен.
 
         Для подключения используется тот же JWT Bearer-токен, что и для HTTP API.
         Браузерные клиенты могут передать его в query-параметре `token`, поскольку
@@ -1745,7 +1753,60 @@ components:
           enum: [PET_PROGRESS_UPDATED]
           description: Тип события WebSocket.
         data:
-          $ref: '#/components/schemas/PetProgress'
+          $ref: '#/components/schemas/PetProgressEventData'
+
+    PetProfile:
+      allOf:
+        - $ref: '#/components/schemas/PetProgress'
+        - type: object
+          required: [bowlImageUrl, bedImageUrl]
+          properties:
+            bowlImageUrl:
+              type: string
+              nullable: true
+              description: URL изображения активной миски; null, если миска не активна.
+            bedImageUrl:
+              type: string
+              nullable: true
+              description: URL изображения активной лежанки; null, если лежанка не активна.
+
+    PetProgressEventData:
+      type: object
+      required: [name, level, leaves, nextLevelTargetLeaves, chestPrice, levelUp, bowlImageUrl, bedImageUrl]
+      properties:
+        name:
+          type: string
+          minLength: 0
+          maxLength: 35
+          description: Имя питомца текущего пользователя. Пустая строка означает, что имя ещё не задано.
+        level:
+          $ref: '#/components/schemas/PetLevel'
+        leaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Текущий остаток листьев.
+        nextLevelTargetLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Стоимость следующего уровня; 0 на максимальном уровне.
+        chestPrice:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Стоимость открытия сундука в листьях.
+        levelUp:
+          type: boolean
+          description: Равно true, если операция, вызвавшая сообщение, повысила уровень питомца.
+        bowlImageUrl:
+          type: string
+          nullable: true
+          description: URL изображения активной миски; null, если миска не активна.
+        bedImageUrl:
+          type: string
+          nullable: true
+          description: URL изображения активной лежанки; null, если лежанка не активна.
 
     AuthResponse:
       type: object

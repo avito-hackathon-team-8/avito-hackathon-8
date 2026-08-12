@@ -133,6 +133,39 @@ func TestListCalculatesItemStatusesForCurrentUser(t *testing.T) {
 	}
 }
 
+func TestActiveImageURLsReturnsOnlyActiveBowlAndBedImages(t *testing.T) {
+	service, db, user, _ := testService(t)
+	if err := db.Create(&models.Pet{UserID: user.ID, Level: 10, Leaves: 1000}).Error; err != nil {
+		t.Fatalf("create pet: %v", err)
+	}
+
+	empty, err := service.ActiveImageURLs(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("ActiveImageURLs() without purchases error = %v", err)
+	}
+	if empty.Bowl != nil || empty.Bed != nil {
+		t.Fatalf("ActiveImageURLs() without purchases = %+v, want nil URLs", empty)
+	}
+
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
+		t.Fatalf("purchase bowl: %v", err)
+	}
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "trader-bed"}); err != nil {
+		t.Fatalf("purchase bed: %v", err)
+	}
+
+	images, err := service.ActiveImageURLs(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("ActiveImageURLs() error = %v", err)
+	}
+	if images.Bowl == nil || *images.Bowl != "/api/v1/shop-images/bowl-fashionable.webp" {
+		t.Fatalf("bowl image = %v, want fashionable bowl image URL", images.Bowl)
+	}
+	if images.Bed == nil || *images.Bed != "/api/v1/shop-images/bed-sell.webp" {
+		t.Fatalf("bed image = %v, want trader bed image URL", images.Bed)
+	}
+}
+
 func TestPurchaseExtendsSameItemAndRequiresReplacementConfirmation(t *testing.T) {
 	service, db, user, _ := testService(t)
 	if err := db.Create(&models.Pet{UserID: user.ID, Level: 7, Leaves: 600}).Error; err != nil {

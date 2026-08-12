@@ -66,6 +66,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 		auth:        authService,
 		pets:        petService,
 		levelClaims: levelClaimsService,
+		shop:        shopService,
 		state:       petStateService,
 		metrics:     metrics,
 	}

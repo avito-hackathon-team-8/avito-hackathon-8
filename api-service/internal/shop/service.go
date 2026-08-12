@@ -35,6 +35,11 @@ type Item struct {
 	Status ItemStatus
 }
 
+type ActiveImageURLs struct {
+	Bowl *string
+	Bed  *string
+}
+
 type Purchase struct {
 	ItemID             string
 	ConfirmReplacement bool
@@ -59,6 +64,37 @@ func NewService(db *gorm.DB, dailyReport DailyReportNotifier, petService *pet.Se
 
 func (service *Service) Items() []models.ShopItem {
 	return service.catalog.Items()
+}
+
+func (service *Service) ActiveImageURLs(ctx context.Context, userID uuid.UUID) (ActiveImageURLs, error) {
+	var activeRewards []models.Reward
+	if err := service.db.WithContext(ctx).
+		Where("user_id = ? AND source = ? AND expires_at > ?", userID, models.RewardSourceShop, service.now().UTC()).
+		Find(&activeRewards).Error; err != nil {
+		return ActiveImageURLs{}, fmt.Errorf("load active shop rewards: %w", err)
+	}
+
+	var result ActiveImageURLs
+	for _, reward := range activeRewards {
+		if reward.ItemType == nil {
+			continue
+		}
+
+		item, exists := service.catalog.ItemByType(*reward.ItemType)
+		if !exists {
+			continue
+		}
+
+		imageURL := item.ImageURL
+		switch reward.Category {
+		case models.RewardCategoryBowl:
+			result.Bowl = &imageURL
+		case models.RewardCategoryBed:
+			result.Bed = &imageURL
+		}
+	}
+
+	return result, nil
 }
 
 func (service *Service) List(ctx context.Context, userID uuid.UUID) ([]Item, error) {

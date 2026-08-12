@@ -35,23 +35,27 @@ type apiResult struct {
 }
 
 type petResponse struct {
-	Name                  string `json:"name"`
-	Level                 int    `json:"level"`
-	Leaves                int64  `json:"leaves"`
-	NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
-	ChestPrice            int64  `json:"chestPrice"`
-	LevelUp               bool   `json:"levelUp"`
+	Name                  string  `json:"name"`
+	Level                 int     `json:"level"`
+	Leaves                int64   `json:"leaves"`
+	NextLevelTargetLeaves int64   `json:"nextLevelTargetLeaves"`
+	ChestPrice            int64   `json:"chestPrice"`
+	LevelUp               bool    `json:"levelUp"`
+	BowlImageURL          *string `json:"bowlImageUrl"`
+	BedImageURL           *string `json:"bedImageUrl"`
 }
 
 type petProgressEvent struct {
 	Event string `json:"event"`
 	Data  struct {
-		Name                  string `json:"name"`
-		Level                 int    `json:"level"`
-		Leaves                int64  `json:"leaves"`
-		NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
-		ChestPrice            int64  `json:"chestPrice"`
-		LevelUp               bool   `json:"levelUp"`
+		Name                  string  `json:"name"`
+		Level                 int     `json:"level"`
+		Leaves                int64   `json:"leaves"`
+		NextLevelTargetLeaves int64   `json:"nextLevelTargetLeaves"`
+		ChestPrice            int64   `json:"chestPrice"`
+		LevelUp               bool    `json:"levelUp"`
+		BowlImageURL          *string `json:"bowlImageUrl"`
+		BedImageURL           *string `json:"bedImageUrl"`
 	} `json:"data"`
 }
 
@@ -78,10 +82,19 @@ func TestPetLifecycleAndTaskRewardWebSocket(t *testing.T) {
 	if _, exists := initial.json["targetLeaves"]; exists {
 		t.Fatalf("initial pet response contains removed targetLeaves field: %s", initial.body)
 	}
+	if _, exists := initial.json["bowlImageUrl"]; !exists {
+		t.Fatalf("initial pet response does not contain bowlImageUrl: %s", initial.body)
+	}
+	if _, exists := initial.json["bedImageUrl"]; !exists {
+		t.Fatalf("initial pet response does not contain bedImageUrl: %s", initial.body)
+	}
 	var pet petResponse
 	decode(t, initial.body, &pet)
 	if pet.Name != "" || pet.Level != 10 || pet.Leaves != 1000 || pet.NextLevelTargetLeaves != 0 || pet.ChestPrice != 200 || pet.LevelUp {
 		t.Fatalf("initial pet = %+v, want empty level-ten pet with 1000 leaves", pet)
+	}
+	if pet.BowlImageURL != nil || pet.BedImageURL != nil {
+		t.Fatalf("initial pet images = bowl %v, bed %v; want nil", pet.BowlImageURL, pet.BedImageURL)
 	}
 
 	invalidName := request(t, cfg, token, http.MethodPatch, "/api/v1/pet", map[string]any{"name": "   "})
