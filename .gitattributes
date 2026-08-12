@@ -1,0 +1,8 @@
+# Scripts mounted into Linux containers must keep Unix line endings.
+*.sh text eol=lf
+
+# SQL is executed inside the PostgreSQL container as well.
+*.sql text eol=lf
+
+# Windows command scripts should be checked out with native CRLF endings.
+*.bat text eol=crlf
