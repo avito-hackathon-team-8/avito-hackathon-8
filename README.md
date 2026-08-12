@@ -43,26 +43,35 @@
 frontend (React/Vite, :3000)
         |
         v
-backend (Go API, :8090) -----> postgres (:5432)
-        |
-        +---- internal HTTP ----> puppeteer (:8091)
-                                  задания, лидерборд, health-check
+api-service (Go API, :8090) -----> postgres (:5432)
+        |       ^                    ^
+        |       | Kafka events      |
+        |       +---- kafka (:9092)-+
+        |                            |
+        +---- internal HTTP ----> pet-state-service (:8092)
+        |                            счастье, уход, outbox
+        +---- internal HTTP ----> daily-tasks-service (:8091)
+                                     задания, лидерборд
 ```
 
 
 | Сервис | Назначение | Локальный адрес |
 | --- | --- | --- |
 | `postgres` | хранение пользователей, питомцев, листьев, заданий и наград | `postgres:5432` внутри сети Compose |
-| `backend` | HTTP API, авторизация и игровые операции | `http://localhost:8090` |
-| `puppeteer` | фоновые задания: назначение задач и расчёт лидерборда | `http://localhost:8091` |
+| `api-service` | HTTP API, авторизация и игровые операции | `http://localhost:8090` |
+| `kafka` | доставка событий изменения состояния питомца | `kafka:9092` внутри сети Compose |
+| `pet-state-service` | счастье питомца, уход, cooldown и transactional outbox | `http://pet-state-service:8092` внутри сети Compose |
+| `daily-tasks-service` | фоновые задания: назначение задач и расчёт лидерборда | `http://localhost:8091` |
 | `frontend` | веб-интерфейс | `http://localhost:3000` |
 
 ## Технологии
 
 - React 19, TypeScript, Vite и React Router;
 - TanStack Query, WebSocket и SCSS Modules;
-- Go 1.25 и стандартный `net/http` для backend и worker-сервиса;
+- Go 1.25 и стандартный `net/http` для api-service и worker-сервиса;
 - PostgreSQL 17, GORM и версионированные SQL-миграции;
+- Apache Kafka;
+- Prometheus;
 - JWT-авторизация и YAML-конфигурация игровых механик;
 - Docker Compose;
 - ESLint, Stylelint, Prettier, golangci-lint и GitHub Actions.
@@ -72,8 +81,8 @@ backend (Go API, :8090) -----> postgres (:5432)
 | Документ | Содержание |
 | --- | --- |
 | [Frontend](frontend/README.md) | локальный запуск, стек, структура, WebSocket и кеширование |
-| [Backend](backend/README.md) | запуск API, конфигурация, структура, авторизация, WebSocket и тесты |
-| [Puppeteer](puppeteer/README.md) | запуск worker-сервиса, фоновые задачи, внутренний API и тесты |
+| [API service](api-service/README.md) | запуск API, конфигурация, структура, авторизация, WebSocket и тесты |
+| [Daily Tasks service](daily-tasks-service/README.md) | запуск worker-сервиса, фоновые задачи, внутренний API и тесты |
 | [API](docs/api.md) | краткий справочник endpoint-ов и правила авторизации |
 | [OpenAPI](docs/openapi.yaml) | полный машиночитаемый контракт API |
 | [Продуктовая логика](docs/logic.md) | игровые механики и правила MVP |
@@ -131,7 +140,7 @@ make up
 ```
 
 Эта команда применяет непримененные версионированные миграции, собирает
-Docker-образы и запускает PostgreSQL, backend, puppeteer и frontend.
+Docker-образы и запускает PostgreSQL, api-service, daily-tasks-service и frontend.
 
 Миграции находятся в `migrations/` и применяются отдельным контейнером
 `migrator`. Для ручного применения миграций используйте:
@@ -157,18 +166,18 @@ make build    # пересборка образов
 
 ## Разработка и тесты
 
-### Backend
+### API service
 
 ```sh
-cd backend
+cd api-service
 go test ./...
 go test -race ./...
 ```
 
-### Puppeteer
+### Daily Tasks service
 
 ```sh
-cd puppeteer
+cd daily-tasks-service
 go test ./...
 ```
 
@@ -188,14 +197,20 @@ npm run lint:styles
 make lint
 ```
 
-`make lint` запускает frontend-проверки и golangci-lint для backend в Docker.
+`make lint` запускает frontend-проверки и golangci-lint для api-service в Docker.
 
-При таком режиме backend должен быть доступен на `http://localhost:8090`.
+При таком режиме api-service должен быть доступен на `http://localhost:8090`.
+
+## Метрики и производительность
+
+API service, pet-state-service и Daily Tasks service публикуют Prometheus-метрики на
+`/metrics`. Docker Compose запускает Prometheus на `http://localhost:9095` с
+конфигурацией `monitoring/prometheus.yml`.
 
 ## Структура проекта
 
 ```text
-backend/
+api-service/
   main.go                  # сборка зависимостей и HTTP-сервер
   internal/
     auth/                  # OTP, JWT и аутентификация
@@ -213,8 +228,9 @@ backend/
     tasks/                 # чтение и выдача дневных заданий
     testutil/              # тестовые заглушки и вспомогательный код
     weekly_login/          # недельные награды за вход
-puppeteer/
+daily-tasks-service/
   main.go                  # фоновые jobs и health endpoint
+pet-state-service/         # счастье, уход, cooldown и Kafka outbox
 config/
   task_definitions.yaml    # варианты заданий
   leaderboard_rewards.yaml # награды топ-3
@@ -236,7 +252,7 @@ compose.yaml               # локальный production-like запуск
 - Сформировали продуктовую концепцию, определили ценность продукта, целевую аудиторию и ключевые пользовательские сценарии.
 - Определили состав MVP и приоритеты разработки первой версии.
 - Совместно проработали UX/UI и основные пользовательские сценарии.
-- Согласовали архитектуру взаимодействия frontend и backend, API и модели данных.
+- Согласовали архитектуру взаимодействия frontend и api-service, API и модели данных.
 
 ### Ломаев Игорь — Frontend
 
@@ -248,26 +264,26 @@ compose.yaml               # локальный production-like запуск
 - Реализовал получение наград, открытие сундуков и актуализацию связанных данных после действий пользователя.
 - Добавил состояния загрузки и ошибок, уведомления, адаптивную вёрстку и корректное отображение текстов.
 
-### Болдаков Владимир — Backend
+### Болдаков Владимир — API service
 
 - Проработал продуктовую логику, игровую экономику и основные игровые механики приложения.
-- Спроектировал API и реализовал backend-логику ежедневных заданий.
+- Спроектировал API и реализовал api-service-логику ежедневных заданий.
 - Реализовал механику питомца, повышение уровня, начисление игровой валюты и выдачу наград.
 - Разработал механику покупки и открытия сундуков, транзакционную обработку операций и конфигурацию наград через YAML.
 - Реализовал систему прогресса заданий, обработку их выполнения и начисление наград.
 - Добавил unit- и e2e-тесты, проводил рефакторинг и устранял ошибки в реализации API и сборке проекта.
 
-### Грицун Артем — Backend
+### Грицун Артем — API service
 
-- Спроектировал техническую архитектуру проекта на базе модульного Go-backend, PostgreSQL и отдельного worker-сервиса для фоновых задач.
-- Настроил Docker-инфраструктуру проекта и единый запуск frontend, backend, worker-сервиса и PostgreSQL через Docker Compose.
-- Реализовал базовые backend-механизмы: JWT-авторизацию, инфраструктуру заданий и наград, лидерборд и транзакционный учёт игровой валюты.
+- Спроектировал техническую архитектуру проекта на базе модульного Go-api-service, PostgreSQL и отдельного worker-сервиса для фоновых задач.
+- Настроил Docker-инфраструктуру проекта и единый запуск frontend, api-service, worker-сервиса и PostgreSQL через Docker Compose.
+- Реализовал базовые api-service-механизмы: JWT-авторизацию, инфраструктуру заданий и наград, лидерборд и транзакционный учёт игровой валюты.
 - Подготовил OpenAPI-спецификацию и подключил Swagger UI для документации и тестирования API.
 - Разработал систему версионируемых миграций PostgreSQL и настроил ограничения целостности данных.
 - Реализовал обработку ошибок и корректное завершение сервисов.
 - Настроил CI-проверки, автоматический запуск тестов и линтеров для контроля качества проекта.
 
-### Лафуткин Андрей — Backend
+### Лафуткин Андрей — API service
 
 - Реализовал механику еженедельной активности и выдачи награды за регулярные входы пользователя.
 - Спроектировал API и разработал сервис еженедельной активности, включая расчёт серии входов и корректную обработку дат.

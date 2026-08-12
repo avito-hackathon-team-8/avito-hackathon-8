@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down restart build logs ps migrate test-backend-e2e lint lint-frontend lint-backend lint-puppeteer branch feature bugfix chore
+.PHONY: help up down restart build logs ps migrate test-api-service-e2e lint lint-frontend lint-api-service lint-daily-tasks-service lint-pet-state branch feature bugfix chore
 
 help:
 	@printf '%s\n' \
@@ -13,7 +13,7 @@ help:
 		'make logs                 Follow service logs' \
 		'make ps                   Show service status' \
 		'make migrate              Apply database migrations' \
-		'make test-backend-e2e     Run backend end-to-end tests' \
+		'make test-api-service-e2e     Run api-service end-to-end tests' \
 		'make lint                 Run all checks' \
 		'make feature NAME=login   Create feature/login' \
 		'make bugfix NAME=api      Create bugfix/api' \
@@ -42,19 +42,23 @@ ps:
 migrate:
 	docker compose run --rm migrator
 
-test-backend-e2e:
-	cd backend && RUN_BACKEND_E2E=1 go test ./test/...
+test-api-service-e2e:
+	cd api-service && RUN_API_SERVICE_E2E=1 go test ./test/...
 
-lint: lint-frontend lint-backend lint-puppeteer
+lint: lint-frontend lint-api-service lint-daily-tasks-service
+	$(MAKE) lint-pet-state
 
 lint-frontend:
 	docker run --rm -v "$(CURDIR)/frontend:/app" -v /app/node_modules -w /app node:24-alpine sh -c "npm ci && npm run lint && npm run lint:styles"
 
-lint-backend:
-	docker run --rm -v "$(CURDIR):/app:ro" -w /app/backend golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
+lint-api-service:
+	docker run --rm -v "$(CURDIR):/app:ro" -w /app/api-service golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
 
-lint-puppeteer:
-	docker run --rm -v "$(CURDIR):/app:ro" -w /app/puppeteer golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
+lint-daily-tasks-service:
+	docker run --rm -v "$(CURDIR):/app:ro" -w /app/daily-tasks-service golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
+
+lint-pet-state:
+	docker run --rm -v "$(CURDIR):/app:ro" -w /app/pet-state-service golangci/golangci-lint:v2.12.2-alpine golangci-lint run --config ../.golangci.yaml
 
 branch:
 	@test -n "$(TYPE)" || (printf '%s\n' 'TYPE is required' && exit 1)

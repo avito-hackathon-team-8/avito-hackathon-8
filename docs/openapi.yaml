@@ -38,6 +38,21 @@ security:
   - bearerAuth: []
 
 paths:
+  /metrics:
+    get:
+      tags: [Состояние сервиса]
+      operationId: getMetrics
+      summary: Получить внутренние Prometheus-метрики
+      description: Endpoint предназначен для внутренней сети и не должен публиковаться наружу без сетевого ограничения.
+      security: []
+      responses:
+        '200':
+          description: Метрики в Prometheus text exposition format.
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /api/health:
     get:
       tags: [Состояние сервиса]
@@ -58,6 +73,38 @@ paths:
                     service: go-api
                     status: ready
                     time: '2026-08-04T12:00:00Z'
+        '503':
+          description: PostgreSQL, Kafka или pet-state-service временно не готовы.
+
+  /api/health/live:
+    get:
+      tags: [Состояние сервиса]
+      operationId: getLiveness
+      summary: Проверить работу процесса API
+      security: []
+      responses:
+        '200':
+          description: Процесс API работает.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/health/ready:
+    get:
+      tags: [Состояние сервиса]
+      operationId: getReadiness
+      summary: Проверить готовность API и зависимостей
+      security: []
+      responses:
+        '200':
+          description: API, PostgreSQL, Kafka и pet-state-service готовы.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Одна из критичных зависимостей не готова.
 
   /api/app/auth/request-otp:
     post:
@@ -287,6 +334,42 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /api/v1/pet/care:
+    post:
+      tags: [Питомец]
+      operationId: careForPet
+      summary: Позаботиться о питомце
+      description: Повышает счастье питомца выбранным действием. Каждое действие имеет отдельный cooldown 6 часов.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          description: Ключ длиной до 128 символов. Повтор с тем же ключом и действием возвращает первоначальный результат.
+          schema:
+            type: string
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetCareRequest'
+      responses:
+        '200':
+          description: Актуальное состояние счастья после действия.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetState'
+        '400':
+          description: Неизвестный тип взаимодействия.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Счастье заполнено, действие находится на cooldown либо ключ уже использован для другого действия.
+        '503':
+          description: Сервис состояния временно недоступен.
 
   /api/v1/pet/ws:
     get:
@@ -1073,6 +1156,8 @@ paths:
       description: |
         Возвращает семь дней текущей UTC-недели с понедельника по воскресенье,
         статус каждого дня, доступную награду и число уже полученных наград.
+        Если pet-state-service временно недоступен, используется базовая награда
+        и множитель 1.0.
       responses:
         '200':
           description: Состояние наград за текущую неделю.
@@ -1146,6 +1231,8 @@ paths:
         Получает одну награду за текущую дату сервера в UTC.
         Награда не выдаётся, если активность за сегодня не подтверждена.
         Повторный запрос в тот же день возвращает ошибку. Тело запроса не требуется.
+        Если pet-state-service временно недоступен, начисляется базовая награда
+        с множителем 1.0.
       responses:
         '200':
           description: Награда за текущий день получена.
@@ -1263,7 +1350,7 @@ components:
           description: Имя сервиса.
         status:
           type: string
-          enum: [ready]
+          enum: [alive, ready, not_ready]
           description: Текущее состояние готовности сервиса.
         time:
           type: string
@@ -1348,9 +1435,46 @@ components:
           maxLength: 35
           description: Новое имя питомца без начальных и конечных пробелов.
 
+    PetCareRequest:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [STROKE, FEED]
+
+    PetState:
+      type: object
+      required: [happiness, calculatedAt, decaysToZeroAt, happinessMultiplier]
+      properties:
+        happiness:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        calculatedAt:
+          type: string
+          format: date-time
+        decaysToZeroAt:
+          type: string
+          format: date-time
+        strokeNextAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        feedNextAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        happinessMultiplier:
+          type: number
+          minimum: 0.5
+          maximum: 1.5
+
     PetProgress:
       type: object
-      required: [name, level, leaves, nextLevelTargetLeaves, chestPrice, levelUp]
+      required: [name, level, leaves, nextLevelTargetLeaves, chestPrice, levelUp, happiness, calculatedAt, decaysToZeroAt, happinessMultiplier]
       description: |
         Прогресс рассчитывается сервером по оставшемуся балансу листьев.
         Листья тратятся на повышение уровня по такой шкале стоимости:
@@ -1387,6 +1511,28 @@ components:
           description: |
             Для REST-ответов всегда false. Для WebSocket равно true, если операция,
             вызвавшая сообщение, повысила уровень питомца.
+        happiness:
+          type: number
+          minimum: 0
+          maximum: 100
+        calculatedAt:
+          type: string
+          format: date-time
+        decaysToZeroAt:
+          type: string
+          format: date-time
+        strokeNextAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        feedNextAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        happinessMultiplier:
+          type: number
+          minimum: 0.5
+          maximum: 1.5
 
     PetProgressUpdatedEvent:
       type: object
@@ -1971,7 +2117,7 @@ components:
     WeeklyLoginDay:
       type: object
       additionalProperties: false
-      required: [weekday, date, status, rewardLeaves]
+      required: [weekday, date, status, rewardLeaves, baseRewardLeaves, happinessMultiplier]
       properties:
         weekday:
           type: integer
@@ -1989,6 +2135,14 @@ components:
           format: int32
           minimum: 0
           description: Равно 0, если награда для дня недоступна.
+        baseRewardLeaves:
+          type: integer
+          format: int32
+          minimum: 0
+        happinessMultiplier:
+          type: number
+          minimum: 0.5
+          maximum: 1.5
         claimId:
           type: string
           format: uuid
@@ -2014,7 +2168,7 @@ components:
     WeeklyLoginClaim:
       type: object
       additionalProperties: false
-      required: [id, weekday, date, status, rewardLeaves]
+      required: [id, weekday, date, status, rewardLeaves, baseRewardLeaves, happinessMultiplier]
       properties:
         id:
           type: string
@@ -2035,6 +2189,14 @@ components:
           type: integer
           format: int32
           minimum: 1
+        baseRewardLeaves:
+          type: integer
+          format: int32
+          minimum: 1
+        happinessMultiplier:
+          type: number
+          minimum: 0.5
+          maximum: 1.5
 
     WeeklyLoginClaimResponse:
       type: object
