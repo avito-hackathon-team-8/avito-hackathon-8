@@ -90,6 +90,7 @@ services:
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
       PET_STATE_KAFKA_TOPIC: ${PET_STATE_KAFKA_TOPIC:-pet-state-events-v1}
       LEVEL_REWARDS_CONFIG: /app/config/level_rewards.yaml
+      SHOP_ITEMS_CONFIG: /app/config/shop_items.yaml
     volumes:
       - ./config:/app/config:ro
       - ./docs:/app/docs:ro

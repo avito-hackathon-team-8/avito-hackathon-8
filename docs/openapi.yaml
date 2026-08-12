@@ -3,8 +3,8 @@ info:
   title: Коробыш API
   version: 1.0.0
   description: |
-    Контракт API для персональных наград, ежемесячного рейтинга, еженедельных
-    наград за вход, ежедневных заданий и ежедневной сводки.
+    Контракт API для персональных наград, магазина мисок и лежанок, ежемесячного
+    рейтинга, еженедельных наград за вход, ежедневных заданий и ежедневной сводки.
 
     Правила работы со временем:
     - все временные метки передаются в формате RFC3339 и часовом поясе UTC;
@@ -26,6 +26,8 @@ tags:
     description: Имя, уровень и текущий прогресс питомца авторизованного пользователя.
   - name: Награды
     description: Все персональные бонусы пользователя, их состояния и использование.
+  - name: Магазин
+    description: Каталог мисок и лежанок, доступных пользователю для временной аренды за листья.
   - name: Рейтинг
     description: Ежемесячный рейтинг игроков, рассчитанный по последнему опубликованному ежедневному снимку.
   - name: Еженедельный вход
@@ -599,6 +601,7 @@ paths:
                     expiresAt: '2026-11-07T12:00:00Z'
                     awardedAt: '2026-08-07T12:00:00Z'
                     redeemedAt: null
+                    itemType: null
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -630,6 +633,141 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/shop:
+    get:
+      tags: [Магазин]
+      operationId: getShop
+      summary: Получить каталог магазина
+      description: |
+        Возвращает полный каталог из шести предметов: трёх мисок и трёх лежанок.
+        Для каждого предмета передаются его категория, требуемый уровень,
+        цена в листьях, срок аренды и рассчитанный для текущего пользователя статус.
+      responses:
+        '200':
+          description: Каталог предметов магазина и активные аренды пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopResponse'
+              example:
+                items:
+                  - id: fashionable-bowl
+                    category: BOWL
+                    status: ACTIVE
+                    title: Модная миска
+                    description: 5% кэшбека листьями за покупки в категории «Одежда, обувь, аксессуары».
+                    requiredLevel: 5
+                    priceLeaves: 100
+                    durationDays: 3
+                  - id: cyber-bowl
+                    category: BOWL
+                    status: AVAILABLE
+                    title: Кибермиска
+                    description: 5% кэшбека листьями за покупки в категории «Электроника».
+                    requiredLevel: 7
+                    priceLeaves: 150
+                    durationDays: 3
+                  - id: helper-bowl
+                    category: BOWL
+                    status: LOCKED
+                    title: Миска-помощник
+                    description: 5% кэшбека листьями за покупки в категории «Услуги».
+                    requiredLevel: 10
+                    priceLeaves: 200
+                    durationDays: 3
+                  - id: trader-bed
+                    category: BED
+                    status: AVAILABLE
+                    title: Лежанка торговца
+                    description: Возможность получить -50% комиссии за продажу товаров на Авито.
+                    requiredLevel: 5
+                    priceLeaves: 300
+                    durationDays: 3
+                  - id: accident-free-bed
+                    category: BED
+                    status: AVAILABLE
+                    title: Лежанка без ДТП
+                    description: Возможность получить бесплатную автотеку в качестве награды из сундука.
+                    requiredLevel: 7
+                    priceLeaves: 400
+                    durationDays: 3
+                  - id: pro-bed
+                    category: BED
+                    status: LOCKED
+                    title: Лежанка профи
+                    description: Возможность получить бесплатную подписку Авито-профи на 3 дня из сундука.
+                    requiredLevel: 10
+                    priceLeaves: 500
+                    durationDays: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/shop/{itemId}/purchase:
+    post:
+      tags: [Магазин]
+      operationId: purchaseShopItem
+      summary: Купить или арендовать предмет магазина
+      description: |
+        Списывает листья и активирует предмет на срок из каталога. Повторная
+        покупка того же предмета продлевает текущий срок действия. Покупка
+        другого предмета того же типа заменяет активный предмет без компенсации;
+        для такой операции клиент обязан передать `confirmReplacement: true`.
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: Идентификатор предмета из каталога магазина.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopPurchaseRequest'
+            example:
+              confirmReplacement: false
+      responses:
+        '204':
+          description: Предмет куплен и активирован.
+        '400':
+          description: Некорректный идентификатор предмета или тело запроса.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Предмет магазина не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Недостаточный уровень/баланс или не подтверждена замена активного предмета.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                levelRequired:
+                  value:
+                    code: SHOP_LEVEL_REQUIRED
+                    message: Для покупки требуется более высокий уровень питомца.
+                insufficientLeaves:
+                  value:
+                    code: INSUFFICIENT_LEAVES
+                    message: Недостаточно листьев для покупки предмета.
+                replacementConfirmationRequired:
+                  value:
+                    code: SHOP_REPLACEMENT_CONFIRMATION_REQUIRED
+                    message: Подтвердите замену активного предмета этого типа.
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/app/rewards:
     get:
       tags: [Награды]
@@ -637,8 +775,10 @@ paths:
       summary: Получить все награды
       description: |
         Возвращает полную историю персональных наград пользователя, включая
-        активные, использованные и просроченные. Награды сгруппированы по категориям,
-        внутри группы сначала отображаются выданные позднее.
+        активные, использованные и просроченные. Сюда также входят купленные в
+        магазине миски и лежанки: для них `itemType` заполнен, а `expiresAt`
+        содержит конец аренды. Награды сгруппированы по категориям; внутри группы
+        сначала отображаются выданные позднее.
       responses:
         '200':
           description: Все награды пользователя, сгруппированные по категориям.
@@ -663,6 +803,7 @@ paths:
                             expiresAt: '2026-09-04T12:00:00Z'
                             awardedAt: '2026-08-05T12:00:00Z'
                             redeemedAt: null
+                            itemType: null
                       - category: FREE_DELIVERY
                         categoryName: Бесплатная доставка
                         items:
@@ -676,6 +817,35 @@ paths:
                             expiresAt: '2026-08-20T12:00:00Z'
                             awardedAt: '2026-08-05T12:00:00Z'
                             redeemedAt: '2026-08-05T13:30:00Z'
+                            itemType: null
+                      - category: BOWL
+                        categoryName: Миски
+                        items:
+                          - id: f2323232-2323-4232-8232-232323232323
+                            title: Кибермиска
+                            category: BOWL
+                            categoryName: Миски
+                            source: SHOP
+                            active: true
+                            status: ACTIVE
+                            expiresAt: '2026-08-14T12:00:00Z'
+                            awardedAt: '2026-08-11T12:00:00Z'
+                            redeemedAt: null
+                            itemType: CYBER_BOWL
+                      - category: BED
+                        categoryName: Лежанки
+                        items:
+                          - id: b2323232-2323-4232-8232-232323232323
+                            title: Лежанка торговца
+                            category: BED
+                            categoryName: Лежанки
+                            source: SHOP
+                            active: true
+                            status: ACTIVE
+                            expiresAt: '2026-08-10T12:00:00Z'
+                            awardedAt: '2026-08-07T12:00:00Z'
+                            redeemedAt: null
+                            itemType: TRADER_BED
         '401':
           description: JWT отсутствует или недействителен.
           content:
@@ -745,6 +915,7 @@ paths:
       description: |
         Помечает активную награду текущего пользователя как использованную.
         Награда остаётся в общем списке со статусом `REDEEMED` и `active: false`.
+        Аренды с источником `SHOP` применяются автоматически и этим методом не используются.
       parameters:
         - name: rewardId
           in: path
@@ -778,7 +949,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthErrorResponse'
         '404':
-          description: Активная награда не найдена, уже использована или просрочена.
+          description: Активная награда не найдена, уже использована/просрочена либо относится к аренде из магазина.
           content:
             application/json:
               schema:
@@ -1575,11 +1746,13 @@ components:
         - FREE_PROMOTION
         - PROMOTION_DISCOUNT
         - DELIVERY_DISCOUNT
+        - BOWL
+        - BED
 
     RewardSource:
       type: string
       description: Игровое событие, за которое выдана награда.
-      enum: [LEVEL, CHEST, LEADERBOARD]
+      enum: [LEVEL, CHEST, LEADERBOARD, SHOP]
 
     RewardStatus:
       type: string
@@ -1588,7 +1761,7 @@ components:
 
     RewardItem:
       type: object
-      required: [id, title, category, categoryName, source, active, status, expiresAt, awardedAt, redeemedAt]
+      required: [id, title, category, categoryName, source, active, status, expiresAt, awardedAt, redeemedAt, itemType]
       properties:
         id:
           type: string
@@ -1623,6 +1796,13 @@ components:
           format: date-time
           nullable: true
           description: Время использования в UTC или null, если награда ещё не использована.
+        itemType:
+          $ref: '#/components/schemas/ShopItemType'
+          nullable: true
+          description: |
+            Тип предмета магазина для награды-аренды. Для обычных бонусных наград
+            равно null. Для мисок и лежанок всегда заполнено; срок аренды передаётся
+            в `expiresAt`.
 
     RewardGroup:
       type: object
@@ -1665,6 +1845,82 @@ components:
           type: string
           format: date-time
           description: Время использования награды в UTC.
+
+    ShopItemType:
+      type: string
+      description: Тип предмета питомца в магазине.
+      enum:
+        - FASHIONABLE_BOWL
+        - CYBER_BOWL
+        - HELPER_BOWL
+        - TRADER_BED
+        - ACCIDENT_FREE_BED
+        - PRO_BED
+
+    ShopItemStatus:
+      type: string
+      description: |
+        Рассчитанное сервером состояние предмета для текущего пользователя:
+        - `ACTIVE` — предмет сейчас применён;
+        - `LOCKED` — уровень питомца ниже `requiredLevel`;
+        - `AVAILABLE` — предмет не применён и доступен для покупки.
+
+        Если предмет применён, `ACTIVE` имеет приоритет над остальными статусами.
+        После окончания аренды предмет перестаёт быть `ACTIVE`; статус снова
+        рассчитывается по текущему уровню питомца.
+      enum: [ACTIVE, LOCKED, AVAILABLE]
+
+    ShopItem:
+      type: object
+      required: [id, category, status, title, description, requiredLevel, priceLeaves, durationDays]
+      properties:
+        id:
+          type: string
+          description: Стабильный идентификатор предмета в каталоге.
+        category:
+          $ref: '#/components/schemas/RewardCategory'
+        status:
+          $ref: '#/components/schemas/ShopItemStatus'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        requiredLevel:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 10
+          description: Минимальный уровень питомца для покупки.
+        priceLeaves:
+          type: integer
+          format: int64
+          minimum: 0
+        durationDays:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Срок аренды в днях с момента покупки.
+
+    ShopResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ShopItem'
+
+    ShopPurchaseRequest:
+      type: object
+      properties:
+        confirmReplacement:
+          type: boolean
+          default: false
+          description: Подтверждает замену уже активного предмета того же типа.
 
     LevelRewardStatus:
       type: string
