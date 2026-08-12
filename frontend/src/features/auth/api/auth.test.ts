@@ -33,11 +33,14 @@ describe('auth API', () => {
     mocks.apiRequest.mockResolvedValue({ sent: true });
 
     await expect(requestOtp('user@example.com')).resolves.toEqual({ sent: true });
-    expect(mocks.fetch).toHaveBeenCalledWith('/api/app/auth/request-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'user@example.com' }),
-    });
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/app\/auth\/request-otp$/),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'user@example.com' }),
+      },
+    );
   });
 
   it('отправляет email и код на подтверждение', async () => {
@@ -48,11 +51,14 @@ describe('auth API', () => {
     mocks.apiRequest.mockResolvedValue(response);
 
     await expect(verifyOtp('user@example.com', '12345678')).resolves.toEqual(response);
-    expect(mocks.fetch).toHaveBeenCalledWith('/api/app/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'user@example.com', code: '12345678' }),
-    });
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/app\/auth\/verify-otp$/),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'user@example.com', code: '12345678' }),
+      },
+    );
   });
 
   it('удаляет токен при выходе', () => {

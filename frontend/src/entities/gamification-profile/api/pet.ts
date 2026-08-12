@@ -10,15 +10,21 @@ export type TPet = {
   nextLevelTargetLeaves?: number;
   levelUp?: boolean;
   chestPrice: number;
+  happiness: number;
+  happinessMultiplier: number;
+  calculatedAt: string;
+  decaysToZeroAt: string;
+  feedNextAvailableAt: string | null;
+  strokeNextAvailableAt: string | null;
 };
 
-export const getPetName = async (): Promise<TPet> => {
-  const response = await fetch(`${API_URL}/${API_ROUTE_PROFILE.petName}`, {
+export const getPet = async (): Promise<TPet> => {
+  const response = await fetch(`${API_URL}/${API_ROUTE_PROFILE.pet}`, {
     headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error(`Ошибка запроса getPetName: ${response.status}`);
+    throw new Error(`Ошибка запроса getPet: ${response.status}`);
   }
 
   return await response.json();
@@ -26,7 +32,7 @@ export const getPetName = async (): Promise<TPet> => {
 
 export const updatePetName = async (name: string): Promise<TPet> => {
   return await apiRequest(
-    fetch(`${API_URL}/${API_ROUTE_PROFILE.petName}`, {
+    fetch(`${API_URL}/${API_ROUTE_PROFILE.pet}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

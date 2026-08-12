@@ -25,6 +25,21 @@ const pet: TPet = {
   leaves: 300,
   nextLevelTargetLeaves: 500,
   chestPrice: 100,
+  happiness: 50,
+  happinessMultiplier: 1,
+  calculatedAt: '2026-08-12T12:52:25.179950567Z',
+  decaysToZeroAt: '2026-08-15T12:52:15.223227999Z',
+  feedNextAvailableAt: null,
+  strokeNextAvailableAt: null,
+};
+
+const petProgress = {
+  chestPrice: pet.chestPrice,
+  leaves: pet.leaves,
+  level: pet.level,
+  levelUp: false,
+  name: pet.name,
+  nextLevelTargetLeaves: pet.nextLevelTargetLeaves,
 };
 
 describe('usePetProfileSocket', () => {
@@ -67,11 +82,14 @@ describe('usePetProfileSocket', () => {
     act(() => {
       MockWebSocket.instances[0].emitMessage({
         event: 'PET_PROGRESS_UPDATED',
-        data: pet,
+        data: petProgress,
       });
     });
 
-    expect(mocks.updatePetProfile).toHaveBeenCalledWith(pet);
+    expect(mocks.updatePetProfile).toHaveBeenCalledWith({
+      ...pet,
+      ...petProgress,
+    });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: gamificationProfileKeys.levels(),
     });
@@ -91,11 +109,40 @@ describe('usePetProfileSocket', () => {
     act(() => {
       MockWebSocket.instances[0].emitMessage({
         event: 'PET_PROGRESS_UPDATED',
-        data: { ...pet, leaves: 350, levelUp: false },
+        data: { ...petProgress, leaves: 350 },
       });
     });
 
     expect(mocks.updatePetProfile).toHaveBeenCalledWith({ ...pet, leaves: 350, levelUp: false });
     expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('ревалидирует профиль при обновлении состояния питомца', async () => {
+    sessionStorage.setItem(sessionStorageKeysMap.authToken, 'token-1');
+    const queryClient = createTestQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue();
+    renderHook(() => usePetProfileSocket({ enabled: true }), {
+      wrapper: createQueryWrapper(queryClient),
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+
+    act(() => {
+      MockWebSocket.instances[0].emitMessage({
+        event: 'PET_STATE_UPDATED',
+        data: {
+          calculatedAt: '2026-08-12T13:12:40.413394178Z',
+          decaysToZeroAt: '2026-08-15T12:52:15.223228Z',
+          feedNextAvailableAt: null,
+          happiness: 99.53,
+          happinessMultiplier: 1.495,
+          strokeNextAvailableAt: null,
+        },
+      });
+    });
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: gamificationProfileKeys.pet(),
+    });
+    expect(mocks.updatePetProfile).not.toHaveBeenCalled();
   });
 });

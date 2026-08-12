@@ -18,6 +18,10 @@ vi.mock('../../model/use-activity-days', () => ({
   useActivityDays: mocks.useActivityDays,
 }));
 
+vi.mock('@/entities/gamification-profile', () => ({
+  usePetProfile: () => ({ data: undefined }),
+}));
+
 type BottomPanelStubProps = Pick<BottomPanelProps, 'children' | 'onClick' | 'renderTrigger'>;
 
 vi.mock('@/shared/ui/bottom-panel', () => ({
@@ -37,6 +41,7 @@ const week: TResponseActivityDay = {
       date: '2026-08-11',
       status: 'AVAILABLE',
       rewardLeaves: 20,
+      baseRewardLeaves: 20,
       claimId: 'claim-2',
     },
   ],

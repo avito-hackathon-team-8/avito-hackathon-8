@@ -37,6 +37,12 @@ const pet: TPet = {
   leaves: 500,
   nextLevelTargetLeaves: 0,
   chestPrice: 100,
+  happiness: 50,
+  happinessMultiplier: 1,
+  calculatedAt: '2026-08-12T12:52:25.179950567Z',
+  decaysToZeroAt: '2026-08-15T12:52:15.223227999Z',
+  feedNextAvailableAt: null,
+  strokeNextAvailableAt: null,
 };
 
 const reward: TReward = {

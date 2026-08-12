@@ -31,6 +31,7 @@ const week: TResponseActivityDay = {
       date: '2026-08-10',
       status: 'CLAIMED',
       rewardLeaves: 10,
+      baseRewardLeaves: 10,
       claimId: 'claim-1',
     },
     {
@@ -38,6 +39,7 @@ const week: TResponseActivityDay = {
       date: '2026-08-11',
       status: 'AVAILABLE',
       rewardLeaves: 20,
+      baseRewardLeaves: 20,
       claimId: 'claim-2',
     },
   ],

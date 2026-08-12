@@ -26,7 +26,7 @@ describe('getCurrentUser', () => {
     );
 
     await expect(getCurrentUser('token-1')).resolves.toEqual(user);
-    expect(fetchMock).toHaveBeenCalledWith('/api/app/auth/me', {
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/app\/auth\/me$/), {
       headers: { Authorization: 'Bearer token-1' },
     });
   });

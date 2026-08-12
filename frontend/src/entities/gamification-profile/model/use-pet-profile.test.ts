@@ -8,11 +8,11 @@ import { gamificationProfileKeys } from '../api/gamification-profile-keys';
 import { usePetProfile } from './use-pet-profile';
 
 const mocks = vi.hoisted(() => ({
-  getPetName: vi.fn(),
+  getPet: vi.fn(),
 }));
 
 vi.mock('../api/pet', () => ({
-  getPetName: mocks.getPetName,
+  getPet: mocks.getPet,
 }));
 
 const pet = {
@@ -21,11 +21,17 @@ const pet = {
   leaves: 250,
   nextLevelTargetLeaves: 500,
   chestPrice: 100,
+  happiness: 50,
+  happinessMultiplier: 1,
+  calculatedAt: '2026-08-12T12:52:25.179950567Z',
+  decaysToZeroAt: '2026-08-15T12:52:15.223227999Z',
+  feedNextAvailableAt: null,
+  strokeNextAvailableAt: null,
 };
 
 describe('usePetProfile', () => {
   beforeEach(() => {
-    mocks.getPetName.mockReset().mockResolvedValue(pet);
+    mocks.getPet.mockReset().mockResolvedValue(pet);
   });
 
   it('загружает профиль питомца', async () => {
