@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/petstate"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/shop"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -22,6 +24,7 @@ type petHandler struct {
 	auth        *auth.Service
 	pets        *pet.Service
 	levelClaims *pet.LevelClaimsService
+	shop        *shop.Service
 	state       *petstate.Service
 	metrics     *appmetrics.Metrics
 }
@@ -59,8 +62,14 @@ type petCareRequest struct {
 }
 
 type petProgressUpdatedEvent struct {
-	Event string              `json:"event"`
-	Data  petProgressResponse `json:"data"`
+	Event string               `json:"event"`
+	Data  petProgressEventData `json:"data"`
+}
+
+type petProgressEventData struct {
+	petProgressResponse
+	BowlImageURL *string `json:"bowlImageUrl"`
+	BedImageURL  *string `json:"bedImageUrl"`
 }
 
 type petSocketRequest struct {
@@ -371,7 +380,7 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	stateUpdates, unsubscribeState := handler.state.Subscribe(user.ID)
 	defer unsubscribeState()
 
-	err = writePetProgressEvent(connection, pet.ProgressForPet(userPet, false))
+	err = handler.writePetProgressEvent(request.Context(), connection, user.ID, pet.ProgressForPet(userPet, false))
 
 	if err != nil {
 		return
@@ -422,7 +431,7 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 	for {
 		select {
 		case update, isOpen := <-updates:
-			if !isOpen || writePetProgressEvent(connection, update.Progress) != nil {
+			if !isOpen || handler.writePetProgressEvent(request.Context(), connection, user.ID, update.Progress) != nil {
 				return
 			}
 		case update, isOpen := <-stateUpdates:
@@ -431,7 +440,7 @@ func (handler *petHandler) ws(response http.ResponseWriter, request *http.Reques
 			}
 		case <-requests:
 			currentPet, err := handler.pets.GetOrCreate(request.Context(), user.ID)
-			if err != nil || writePetProgressEvent(connection, pet.ProgressForPet(currentPet, false)) != nil {
+			if err != nil || handler.writePetProgressEvent(request.Context(), connection, user.ID, pet.ProgressForPet(currentPet, false)) != nil {
 				return
 			}
 		case <-done:
@@ -485,11 +494,24 @@ func responsePetProgress(progress pet.Progress) petProgressResponse {
 	}
 }
 
-func writePetProgressEvent(connection *websocket.Conn, progress pet.Progress) error {
+func (handler *petHandler) writePetProgressEvent(ctx context.Context, connection *websocket.Conn, userID uuid.UUID, progress pet.Progress) error {
+	activeImages, err := handler.shop.ActiveImageURLs(ctx, userID)
+	if err != nil {
+		return err
+	}
+
 	return writeWebSocketJSON(connection, petProgressUpdatedEvent{
 		Event: "PET_PROGRESS_UPDATED",
-		Data:  responsePetProgress(progress),
+		Data:  responsePetProgressEventData(progress, activeImages),
 	})
+}
+
+func responsePetProgressEventData(progress pet.Progress, activeImages shop.ActiveImageURLs) petProgressEventData {
+	return petProgressEventData{
+		petProgressResponse: responsePetProgress(progress),
+		BowlImageURL:        activeImages.Bowl,
+		BedImageURL:         activeImages.Bed,
+	}
 }
 
 func responsePetState(snapshot petstate.Snapshot) *petStateResponse {

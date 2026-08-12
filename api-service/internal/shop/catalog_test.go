@@ -23,6 +23,10 @@ func TestLoadCatalog(t *testing.T) {
 		item.ImageURL != "/api/v1/shop-images/bowl-cyberpunk.webp" {
 		t.Fatalf("cyber-bowl = %+v, exists = %t", item, ok)
 	}
+	item, ok = catalog.ItemByType(models.ShopItemTypeCyberBowl)
+	if !ok || item.ID != "cyber-bowl" || item.ImageURL != "/api/v1/shop-images/bowl-cyberpunk.webp" {
+		t.Fatalf("CYBER_BOWL = %+v, exists = %t", item, ok)
+	}
 }
 
 func TestLoadCatalogRejectsInvalidCatalog(t *testing.T) {
@@ -50,6 +54,9 @@ func TestCatalogItemsReturnsCopyAndItemReportsMissingID(t *testing.T) {
 	}
 	if _, ok := catalog.Item("missing"); ok {
 		t.Fatal("Item(missing) exists")
+	}
+	if _, ok := catalog.ItemByType(models.ShopItemType("MISSING")); ok {
+		t.Fatal("ItemByType(MISSING) exists")
 	}
 }
 

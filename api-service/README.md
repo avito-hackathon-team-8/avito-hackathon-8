@@ -94,7 +94,7 @@ X-Service-Token: <INTERNAL_SERVICE_TOKEN>
 
 JWT для WebSocket можно передать в заголовке `Authorization` или query-параметре `token`.
 
-- `/api/v1/pet/ws` сначала отправляет текущее состояние питомца, затем события `PET_PROGRESS_UPDATED` после изменения баланса или уровня;
+- `/api/v1/pet/ws` сначала отправляет текущее состояние питомца, затем события `PET_PROGRESS_UPDATED` после изменения баланса или уровня; в данных события также передаются `bowlImageUrl` и `bedImageUrl` активных предметов (`null`, если предмет не активен);
 - тот же WebSocket отправляет `PET_STATE_UPDATED` после поглаживания или кормления;
 - `/api/v1/daily-report/ws` сначала отправляет актуальную сводку, затем события `DAILY_REPORT_UPDATED` при изменениях и наступлении нового дня по UTC.
 

@@ -14,6 +14,7 @@ import (
 
 type Catalog struct {
 	items map[string]models.ShopItem
+	types map[models.ShopItemType]models.ShopItem
 	list  []models.ShopItem
 }
 
@@ -59,9 +60,9 @@ func LoadCatalog(path string) (Catalog, error) {
 
 	catalog := Catalog{
 		items: make(map[string]models.ShopItem, len(file.Items)),
+		types: make(map[models.ShopItemType]models.ShopItem, len(file.Items)),
 		list:  make([]models.ShopItem, 0, len(file.Items)),
 	}
-	types := make(map[models.ShopItemType]struct{}, len(file.Items))
 	for _, config := range file.Items {
 		item := models.ShopItem{
 			ID:            strings.TrimSpace(config.ID),
@@ -80,12 +81,12 @@ func LoadCatalog(path string) (Catalog, error) {
 		if _, exists := catalog.items[item.ID]; exists {
 			return Catalog{}, fmt.Errorf("duplicate shop item %q", item.ID)
 		}
-		if _, exists := types[item.Type]; exists {
+		if _, exists := catalog.types[item.Type]; exists {
 			return Catalog{}, fmt.Errorf("duplicate shop item type %q", item.Type)
 		}
 		catalog.items[item.ID] = item
+		catalog.types[item.Type] = item
 		catalog.list = append(catalog.list, item)
-		types[item.Type] = struct{}{}
 	}
 
 	return catalog, nil
@@ -97,6 +98,11 @@ func (catalog Catalog) Items() []models.ShopItem {
 
 func (catalog Catalog) Item(id string) (models.ShopItem, bool) {
 	item, ok := catalog.items[id]
+	return item, ok
+}
+
+func (catalog Catalog) ItemByType(itemType models.ShopItemType) (models.ShopItem, bool) {
+	item, ok := catalog.types[itemType]
 	return item, ok
 }
 

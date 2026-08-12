@@ -46,12 +46,14 @@ type petResponse struct {
 type petProgressEvent struct {
 	Event string `json:"event"`
 	Data  struct {
-		Name                  string `json:"name"`
-		Level                 int    `json:"level"`
-		Leaves                int64  `json:"leaves"`
-		NextLevelTargetLeaves int64  `json:"nextLevelTargetLeaves"`
-		ChestPrice            int64  `json:"chestPrice"`
-		LevelUp               bool   `json:"levelUp"`
+		Name                  string  `json:"name"`
+		Level                 int     `json:"level"`
+		Leaves                int64   `json:"leaves"`
+		NextLevelTargetLeaves int64   `json:"nextLevelTargetLeaves"`
+		ChestPrice            int64   `json:"chestPrice"`
+		LevelUp               bool    `json:"levelUp"`
+		BowlImageURL          *string `json:"bowlImageUrl"`
+		BedImageURL           *string `json:"bedImageUrl"`
 	} `json:"data"`
 }
 
