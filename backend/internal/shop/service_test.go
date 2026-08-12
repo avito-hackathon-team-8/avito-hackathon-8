@@ -26,9 +26,13 @@ func TestPurchaseSpendsLeavesAndIssuesShopReward(t *testing.T) {
 	updates, unsubscribe := petService.Subscribe(user.ID)
 	defer unsubscribe()
 
-	reward, progress, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"})
-	if err != nil {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
 		t.Fatalf("Purchase() error = %v", err)
+	}
+
+	var reward models.Reward
+	if err := db.Where("user_id = ? AND source = ?", user.ID, models.RewardSourceShop).First(&reward).Error; err != nil {
+		t.Fatalf("load shop reward: %v", err)
 	}
 	if reward.Source != models.RewardSourceShop || reward.ItemType == nil || *reward.ItemType != models.ShopItemTypeFashionableBowl {
 		t.Fatalf("reward = %+v, want fashionable bowl shop reward", reward)
@@ -36,10 +40,6 @@ func TestPurchaseSpendsLeavesAndIssuesShopReward(t *testing.T) {
 	if reward.Category != models.RewardCategoryBowl || reward.ExpiresAt != testNow.AddDate(0, 0, 3) {
 		t.Fatalf("reward = %+v, want bowl that expires in three days", reward)
 	}
-	if progress.Leaves != 250 {
-		t.Fatalf("progress leaves = %d, want 250", progress.Leaves)
-	}
-
 	var transaction models.LeafTransaction
 	if err := db.Where("reason = ?", models.LeafReasonShopPurchase).First(&transaction).Error; err != nil {
 		t.Fatalf("load shop transaction: %v", err)
@@ -73,7 +73,7 @@ func TestPurchaseRejectsUnavailableItemsWithoutSpendingLeaves(t *testing.T) {
 				t.Fatalf("create pet: %v", err)
 			}
 
-			if _, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: test.itemID}); !errors.Is(err, test.want) {
+			if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: test.itemID}); !errors.Is(err, test.want) {
 				t.Fatalf("Purchase() error = %v, want %v", err, test.want)
 			}
 
@@ -91,11 +91,45 @@ func TestPurchaseRejectsUnavailableItemsWithoutSpendingLeaves(t *testing.T) {
 func TestPurchaseRejectsMissingPetAndNilUser(t *testing.T) {
 	service, _, user, _ := testService(t)
 
-	if _, _, err := service.Purchase(context.Background(), uuid.Nil, Purchase{ItemID: "fashionable-bowl"}); !errors.Is(err, ErrPetNotFound) {
+	if err := service.Purchase(context.Background(), uuid.Nil, Purchase{ItemID: "fashionable-bowl"}); !errors.Is(err, ErrPetNotFound) {
 		t.Fatalf("Purchase(nil user) error = %v, want %v", err, ErrPetNotFound)
 	}
-	if _, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); !errors.Is(err, ErrPetNotFound) {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); !errors.Is(err, ErrPetNotFound) {
 		t.Fatalf("Purchase(missing pet) error = %v, want %v", err, ErrPetNotFound)
+	}
+}
+
+func TestListCalculatesItemStatusesForCurrentUser(t *testing.T) {
+	service, db, user, _ := testService(t)
+	if err := db.Create(&models.Pet{UserID: user.ID, Level: 7, Leaves: 1000}).Error; err != nil {
+		t.Fatalf("create pet: %v", err)
+	}
+
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
+		t.Fatalf("Purchase() error = %v", err)
+	}
+
+	items, err := service.List(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	statuses := make(map[string]ItemStatus, len(items))
+	for _, item := range items {
+		statuses[item.ID] = item.Status
+	}
+
+	want := map[string]ItemStatus{
+		"fashionable-bowl":  ItemStatusActive,
+		"cyber-bowl":        ItemStatusAvailable,
+		"helper-bowl":       ItemStatusLocked,
+		"trader-bed":        ItemStatusAvailable,
+		"accident-free-bed": ItemStatusAvailable,
+		"pro-bed":           ItemStatusLocked,
+	}
+	for itemID, wantStatus := range want {
+		if statuses[itemID] != wantStatus {
+			t.Errorf("status of %s = %q, want %q", itemID, statuses[itemID], wantStatus)
+		}
 	}
 }
 
@@ -105,24 +139,34 @@ func TestPurchaseExtendsSameItemAndRequiresReplacementConfirmation(t *testing.T)
 		t.Fatalf("create pet: %v", err)
 	}
 
-	first, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"})
-	if err != nil {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
 		t.Fatalf("first Purchase() error = %v", err)
 	}
-	second, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"})
-	if err != nil {
+	var first models.Reward
+	if err := db.Where("user_id = ? AND source = ?", user.ID, models.RewardSourceShop).First(&first).Error; err != nil {
+		t.Fatalf("load first reward: %v", err)
+	}
+
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
 		t.Fatalf("second Purchase() error = %v", err)
+	}
+	var second models.Reward
+	if err := db.Where("id = ?", first.ID).First(&second).Error; err != nil {
+		t.Fatalf("load extended reward: %v", err)
 	}
 	if second.ID != first.ID || second.ExpiresAt != testNow.AddDate(0, 0, 6) {
 		t.Fatalf("extended reward = %+v, want original reward extended to six days", second)
 	}
 
-	if _, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "cyber-bowl"}); !errors.Is(err, ErrReplacementConfirmation) {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "cyber-bowl"}); !errors.Is(err, ErrReplacementConfirmation) {
 		t.Fatalf("replacement Purchase() error = %v, want %v", err, ErrReplacementConfirmation)
 	}
-	replacement, _, err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "cyber-bowl", ConfirmReplacement: true})
-	if err != nil {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "cyber-bowl", ConfirmReplacement: true}); err != nil {
 		t.Fatalf("confirmed replacement error = %v", err)
+	}
+	var replacement models.Reward
+	if err := db.Where("user_id = ? AND item_type = ?", user.ID, models.ShopItemTypeCyberBowl).First(&replacement).Error; err != nil {
+		t.Fatalf("load replacement reward: %v", err)
 	}
 	if replacement.ItemType == nil || *replacement.ItemType != models.ShopItemTypeCyberBowl {
 		t.Fatalf("replacement = %+v, want cyber bowl", replacement)

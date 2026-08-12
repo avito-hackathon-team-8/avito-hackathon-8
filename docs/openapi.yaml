@@ -555,7 +555,7 @@ paths:
       description: |
         Возвращает полный каталог из шести предметов: трёх мисок и трёх лежанок.
         Для каждого предмета передаются его уникальный тип, требуемый уровень,
-        цена в листьях и срок аренды.
+        цена в листьях, срок аренды и рассчитанный для текущего пользователя статус.
       responses:
         '200':
           description: Каталог предметов магазина и активные аренды пользователя.
@@ -567,41 +567,47 @@ paths:
                 items:
                   - id: fashionable-bowl
                     type: FASHIONABLE_BOWL
+                    status: ACTIVE
                     title: Модная миска
                     description: 5% кэшбека листьями за покупки в категории «Одежда, обувь, аксессуары».
                     requiredLevel: 5
                     priceLeaves: 100
-                    durationDays: 7
-                  - id: cyber_bowl
+                    durationDays: 3
+                  - id: cyber-bowl
                     type: CYBER_BOWL
+                    status: AVAILABLE
                     title: Кибермиска
                     description: 5% кэшбека листьями за покупки в категории «Электроника».
-                    requiredLevel: 5
-                    priceLeaves: 100
-                    durationDays: 7
+                    requiredLevel: 7
+                    priceLeaves: 150
+                    durationDays: 3
                   - id: helper-bowl
                     type: HELPER_BOWL
+                    status: LOCKED
                     title: Миска-помощник
                     description: 5% кэшбека листьями за покупки в категории «Услуги».
-                    requiredLevel: 5
-                    priceLeaves: 100
-                    durationDays: 7
+                    requiredLevel: 10
+                    priceLeaves: 200
+                    durationDays: 3
                   - id: trader-bed
                     type: TRADER_BED
+                    status: AVAILABLE
                     title: Лежанка торговца
                     description: Возможность получить -50% комиссии за продажу товаров на Авито.
-                    requiredLevel: 10
+                    requiredLevel: 5
                     priceLeaves: 300
                     durationDays: 3
                   - id: accident-free-bed
                     type: ACCIDENT_FREE_BED
+                    status: AVAILABLE
                     title: Лежанка без ДТП
                     description: Возможность получить бесплатную автотеку в качестве награды из сундука.
-                    requiredLevel: 10
+                    requiredLevel: 7
                     priceLeaves: 400
                     durationDays: 3
                   - id: pro-bed
                     type: PRO_BED
+                    status: LOCKED
                     title: Лежанка профи
                     description: Возможность получить бесплатную подписку Авито-профи на 3 дня из сундука.
                     requiredLevel: 10
@@ -638,12 +644,8 @@ paths:
             example:
               confirmReplacement: false
       responses:
-        '200':
+        '204':
           description: Предмет куплен и активирован.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShopPurchaseResponse'
         '400':
           description: Некорректный идентификатор предмета или тело запроса.
           content:
@@ -1677,15 +1679,30 @@ components:
         - ACCIDENT_FREE_BED
         - PRO_BED
 
+    ShopItemStatus:
+      type: string
+      description: |
+        Рассчитанное сервером состояние предмета для текущего пользователя:
+        - `ACTIVE` — предмет сейчас применён;
+        - `LOCKED` — уровень питомца ниже `requiredLevel`;
+        - `AVAILABLE` — предмет не применён и доступен для покупки.
+
+        Если предмет применён, `ACTIVE` имеет приоритет над остальными статусами.
+        После окончания аренды предмет перестаёт быть `ACTIVE`; статус снова
+        рассчитывается по текущему уровню питомца.
+      enum: [ACTIVE, LOCKED, AVAILABLE]
+
     ShopItem:
       type: object
-      required: [id, type, title, description, requiredLevel, priceLeaves, durationDays]
+      required: [id, type, status, title, description, requiredLevel, priceLeaves, durationDays]
       properties:
         id:
           type: string
           description: Стабильный идентификатор предмета в каталоге.
         type:
           $ref: '#/components/schemas/ShopItemType'
+        status:
+          $ref: '#/components/schemas/ShopItemStatus'
         title:
           type: string
           minLength: 1
@@ -1726,35 +1743,6 @@ components:
           type: boolean
           default: false
           description: Подтверждает замену уже активного предмета того же типа.
-
-    ShopPurchaseResponse:
-      type: object
-      required: [itemId, type, title, priceLeaves, activeFrom, activeUntil, leaves]
-      properties:
-        itemId:
-          type: string
-        type:
-          $ref: '#/components/schemas/ShopItemType'
-        title:
-          type: string
-        priceLeaves:
-          type: integer
-          format: int64
-          minimum: 0
-        activeFrom:
-          type: string
-          format: date-time
-          description: Время начала аренды в UTC.
-        activeUntil:
-          type: string
-          format: date-time
-          nullable: true
-          description: Время окончания аренды в UTC.
-        leaves:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Остаток листьев после покупки.
 
     LevelRewardStatus:
       type: string

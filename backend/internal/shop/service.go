@@ -22,6 +22,19 @@ var (
 	ErrReplacementConfirmation = errors.New("active shop item replacement requires confirmation")
 )
 
+type ItemStatus string
+
+const (
+	ItemStatusActive    ItemStatus = "ACTIVE"
+	ItemStatusLocked    ItemStatus = "LOCKED"
+	ItemStatusAvailable ItemStatus = "AVAILABLE"
+)
+
+type Item struct {
+	models.ShopItem
+	Status ItemStatus
+}
+
 type Purchase struct {
 	ItemID             string
 	ConfirmReplacement bool
@@ -43,17 +56,58 @@ func (service *Service) Items() []models.ShopItem {
 	return service.catalog.Items()
 }
 
-func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase Purchase) (models.Reward, pet.Progress, error) {
+func (service *Service) List(ctx context.Context, userID uuid.UUID) ([]Item, error) {
 	if userID == uuid.Nil {
-		return models.Reward{}, pet.Progress{}, ErrPetNotFound
+		return nil, ErrPetNotFound
+	}
+
+	var userPet models.Pet
+	if err := service.db.WithContext(ctx).Where("user_id = ?", userID).First(&userPet).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrPetNotFound
+		}
+		return nil, fmt.Errorf("load pet: %w", err)
+	}
+
+	var activeRewards []models.Reward
+	if err := service.db.WithContext(ctx).
+		Where("user_id = ? AND source = ? AND expires_at > ?", userID, models.RewardSourceShop, service.now().UTC()).
+		Find(&activeRewards).Error; err != nil {
+		return nil, fmt.Errorf("load active shop rewards: %w", err)
+	}
+
+	activeTypes := make(map[models.ShopItemType]struct{}, len(activeRewards))
+	for _, reward := range activeRewards {
+		if reward.ItemType != nil {
+			activeTypes[*reward.ItemType] = struct{}{}
+		}
+	}
+
+	catalogItems := service.catalog.Items()
+	items := make([]Item, 0, len(catalogItems))
+	for _, catalogItem := range catalogItems {
+		status := ItemStatusAvailable
+		if _, active := activeTypes[catalogItem.Type]; active {
+			status = ItemStatusActive
+		} else if userPet.Level < catalogItem.RequiredLevel {
+			status = ItemStatusLocked
+		}
+		items = append(items, Item{ShopItem: catalogItem, Status: status})
+	}
+
+	return items, nil
+}
+
+func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase Purchase) error {
+	if userID == uuid.Nil {
+		return ErrPetNotFound
 	}
 
 	item, exists := service.catalog.Item(purchase.ItemID)
 	if !exists {
-		return models.Reward{}, pet.Progress{}, ErrItemNotFound
+		return ErrItemNotFound
 	}
 
-	var reward models.Reward
 	var progress pet.Progress
 	err := service.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var userPet models.Pet
@@ -101,8 +155,6 @@ func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase
 			if err := tx.Model(&active).Update("expires_at", expiresAt).Error; err != nil {
 				return fmt.Errorf("extend shop reward: %w", err)
 			}
-			active.ExpiresAt = expiresAt
-			reward = active
 			return nil
 		}
 
@@ -113,7 +165,7 @@ func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase
 		}
 
 		itemType := item.Type
-		reward, err = service.rewards.GrantTx(ctx, tx, userID, rewards.Grant{
+		_, err = service.rewards.GrantTx(ctx, tx, userID, rewards.Grant{
 			Title:     item.Title,
 			Category:  item.Category,
 			Source:    models.RewardSourceShop,
@@ -126,9 +178,9 @@ func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase
 		return nil
 	})
 	if err != nil {
-		return models.Reward{}, pet.Progress{}, err
+		return err
 	}
 
 	service.pets.PublishProgress(userID, progress)
-	return reward, progress, nil
+	return nil
 }

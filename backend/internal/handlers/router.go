@@ -13,6 +13,7 @@ import (
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/models"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/pet"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/rewards"
+	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/shop"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/tasks"
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/backend/internal/weekly_login"
 	"gorm.io/gorm"
@@ -48,7 +49,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	taskService *tasks.Service, petService *pet.Service,
 	levelClaimsService *pet.LevelClaimsService, weeklyLoginService *weekly_login.Service,
 	eventService *activityevents.Service, dailyReportService *daily_report.Service,
-	internalToken string, chestService *chest.Service,
+	internalToken string, chestService *chest.Service, shopService *shop.Service,
 ) http.Handler {
 	handler := &authHandler{service: authService, db: db}
 	rewardHandler := &rewardHandler{auth: authService, rewards: rewardService}
@@ -65,6 +66,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 		chests:  chestService,
 		rewards: rewardService,
 	}
+	shopHandler := &shopHandler{auth: authService, shop: shopService}
 	weeklyLoginHandler := &weeklyLoginHandler{
 		auth:        authService,
 		weeklyLogin: weeklyLoginService,
@@ -92,8 +94,10 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux.HandleFunc("POST /api/v1/pet/mvp/leaves", petHandler.addMVPLeaves)
 	mux.HandleFunc("GET /api/v1/pet/levels", petHandler.levels)
 	mux.HandleFunc("POST /api/v1/pet/level-rewards/{rewardId}/claim", petHandler.claimLevelReward)
-
 	mux.HandleFunc("POST /api/v1/pet/chests/open", chestHandler.open)
+
+	mux.HandleFunc("GET /api/v1/shop", shopHandler.list)
+	mux.HandleFunc("POST /api/v1/shop/{itemId}/purchase", shopHandler.purchase)
 
 	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
 	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
