@@ -57,6 +57,12 @@ type petStateUpdatedEvent struct {
 	Data  petStateResponse `json:"data"`
 }
 
+type petProfileResponse struct {
+	petProgressResponse
+	BowlImageURL *string `json:"bowlImageUrl"`
+	BedImageURL  *string `json:"bedImageUrl"`
+}
+
 type petCareRequest struct {
 	Type petstate.CareType `json:"type"`
 }
@@ -148,7 +154,19 @@ func (handler *petHandler) get(response http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	result := responsePet(userPet)
+	activeImages, err := handler.shop.ActiveImageURLs(request.Context(), user.ID)
+
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, "Could not load active pet items")
+
+		return
+	}
+
+	result := petProfileResponse{
+		petProgressResponse: responsePet(userPet),
+		BowlImageURL:        activeImages.Bowl,
+		BedImageURL:         activeImages.Bed,
+	}
 	result.petStateResponse = responsePetState(stateSnapshot)
 
 	writeJSON(response, http.StatusOK, result)

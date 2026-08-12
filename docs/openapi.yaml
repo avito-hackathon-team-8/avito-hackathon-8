@@ -256,13 +256,15 @@ paths:
         после каждого повышения. Новый пользователь начинает с питомцем 1-го уровня,
         0 листьями и пустым именем.
         Если `name` пустое, клиент показывает пользователю форму первичной настройки имени.
+        Поля `bowlImageUrl` и `bedImageUrl` содержат URL изображений активных предметов
+        соответствующих категорий либо `null`, если предмет не активен.
       responses:
         '200':
           description: Текущее состояние питомца.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PetProgress'
+                $ref: '#/components/schemas/PetProfile'
               examples:
                 default:
                   value:
@@ -272,6 +274,8 @@ paths:
                     nextLevelTargetLeaves: 230
                     chestPrice: 200
                     levelUp: false
+                    bowlImageUrl: /api/v1/shop-images/bowl-fashionable.webp
+                    bedImageUrl: /api/v1/shop-images/bed-car.webp
                 uninitialized:
                   value:
                     name: ''
@@ -280,6 +284,8 @@ paths:
                     nextLevelTargetLeaves: 100
                     chestPrice: 200
                     levelUp: false
+                    bowlImageUrl: null
+                    bedImageUrl: null
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -1748,6 +1754,21 @@ components:
           description: Тип события WebSocket.
         data:
           $ref: '#/components/schemas/PetProgressEventData'
+
+    PetProfile:
+      allOf:
+        - $ref: '#/components/schemas/PetProgress'
+        - type: object
+          required: [bowlImageUrl, bedImageUrl]
+          properties:
+            bowlImageUrl:
+              type: string
+              nullable: true
+              description: URL изображения активной миски; null, если миска не активна.
+            bedImageUrl:
+              type: string
+              nullable: true
+              description: URL изображения активной лежанки; null, если лежанка не активна.
 
     PetProgressEventData:
       type: object
