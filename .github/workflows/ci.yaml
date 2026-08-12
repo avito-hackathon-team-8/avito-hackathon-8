@@ -43,12 +43,12 @@ jobs:
       - name: Собрать приложение
         run: npm run build
 
-  backend:
+  api-service:
     name: Backend
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: api-service
     steps:
       - name: Получить код
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: api-service/go.sum
 
       - name: Проверить тесты и конкурентность
         run: go test -race ./...
@@ -72,31 +72,31 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
-          working-directory: backend
+          working-directory: api-service
           args: --config ../.golangci.yaml
 
-  puppeteer:
-    name: Puppeteer
+  daily-tasks-service:
+    name: Daily tasks service
     runs-on: ubuntu-latest
     env:
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/puppeteer_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/daily_tasks_service_test
     services:
       postgres:
         image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: puppeteer_test
+          POSTGRES_DB: daily_tasks_service_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d puppeteer_test"
+          --health-cmd="pg_isready -U postgres -d daily_tasks_service_test"
           --health-interval=5s
           --health-timeout=3s
           --health-retries=10
     defaults:
       run:
-        working-directory: puppeteer
+        working-directory: daily-tasks-service
     steps:
       - name: Получить код
         uses: actions/checkout@v4
@@ -105,7 +105,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-          cache-dependency-path: puppeteer/go.sum
+          cache-dependency-path: daily-tasks-service/go.sum
 
       - name: Проверить тесты и конкурентность
         run: go test -race ./...
@@ -120,7 +120,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
-          working-directory: puppeteer
+          working-directory: daily-tasks-service
           args: --config ../.golangci.yaml
 
   pet-state-service:
