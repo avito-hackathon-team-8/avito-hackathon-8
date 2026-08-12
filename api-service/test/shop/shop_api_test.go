@@ -50,6 +50,7 @@ type shopItem struct {
 	Status        string `json:"status"`
 	Title         string `json:"title"`
 	Description   string `json:"description"`
+	ImageURL      string `json:"imageUrl"`
 	RequiredLevel int    `json:"requiredLevel"`
 	PriceLeaves   int64  `json:"priceLeaves"`
 	DurationDays  int    `json:"durationDays"`
@@ -100,6 +101,9 @@ func TestShopCatalogReturnsPersonalStatuses(t *testing.T) {
 	}
 
 	fashionable := findShopItem(t, catalog.Items, fashionableBowlID)
+	if fashionable.ImageURL != "/api/v1/shop-images/bowl-fashionable.webp" {
+		t.Fatalf("fashionable bowl imageUrl = %q", fashionable.ImageURL)
+	}
 	if fashionable.Category != "BOWL" || fashionable.Status != "AVAILABLE" ||
 		fashionable.RequiredLevel != 5 || fashionable.PriceLeaves != 100 || fashionable.DurationDays != 3 {
 		t.Fatalf("fashionable bowl = %+v", fashionable)

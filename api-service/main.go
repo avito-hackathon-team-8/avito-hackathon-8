@@ -102,6 +102,7 @@ func main() {
 		taskService, petService, levelClaimsService,
 		weeklyLoginService, eventService, dailyReportService,
 		cfg.InternalServiceToken, chestService, shopService, petStateService, metrics,
+		cfg.ShopImagesDir,
 		handlers.HTTPReadinessChecker{URL: cfg.DailyTasksInternalURL, Client: &http.Client{Timeout: 750 * time.Millisecond}})
 
 	root := http.NewServeMux()

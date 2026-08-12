@@ -54,7 +54,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	levelClaimsService *pet.LevelClaimsService, weeklyLoginService *weekly_login.Service,
 	eventService *activityevents.Service, dailyReportService *daily_report.Service,
 	internalToken string, chestService *chest.Service, shopService *shop.Service,
-	petStateService *petstate.Service, metrics *appmetrics.Metrics,
+	petStateService *petstate.Service, metrics *appmetrics.Metrics, shopImagesDir string,
 	dependencies ...readinessChecker,
 ) http.Handler {
 	handler := &authHandler{service: authService, db: db}
@@ -109,6 +109,7 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 
 	mux.HandleFunc("GET /api/v1/shop", shopHandler.list)
 	mux.HandleFunc("POST /api/v1/shop/{itemId}/purchase", shopHandler.purchase)
+	mux.Handle("GET /api/v1/shop-images/", shopImagesHandler(shopImagesDir))
 
 	mux.HandleFunc("GET /api/v1/tasks", taskHandler.list)
 	mux.HandleFunc("GET /api/v1/tasks/progress", taskHandler.progress)
@@ -124,6 +125,10 @@ func NewRouter(db *gorm.DB, authService *auth.Service, rewardService *rewards.Se
 	mux.HandleFunc("POST /api/internal/v1/users/{userId}/events", internalEvents.record)
 
 	return withCORS(mux)
+}
+
+func shopImagesHandler(directory string) http.Handler {
+	return http.StripPrefix("/api/v1/shop-images/", http.FileServer(http.Dir(directory)))
 }
 
 func healthLive(response http.ResponseWriter, _ *http.Request) {

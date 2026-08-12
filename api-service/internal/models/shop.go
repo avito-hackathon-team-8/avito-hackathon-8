@@ -16,6 +16,7 @@ type ShopItem struct {
 	Type          ShopItemType
 	Title         string
 	Description   string
+	ImageURL      string
 	Category      RewardCategory
 	RequiredLevel int
 	PriceLeaves   int64

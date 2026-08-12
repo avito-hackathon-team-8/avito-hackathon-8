@@ -19,7 +19,8 @@ func TestLoadCatalog(t *testing.T) {
 		t.Fatalf("items = %d, want 6", len(items))
 	}
 	item, ok := catalog.Item("cyber-bowl")
-	if !ok || item.Type != models.ShopItemTypeCyberBowl || item.RequiredLevel != 7 || item.PriceLeaves != 150 {
+	if !ok || item.Type != models.ShopItemTypeCyberBowl || item.RequiredLevel != 7 || item.PriceLeaves != 150 ||
+		item.ImageURL != "/api/v1/shop-images/bowl-cyberpunk.webp" {
 		t.Fatalf("cyber-bowl = %+v, exists = %t", item, ok)
 	}
 }
@@ -67,6 +68,7 @@ const validCatalog = `items:
     type: FASHIONABLE_BOWL
     title: Fashionable bowl
     description: Clothes cashback
+    imageUrl: /api/v1/shop-images/bowl-fashionable.webp
     category: BOWL
     requiredLevel: 5
     priceLeaves: 100
@@ -75,6 +77,7 @@ const validCatalog = `items:
     type: CYBER_BOWL
     title: Cyber bowl
     description: Electronics cashback
+    imageUrl: /api/v1/shop-images/bowl-cyberpunk.webp
     category: BOWL
     requiredLevel: 7
     priceLeaves: 150
@@ -83,6 +86,7 @@ const validCatalog = `items:
     type: HELPER_BOWL
     title: Helper bowl
     description: Services cashback
+    imageUrl: /api/v1/shop-images/bowl-helper.webp
     category: BOWL
     requiredLevel: 10
     priceLeaves: 200
@@ -91,6 +95,7 @@ const validCatalog = `items:
     type: TRADER_BED
     title: Trader bed
     description: Commission bonus
+    imageUrl: /api/v1/shop-images/bed-sell.webp
     category: BED
     requiredLevel: 5
     priceLeaves: 300
@@ -99,6 +104,7 @@ const validCatalog = `items:
     type: ACCIDENT_FREE_BED
     title: Accident-free bed
     description: Vehicle report bonus
+    imageUrl: /api/v1/shop-images/bed-car.webp
     category: BED
     requiredLevel: 7
     priceLeaves: 400
@@ -107,6 +113,7 @@ const validCatalog = `items:
     type: PRO_BED
     title: Pro bed
     description: Pro subscription bonus
+    imageUrl: /api/v1/shop-images/bed-profi.webp
     category: BED
     requiredLevel: 10
     priceLeaves: 500

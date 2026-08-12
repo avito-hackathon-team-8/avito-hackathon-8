@@ -3,6 +3,7 @@ items:
     type: FASHIONABLE_BOWL
     title: Модная миска
     description: 5% кэшбека листьями за покупки в категории "Одежда, обувь, аксессуары".
+    imageUrl: /api/v1/shop-images/bowl-fashionable.webp
     category: BOWL
     requiredLevel: 5
     priceLeaves: 100
@@ -11,6 +12,7 @@ items:
     type: CYBER_BOWL
     title: Кибермиска
     description: 5% кэшбека листьями за покупки в категории "Электроника".
+    imageUrl: /api/v1/shop-images/bowl-cyberpunk.webp
     category: BOWL
     requiredLevel: 7
     priceLeaves: 150
@@ -19,6 +21,7 @@ items:
     type: HELPER_BOWL
     title: Миска-помощник
     description: 5% кэшбека листьями за покупки в категории "Услуги".
+    imageUrl: /api/v1/shop-images/bowl-helper.webp
     category: BOWL
     requiredLevel: 10
     priceLeaves: 200
@@ -27,6 +30,7 @@ items:
     type: TRADER_BED
     title: Лежанка торговца
     description: Возможность получить -50% комиссии за продажу товаров на Авито на 3 дня из сундука.
+    imageUrl: /api/v1/shop-images/bed-sell.webp
     category: BED
     requiredLevel: 5
     priceLeaves: 300
@@ -35,6 +39,7 @@ items:
     type: ACCIDENT_FREE_BED
     title: Лежанка без ДТП
     description: Возможность получить бесплатную автотеку в качестве награды из сундука.
+    imageUrl: /api/v1/shop-images/bed-car.webp
     category: BED
     requiredLevel: 7
     priceLeaves: 400
@@ -43,6 +48,7 @@ items:
     type: PRO_BED
     title: Лежанка профи
     description: Возможность получить бесплатную подписку Авито-профи на 3 дня из сундука.
+    imageUrl: /api/v1/shop-images/bed-profi.webp
     category: BED
     requiredLevel: 10
     priceLeaves: 500

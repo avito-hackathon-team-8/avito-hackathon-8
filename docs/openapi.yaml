@@ -640,7 +640,7 @@ paths:
       summary: Получить каталог магазина
       description: |
         Возвращает полный каталог из шести предметов: трёх мисок и трёх лежанок.
-        Для каждого предмета передаются его категория, требуемый уровень,
+        Для каждого предмета передаются ссылка на изображение, категория, требуемый уровень,
         цена в листьях, срок аренды и рассчитанный для текущего пользователя статус.
       responses:
         '200':
@@ -656,6 +656,7 @@ paths:
                     status: ACTIVE
                     title: Модная миска
                     description: 5% кэшбека листьями за покупки в категории «Одежда, обувь, аксессуары».
+                    imageUrl: /api/v1/shop-images/bowl-fashionable.webp
                     requiredLevel: 5
                     priceLeaves: 100
                     durationDays: 3
@@ -664,6 +665,7 @@ paths:
                     status: AVAILABLE
                     title: Кибермиска
                     description: 5% кэшбека листьями за покупки в категории «Электроника».
+                    imageUrl: /api/v1/shop-images/bowl-cyberpunk.webp
                     requiredLevel: 7
                     priceLeaves: 150
                     durationDays: 3
@@ -672,6 +674,7 @@ paths:
                     status: LOCKED
                     title: Миска-помощник
                     description: 5% кэшбека листьями за покупки в категории «Услуги».
+                    imageUrl: /api/v1/shop-images/bowl-helper.webp
                     requiredLevel: 10
                     priceLeaves: 200
                     durationDays: 3
@@ -680,6 +683,7 @@ paths:
                     status: AVAILABLE
                     title: Лежанка торговца
                     description: Возможность получить -50% комиссии за продажу товаров на Авито.
+                    imageUrl: /api/v1/shop-images/bed-sell.webp
                     requiredLevel: 5
                     priceLeaves: 300
                     durationDays: 3
@@ -688,6 +692,7 @@ paths:
                     status: AVAILABLE
                     title: Лежанка без ДТП
                     description: Возможность получить бесплатную автотеку в качестве награды из сундука.
+                    imageUrl: /api/v1/shop-images/bed-car.webp
                     requiredLevel: 7
                     priceLeaves: 400
                     durationDays: 3
@@ -696,6 +701,7 @@ paths:
                     status: LOCKED
                     title: Лежанка профи
                     description: Возможность получить бесплатную подписку Авито-профи на 3 дня из сундука.
+                    imageUrl: /api/v1/shop-images/bed-profi.webp
                     requiredLevel: 10
                     priceLeaves: 500
                     durationDays: 3
@@ -703,6 +709,31 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /api/v1/shop-images/{fileName}:
+    get:
+      tags: [Магазин]
+      operationId: getShopImage
+      summary: Получить изображение предмета магазина
+      description: Раздаёт файл из каталога изображений магазина. Авторизация не требуется.
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          description: Имя файла из поля `imageUrl` предмета магазина.
+          schema:
+            type: string
+            example: bowl-fashionable.webp
+      responses:
+        '200':
+          description: Изображение предмета в формате WebP.
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Изображение не найдено.
 
   /api/v1/shop/{itemId}/purchase:
     post:
@@ -1872,7 +1903,7 @@ components:
 
     ShopItem:
       type: object
-      required: [id, category, status, title, description, requiredLevel, priceLeaves, durationDays]
+      required: [id, category, status, title, description, imageUrl, requiredLevel, priceLeaves, durationDays]
       properties:
         id:
           type: string
@@ -1887,6 +1918,11 @@ components:
         description:
           type: string
           minLength: 1
+        imageUrl:
+          type: string
+          minLength: 1
+          description: Относительная ссылка на изображение, которое раздаёт API.
+          example: /api/v1/shop-images/bowl-fashionable.webp
         requiredLevel:
           type: integer
           format: int32

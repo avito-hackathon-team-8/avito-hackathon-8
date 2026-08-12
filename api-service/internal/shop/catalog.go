@@ -26,6 +26,7 @@ type shopItemConfig struct {
 	Type          models.ShopItemType   `yaml:"type"`
 	Title         string                `yaml:"title"`
 	Description   string                `yaml:"description"`
+	ImageURL      string                `yaml:"imageUrl"`
 	Category      models.RewardCategory `yaml:"category"`
 	RequiredLevel int                   `yaml:"requiredLevel"`
 	PriceLeaves   int64                 `yaml:"priceLeaves"`
@@ -67,6 +68,7 @@ func LoadCatalog(path string) (Catalog, error) {
 			Type:          config.Type,
 			Title:         strings.TrimSpace(config.Title),
 			Description:   strings.TrimSpace(config.Description),
+			ImageURL:      strings.TrimSpace(config.ImageURL),
 			Category:      config.Category,
 			RequiredLevel: config.RequiredLevel,
 			PriceLeaves:   config.PriceLeaves,
@@ -99,7 +101,7 @@ func (catalog Catalog) Item(id string) (models.ShopItem, bool) {
 }
 
 func validItem(item models.ShopItem) bool {
-	if item.ID == "" || item.Title == "" || item.Description == "" || item.RequiredLevel < 1 ||
+	if item.ID == "" || item.Title == "" || item.Description == "" || item.ImageURL == "" || item.RequiredLevel < 1 ||
 		item.RequiredLevel > 10 || item.PriceLeaves <= 0 || item.DurationDays <= 0 {
 		return false
 	}

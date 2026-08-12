@@ -36,6 +36,7 @@ HTTP_ADDRESS=:8090
 DAILY_TASKS_INTERNAL_URL=http://daily-tasks-service:8091
 LEVEL_REWARDS_CONFIG=/app/config/level_rewards.yaml
 SHOP_ITEMS_CONFIG=/app/config/shop_items.yaml
+SHOP_IMAGES_DIR=/app/shop-images
 ```
 
 ## Технологии

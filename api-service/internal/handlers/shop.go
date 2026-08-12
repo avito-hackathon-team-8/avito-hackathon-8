@@ -21,6 +21,7 @@ type shopItemResponse struct {
 	Status        shop.ItemStatus       `json:"status"`
 	Title         string                `json:"title"`
 	Description   string                `json:"description"`
+	ImageURL      string                `json:"imageUrl"`
 	RequiredLevel int                   `json:"requiredLevel"`
 	PriceLeaves   int64                 `json:"priceLeaves"`
 	DurationDays  int                   `json:"durationDays"`
@@ -107,6 +108,7 @@ func responseShopItem(item shop.Item) shopItemResponse {
 		Status:        item.Status,
 		Title:         item.Title,
 		Description:   item.Description,
+		ImageURL:      item.ImageURL,
 		RequiredLevel: item.RequiredLevel,
 		PriceLeaves:   item.PriceLeaves,
 		DurationDays:  item.DurationDays,
