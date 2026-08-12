@@ -11,17 +11,18 @@ import { DailyTaskCard } from './daily-task-card';
 const mocks = vi.hoisted(() => ({
   useDailyTasks: vi.fn(),
   receiveReward: vi.fn(),
+  refetch: vi.fn(),
 }));
 
 vi.mock('../../model/use-daily-tasks', () => ({
   useDailyTasks: mocks.useDailyTasks,
 }));
 
-type BottomPanelStubProps = Pick<BottomPanelProps, 'children' | 'renderTrigger'>;
+type BottomPanelStubProps = Pick<BottomPanelProps, 'children' | 'disabled' | 'renderTrigger'>;
 
 vi.mock('@/shared/ui/bottom-panel', () => ({
-  BottomPanel: ({ children, renderTrigger }: BottomPanelStubProps) => (
-    <div>
+  BottomPanel: ({ children, disabled, renderTrigger }: BottomPanelStubProps) => (
+    <div data-testid="bottom-panel" data-disabled={disabled}>
       {renderTrigger(() => undefined)}
       {children}
     </div>
@@ -44,30 +45,34 @@ describe('DailyTaskCard', () => {
   beforeEach(() => {
     mocks.useDailyTasks.mockReset();
     mocks.receiveReward.mockReset();
+    mocks.refetch.mockReset();
   });
 
-  it('ничего не показывает без данных', () => {
+  it('показывает заглушку и не открывается без данных', () => {
     mocks.useDailyTasks.mockReturnValue({
       data: undefined,
-      isLoading: true,
+      isPending: true,
+      refetch: mocks.refetch,
       receiveReward: mocks.receiveReward,
     });
 
-    const { container } = render(<DailyTaskCard />);
-    expect(container).toBeEmptyDOMElement();
+    render(<DailyTaskCard />);
+
+    expect(screen.getByText('Ежедневные задания')).toBeInTheDocument();
+    expect(screen.getByText('На данный момент задач нету')).toBeInTheDocument();
+    expect(screen.getByTestId('bottom-panel')).toHaveAttribute('data-disabled', 'true');
   });
 
   it('считает выполненные задания и передаёт получение награды', async () => {
     const user = userEvent.setup();
     mocks.useDailyTasks.mockReturnValue({
-      data: {
-        tasks: [
-          createTask('task-1', 'COMPLETED'),
-          createTask('task-2', 'CLAIMED'),
-          createTask('task-3', 'IN_PROGRESS'),
-        ],
-      },
-      isLoading: false,
+      data: [
+        createTask('task-1', 'COMPLETED'),
+        createTask('task-2', 'CLAIMED'),
+        createTask('task-3', 'IN_PROGRESS'),
+      ],
+      isPending: false,
+      refetch: mocks.refetch,
       receiveReward: mocks.receiveReward,
     });
     render(<DailyTaskCard />);
