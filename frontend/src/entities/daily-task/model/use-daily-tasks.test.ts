@@ -37,7 +37,7 @@ const task: TTask = {
 
 describe('useDailyTasks', () => {
   beforeEach(() => {
-    mocks.getTasks.mockReset().mockResolvedValue({ tasks: [task] });
+    mocks.getTasks.mockReset().mockResolvedValue([task]);
     mocks.receiveTaskReward.mockReset();
     mocks.toastError.mockReset();
   });
@@ -68,22 +68,22 @@ describe('useDailyTasks', () => {
         }),
     );
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(dailyTasksQueryKeys.list(), { tasks: [task] });
+    queryClient.setQueryData(dailyTasksQueryKeys.list(), [task]);
     const { result } = renderHook(() => useDailyTasks(), {
       wrapper: createQueryWrapper(queryClient),
     });
 
     act(() => result.current.receiveReward({ taskId: 'task-1' }));
     await waitFor(() => {
-      const cached = queryClient.getQueryData<{ tasks: TTask[] }>(dailyTasksQueryKeys.list());
-      expect(cached?.tasks[0].status).toBe('CLAIMED');
+      const cached = queryClient.getQueryData<TTask[]>(dailyTasksQueryKeys.list());
+      expect(cached?.[0].status).toBe('CLAIMED');
     });
 
     act(() => rejectRequest(new Error('Ошибка')));
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<{ tasks: TTask[] }>(dailyTasksQueryKeys.list());
-      expect(cached?.tasks[0].status).toBe('COMPLETED');
+      const cached = queryClient.getQueryData<TTask[]>(dailyTasksQueryKeys.list());
+      expect(cached?.[0].status).toBe('COMPLETED');
     });
     expect(mocks.toastError).toHaveBeenCalledWith(
       'Произошла ошибка при получении награды за задание',

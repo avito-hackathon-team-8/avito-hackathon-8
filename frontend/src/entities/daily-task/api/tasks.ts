@@ -31,15 +31,17 @@ type TResponseGetTasks = {
   tasks: TTask[];
 };
 
-export const getTasks = async (): Promise<TResponseGetTasks> => {
-  return await apiRequest(
+export const getTasks = async (): Promise<TTask[]> => {
+  const data = await apiRequest<TResponseGetTasks>(
     fetch(`${API_URL}${API_ROUTE_DAILY_TASKS.tasks}`, {
       headers: getAuthHeaders(),
     }),
   );
+
+  return data.tasks;
 };
 export const receiveTaskReward = async (id: string): Promise<TResponseGetTasks> => {
-  return await apiRequest(
+  return await apiRequest<TResponseGetTasks>(
     fetch(`${API_URL}${API_ROUTE_DAILY_TASKS.receiveRewardTask(id)}`, {
       headers: getAuthHeaders(),
       method: 'POST',

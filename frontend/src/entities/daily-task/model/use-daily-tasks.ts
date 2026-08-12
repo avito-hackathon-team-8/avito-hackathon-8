@@ -4,10 +4,6 @@ import { toast } from 'sonner';
 import { dailyTasksQueryKeys } from '../api/daily-tasks-keys';
 import { getTasks, receiveTaskReward, type TTask } from '../api/tasks';
 
-type TTasksData = {
-  tasks: TTask[];
-};
-
 export type TReceiveTaskRewardVariables = {
   taskId: TTask['taskId'];
 };
@@ -31,24 +27,21 @@ export const useDailyTasks = () => {
         queryKey,
       });
 
-      const previousTasks = queryClient.getQueryData<TTasksData>(queryKey);
+      const previousTasks = queryClient.getQueryData<TTask[]>(queryKey);
 
-      queryClient.setQueryData<TTasksData>(queryKey, (old) => {
+      queryClient.setQueryData<TTask[]>(queryKey, (old) => {
         if (!old) {
           return old;
         }
 
-        return {
-          ...old,
-          tasks: old.tasks.map((task) =>
-            task.taskId === taskId
-              ? {
-                  ...task,
-                  status: 'CLAIMED' as const,
-                }
-              : task,
-          ),
-        };
+        return old.map((task) =>
+          task.taskId === taskId
+            ? {
+                ...task,
+                status: 'CLAIMED' as const,
+              }
+            : task,
+        );
       });
 
       return {
