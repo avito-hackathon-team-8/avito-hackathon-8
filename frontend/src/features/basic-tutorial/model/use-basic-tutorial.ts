@@ -25,6 +25,9 @@ export const useBasicTutorial = ({ enabled }: TUseBasicTutorialParams) => {
   const startTutorial = useCallback(() => {
     tutorialRef.current?.destroy();
 
+    const visualViewport = window.visualViewport;
+    const refreshTutorial = () => tutorialRef.current?.refresh();
+
     const tutorial = driver({
       allowClose: true,
       disableActiveInteraction: true,
@@ -144,12 +147,16 @@ export const useBasicTutorial = ({ enabled }: TUseBasicTutorialParams) => {
         },
       ],
       onDestroyed: () => {
+        visualViewport?.removeEventListener('resize', refreshTutorial);
+        visualViewport?.removeEventListener('scroll', refreshTutorial);
         localStorage.setItem(BASIC_TUTORIAL_STORAGE_KEY, BASIC_TUTORIAL_VERSION);
         tutorialRef.current = null;
       },
     });
 
     tutorialRef.current = tutorial;
+    visualViewport?.addEventListener('resize', refreshTutorial);
+    visualViewport?.addEventListener('scroll', refreshTutorial);
     tutorial.drive();
   }, []);
 
