@@ -1,13 +1,16 @@
 .content {
   .content__header {
     position: sticky;
-    top: 0;
+    top: -1px;
     left: 0;
     z-index: var(--z-index-content);
 
-    padding-block: 10px 16px;
+    padding-block: 11px 16px;
 
     background-color: var(--white);
+
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   .content__filter {
