@@ -1,38 +1,18 @@
 .petInteraction {
   display: grid;
-  grid-template-areas: 'buttonFood mood buttonPet';
-  grid-template-columns: 1fr minmax(35px, 50px) 1fr;
+  grid-template-columns: repeat(2, 1fr);
   align-items: center;
+  gap: 10px;
   padding: 16px;
 
   background-color: var(--gray-200);
   border-radius: 20px;
 
   .petInteraction__buttonFood {
-    grid-area: buttonFood;
-
     background-color: var(--green-500);
   }
 
   .petInteraction__buttonPet {
-    grid-area: buttonPet;
-
     background-color: var(--purple);
-  }
-
-  .petInteraction__mood {
-    display: flex;
-    flex-direction: column;
-    grid-area: mood;
-    align-items: center;
-
-    .petInteraction__moodImg {
-      width: 35px;
-      height: 35px;
-      padding: 4%;
-
-      background-color: var(--gray-500);
-      border-radius: 50%;
-    }
   }
 }

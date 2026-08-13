@@ -262,7 +262,7 @@ export const BottomPanel = ({
                   <Typography
                     className={styles.panel__closeText}
                     as="span"
-                    color="inherit"
+                    color="black"
                     variant="display-normal"
                   >
                     ×
