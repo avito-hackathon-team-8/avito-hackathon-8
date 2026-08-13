@@ -1,11 +1,9 @@
 .driver-active::after {
   position: fixed;
-  right: 0;
-  bottom: calc(0px - env(safe-area-inset-bottom, 0px));
-  left: 0;
+  inset: var(--app-visual-viewport-bottom, 100dvh) 0 auto 0;
   z-index: 9999;
 
-  height: env(safe-area-inset-bottom, 0);
+  height: var(--app-viewport-bottom-gap, 0);
 
   background-color: rgb(15 15 15 / 58%);
   content: '';
