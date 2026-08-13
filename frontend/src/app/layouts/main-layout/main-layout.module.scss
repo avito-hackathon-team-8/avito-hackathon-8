@@ -1,7 +1,6 @@
 .page__main {
   flex: 1;
   min-height: 0;
-  padding-bottom: max(0px, env(safe-area-inset-bottom));
   overflow: hidden;
   overflow-y: auto;
 
@@ -17,7 +16,6 @@
 
 @media (width < 600px) {
   .page__main {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
     overflow-y: visible;
   }
 }
