@@ -73,6 +73,7 @@ describe('BottomPanel', () => {
     expect(document.body).toHaveStyle({ overflow: 'hidden' });
     expect(appContent.inert).toBe(true);
     expect(screen.getByText('×').closest('button')).toHaveFocus();
+    expect(screen.getAllByRole('button', { name: 'Закрыть панель' })).toHaveLength(1);
   });
 
   it('вызывает onClick, но не открывается в disabled-состоянии', async () => {

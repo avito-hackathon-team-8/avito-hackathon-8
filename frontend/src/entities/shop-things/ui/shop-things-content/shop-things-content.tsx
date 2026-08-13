@@ -42,23 +42,25 @@ export const ShopThingsContent = ({
 
   return (
     <div className={styles.content}>
-      <menu className={styles.content__filter}>
-        {SHOP_CATEGORIES.map(({ category, title }) => (
-          <li className={styles.content__filterItem} key={category}>
-            <Button
-              className={clsx(styles.content__filterButton, {
-                [styles.content__filterButton_active]: activeCategory === category,
-              })}
-              onClick={() => {
-                setActiveCategory(category);
-                setConfirmationItemId(null);
-              }}
-            >
-              {title}
-            </Button>
-          </li>
-        ))}
-      </menu>
+      <div className={styles.content__header}>
+        <menu className={styles.content__filter}>
+          {SHOP_CATEGORIES.map(({ category, title }) => (
+            <li className={styles.content__filterItem} key={category}>
+              <Button
+                className={clsx(styles.content__filterButton, {
+                  [styles.content__filterButton_active]: activeCategory === category,
+                })}
+                onClick={() => {
+                  setActiveCategory(category);
+                  setConfirmationItemId(null);
+                }}
+              >
+                {title}
+              </Button>
+            </li>
+          ))}
+        </menu>
+      </div>
 
       <ul className={styles.content__list}>
         {filteredItems.map((item) => {

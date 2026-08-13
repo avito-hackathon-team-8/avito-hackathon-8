@@ -4,7 +4,6 @@
 
   display: flex;
   align-items: flex-end;
-  padding: 12px;
   overflow: hidden;
 
   background-color: rgb(0 0 0 / 48%);
@@ -36,40 +35,26 @@
   overflow: hidden;
 
   background-color: var(--white);
-  border-radius: 28px;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
 
   transform: translateY(calc(100% + 16px));
   transition: transform 200ms ease;
-
-  .panel__handleButton {
-    display: flex;
-    align-items: center;
-    width: 100%;
-
-    background-color: transparent;
-    border: none;
-
-    cursor: pointer;
-    touch-action: none;
-
-    .panel__handleLine {
-      flex-shrink: 0;
-      width: 64px;
-      height: 6px;
-      margin: 16px auto 8px;
-
-      background-color: var(--gray-300);
-      border-radius: 999px;
-    }
-  }
 
   .panel__header {
     display: grid;
     grid-template:
       'title close' auto
-      'description close' auto / 1fr auto;
+      'description close' auto / 1fr minmax(0, auto);
     gap: 5px;
-    padding: 8px 24px 12px;
+    padding: 20px 24px 12px;
+
+    cursor: grab;
+    touch-action: none;
+
+    &:active {
+      cursor: grabbing;
+    }
   }
 
   .panel__title {
@@ -82,23 +67,19 @@
 
   .panel__close {
     display: flex;
-    flex-shrink: 0;
     grid-area: close;
     justify-content: center;
-    align-items: center;
-    width: 36px;
-    height: 22px;
+    align-items: flex-start;
     padding: 0;
 
-    font: var(--font-heading-semiBold);
-    line-height: 1;
-    color: inherit;
-
-    background-color: var(--gray-200);
+    background-color: transparent;
     border: 0;
-    border-radius: 999px;
 
     cursor: pointer;
+
+    .panel__closeText {
+      line-height: 0.7;
+    }
   }
 
   .panel__close:focus-visible {
@@ -109,14 +90,15 @@
   .panel__content {
     flex: 1;
     min-height: 0;
-    margin-right: calc(var(--scrollbar-width) * -1);
     padding: 0 24px 24px;
     overflow-y: auto;
     overscroll-behavior: contain;
 
-    scrollbar-width: thin;
+    scrollbar-width: none;
 
-    --scrollbar-width: 8px;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 }
 

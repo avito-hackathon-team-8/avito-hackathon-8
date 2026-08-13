@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { rewardsQueryKeys } from '@/entities/reward';
 import { createQueryWrapper, createTestQueryClient } from '@/test/render-with-providers';
 
 import type { TShopItem } from '../api/shop-items';
@@ -42,7 +43,7 @@ describe('useShopItems', () => {
     mocks.toastError.mockReset();
   });
 
-  it('получает товары и после покупки обновляет список', async () => {
+  it('получает товары и после покупки обновляет магазин и награды', async () => {
     mocks.purchaseShopItem.mockResolvedValue(undefined);
     const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
@@ -61,6 +62,7 @@ describe('useShopItems', () => {
     });
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: shopItemsQueryKeys.list() });
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: rewardsQueryKeys.list() });
     });
   });
 

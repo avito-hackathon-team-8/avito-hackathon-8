@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useBottomPanelDrag } from './use-bottom-panel-drag';
 
 type PointerEventOverrides = Partial<
-  Pick<ReactPointerEvent<HTMLButtonElement>, 'button' | 'clientY' | 'isPrimary' | 'pointerId'>
+  Pick<ReactPointerEvent<HTMLElement>, 'button' | 'clientY' | 'isPrimary' | 'pointerId'>
 >;
 
 const createPointerTarget = () =>
@@ -13,12 +13,9 @@ const createPointerTarget = () =>
     setPointerCapture: vi.fn(),
     hasPointerCapture: vi.fn(() => true),
     releasePointerCapture: vi.fn(),
-  }) as unknown as HTMLButtonElement;
+  }) as unknown as HTMLElement;
 
-const createPointerEvent = (
-  currentTarget: HTMLButtonElement,
-  overrides: PointerEventOverrides = {},
-) =>
+const createPointerEvent = (currentTarget: HTMLElement, overrides: PointerEventOverrides = {}) =>
   ({
     button: 0,
     clientY: 100,
@@ -27,7 +24,7 @@ const createPointerEvent = (
     preventDefault: vi.fn(),
     currentTarget,
     ...overrides,
-  }) as unknown as ReactPointerEvent<HTMLButtonElement>;
+  }) as unknown as ReactPointerEvent<HTMLElement>;
 
 const createPanelRef = (height = 400): RefObject<HTMLElement | null> => {
   const panel = document.createElement('section');

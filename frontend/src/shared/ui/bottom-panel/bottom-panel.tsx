@@ -233,20 +233,13 @@ export const BottomPanel = ({
               tabIndex={-1}
               style={panelStyle}
             >
-              <button
-                type="button"
-                className={styles.panel__handleButton}
-                aria-label="Закрыть панель"
+              <header
+                className={styles.panel__header}
                 onPointerCancel={handleDragCancel}
                 onPointerDown={handleDragStart}
                 onPointerMove={handleDragMove}
                 onPointerUp={handleDragEnd}
-                tabIndex={-1}
               >
-                <div className={styles.panel__handleLine} aria-hidden="true" tabIndex={-1} />
-              </button>
-
-              <header className={styles.panel__header}>
                 <Typography className={styles.panel__title} id={titleId} variant="section" as="h2">
                   {title}
                 </Typography>
@@ -266,8 +259,16 @@ export const BottomPanel = ({
                   className={styles.panel__close}
                   aria-label="Закрыть панель"
                   onClick={handleClose}
+                  onPointerDown={(event) => event.stopPropagation()}
                 >
-                  ×
+                  <Typography
+                    className={styles.panel__closeText}
+                    as="span"
+                    color="inherit"
+                    variant="display-normal"
+                  >
+                    ×
+                  </Typography>
                 </button>
               </header>
 
