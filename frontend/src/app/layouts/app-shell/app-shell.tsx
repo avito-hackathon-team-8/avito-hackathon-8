@@ -6,9 +6,13 @@ import { ToasterProvider } from '@/app/providers/toaster';
 import { useCurrentUser } from '@/entities/user';
 import { APP_ROUTES } from '@/shared/config';
 
+import { useAppViewport } from './use-app-viewport';
+
 import styles from './app-shell.module.scss';
 
 export const AppShell = () => {
+  useAppViewport();
+
   const navigate = useNavigate();
   const location = useLocation();
 
