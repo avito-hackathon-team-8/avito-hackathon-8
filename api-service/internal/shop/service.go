@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/avito-hackathon-team-8/avito-hackathon-8/api-service/internal/models"
@@ -135,8 +136,32 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID) ([]Item, err
 		}
 		items = append(items, Item{ShopItem: catalogItem, Status: status})
 	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Category != items[j].Category {
+			return categoryOrder(items[i].Category) < categoryOrder(items[j].Category)
+		}
+		return statusOrder(items[i].Status) < statusOrder(items[j].Status)
+	})
 
 	return items, nil
+}
+
+func categoryOrder(category models.RewardCategory) int {
+	if category == models.RewardCategoryBowl {
+		return 0
+	}
+	return 1
+}
+
+func statusOrder(status ItemStatus) int {
+	switch status {
+	case ItemStatusActive:
+		return 0
+	case ItemStatusAvailable:
+		return 1
+	default:
+		return 2
+	}
 }
 
 func (service *Service) Purchase(ctx context.Context, userID uuid.UUID, purchase Purchase) error {
