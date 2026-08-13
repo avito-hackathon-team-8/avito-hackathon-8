@@ -27,7 +27,9 @@
 @media (width < 600px) {
   .overlay {
     position: fixed;
-    bottom: calc(0px - env(safe-area-inset-bottom, 0px));
+
+    height: 100vh;
+    height: 100lvh;
   }
 }
 
