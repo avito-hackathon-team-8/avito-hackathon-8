@@ -2,4 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  [data-tutorial='pet'] {
+    scroll-margin-top: 56px;
+  }
 }

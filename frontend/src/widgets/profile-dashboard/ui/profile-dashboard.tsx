@@ -7,9 +7,15 @@ import styles from './profile-dashboard.module.scss';
 export const ProfileDashboard = () => {
   return (
     <div className={styles.profileDashboard}>
-      <GamificationScene />
-      <GamificationProfile />
-      <PetInteraction />
+      <div data-tutorial="pet">
+        <GamificationScene />
+      </div>
+      <div data-tutorial="progress">
+        <GamificationProfile />
+      </div>
+      <div data-tutorial="pet-care">
+        <PetInteraction />
+      </div>
       <BuyReward />
     </div>
   );

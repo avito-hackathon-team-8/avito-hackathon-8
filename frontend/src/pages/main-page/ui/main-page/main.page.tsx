@@ -1,6 +1,7 @@
 import { ActivityDaysAutoPanel } from '@/entities/activity-days';
 import { usePetName, usePetProfileSocket } from '@/entities/gamification-profile';
 import { useTodaySummarySocket } from '@/entities/today-summary';
+import { useBasicTutorial } from '@/features/basic-tutorial';
 import { PetNameModal } from '@/features/pet-name';
 import { GamificationDashboard } from '@/widgets/gamification-dashboard';
 import { ProfileDashboard } from '@/widgets/profile-dashboard';
@@ -13,6 +14,7 @@ export const MainPage = () => {
   const { data: pet } = usePetName();
 
   const isPetInitialized = Boolean(pet?.trim());
+  const { startTutorial } = useBasicTutorial({ enabled: isPetInitialized });
 
   usePetProfileSocket({ enabled: isPetInitialized });
   useTodaySummarySocket();
@@ -25,7 +27,7 @@ export const MainPage = () => {
           <WelcomeOverlay />
           <div className={styles.page}>
             <ProfileDashboard />
-            <GamificationDashboard />
+            <GamificationDashboard onStartTutorial={startTutorial} />
           </div>
           <ActivityDaysAutoPanel />
         </>

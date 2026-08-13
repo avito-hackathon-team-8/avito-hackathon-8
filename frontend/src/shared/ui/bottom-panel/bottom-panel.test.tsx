@@ -6,6 +6,8 @@ import type { BottomPanelProps } from './bottom-panel';
 import { BottomPanel } from './bottom-panel';
 
 const renderPanel = (props: Partial<BottomPanelProps> = {}) => {
+  const { children = <button type="button">Действие в панели</button>, ...panelProps } = props;
+
   return render(
     <BottomPanel
       title="Дни активности"
@@ -15,9 +17,9 @@ const renderPanel = (props: Partial<BottomPanelProps> = {}) => {
           Открыть панель
         </button>
       )}
-      {...props}
+      {...panelProps}
     >
-      <button type="button">Действие в панели</button>
+      {children}
     </BottomPanel>,
   );
 };
@@ -168,6 +170,24 @@ describe('BottomPanel', () => {
 
     await user.click(overlay!);
     expect(overlay).toHaveAttribute('data-open', 'true');
+  });
+
+  it('передаёт функцию закрытия в render-callback контента', async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      renderContent: (close) => (
+        <button type="button" onClick={close}>
+          Закрыть из контента
+        </button>
+      ),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Открыть панель' }));
+    const overlay = screen.getByRole('dialog').parentElement;
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть из контента' }));
+
+    expect(overlay).toHaveAttribute('data-open', 'false');
   });
 
   it('сообщает об отсутствующем portal root', async () => {

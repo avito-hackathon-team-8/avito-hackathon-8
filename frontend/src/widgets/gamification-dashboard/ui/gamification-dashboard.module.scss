@@ -18,15 +18,23 @@
     visibility: hidden;
   }
 
-  .gamificationDashboard__shop {
-    grid-area: shop;
-  }
-
   .gamificationDashboard__summary {
     grid-area: summary;
   }
 
+  .gamificationDashboard__shop {
+    grid-area: shop;
+  }
+
   .gamificationDashboard__rules {
     grid-area: rules;
+  }
+
+  .gamificationDashboard__tutorialTarget {
+    display: flex;
+
+    > article {
+      flex: 1;
+    }
   }
 }
