@@ -1,12 +1,11 @@
 .driver-active::after {
   position: fixed;
-  top: 100dvh;
   right: 0;
+  bottom: calc(0px - env(safe-area-inset-bottom, 0px));
   left: 0;
   z-index: 9999;
 
-  height: calc(100vh - 100dvh);
-  height: calc(100lvh - 100dvh);
+  height: env(safe-area-inset-bottom, 0);
 
   background-color: rgb(15 15 15 / 58%);
   content: '';
