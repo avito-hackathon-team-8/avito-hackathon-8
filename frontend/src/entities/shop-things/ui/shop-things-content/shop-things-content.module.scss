@@ -1,7 +1,19 @@
 .content {
+  .content__header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: var(--z-index-content);
+
+    padding-block: 10px 16px;
+
+    background-color: var(--white);
+  }
+
   .content__filter {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+    margin: 0;
     padding: 2px;
 
     list-style: none;

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { rewardsQueryKeys } from '@/entities/reward';
+
 import { getShopItems, purchaseShopItem, type TShopItem } from '../api/shop-items';
 import { shopItemsQueryKeys } from '../api/shop-items-keys';
 
@@ -48,10 +50,11 @@ export const useShopItems = () => {
       toast.error(getPurchaseErrorMessage(error));
     },
 
-    onSettled: () => {
-      return queryClient.invalidateQueries({
-        queryKey,
-      });
+    onSuccess: () => {
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: rewardsQueryKeys.list() }),
+      ]);
     },
   });
 

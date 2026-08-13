@@ -22,6 +22,7 @@ export type TypographyTag =
 export type TypographyVariant =
   | 'inherit'
   | 'display'
+  | 'display-normal'
   | 'heading'
   | 'heading-semiBold'
   | 'section'

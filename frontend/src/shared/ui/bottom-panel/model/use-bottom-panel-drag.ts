@@ -18,7 +18,7 @@ export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragPara
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDragStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleDragStart = (event: ReactPointerEvent<HTMLElement>) => {
     if (!event.isPrimary || event.button !== 0) {
       return;
     }
@@ -31,7 +31,7 @@ export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragPara
     setIsDragging(true);
   };
 
-  const handleDragMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleDragMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -41,7 +41,7 @@ export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragPara
     setDragOffset(Math.max(0, event.clientY - dragStartYRef.current));
   };
 
-  const handleDragEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleDragEnd = (event: ReactPointerEvent<HTMLElement>) => {
     if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -62,7 +62,7 @@ export const useBottomPanelDrag = ({ panelRef, onClose }: UseBottomPanelDragPara
     }
   };
 
-  const handleDragCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleDragCancel = (event: ReactPointerEvent<HTMLElement>) => {
     if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
