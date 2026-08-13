@@ -167,6 +167,54 @@ func TestRewardStatus(t *testing.T) {
 	}
 }
 
+func TestListReturnsOnlyActiveRewards(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+uuid.NewString()+"?mode=memory&cache=shared"), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	if err := db.AutoMigrate(&models.User{}, &models.Reward{}); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	now := time.Date(2030, time.August, 5, 12, 0, 0, 0, time.UTC)
+	service := NewService(db, nil)
+	service.now = func() time.Time { return now }
+
+	user := models.User{Email: "active-rewards@example.com"}
+	otherUser := models.User{Email: "other-rewards@example.com"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if err := db.Create(&otherUser).Error; err != nil {
+		t.Fatalf("create other user: %v", err)
+	}
+
+	redeemedAt := now.Add(-time.Hour)
+	bedType := models.ShopItemTypeTraderBed
+	rewards := []models.Reward{
+		{UserID: user.ID, Title: "Active bed", Category: models.RewardCategoryBed, Source: models.RewardSourceShop, ItemType: &bedType, ExpiresAt: now.Add(time.Hour)},
+		{UserID: user.ID, Title: "Expired", Category: models.RewardCategoryAvitoBonus, Source: models.RewardSourceLeaderboard, ExpiresAt: now},
+		{UserID: user.ID, Title: "Redeemed", Category: models.RewardCategoryFreeDelivery, Source: models.RewardSourceLeaderboard, ExpiresAt: now.Add(time.Hour), RedeemedAt: &redeemedAt},
+		{UserID: otherUser.ID, Title: "Other user", Category: models.RewardCategoryAvitoBonus, Source: models.RewardSourceLeaderboard, ExpiresAt: now.Add(time.Hour)},
+	}
+	if err := db.Create(&rewards).Error; err != nil {
+		t.Fatalf("create rewards: %v", err)
+	}
+
+	items, err := service.List(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("List() returned %d rewards, want 1: %+v", len(items), items)
+	}
+	if items[0].Category != models.RewardCategoryBed || items[0].ItemType == nil || *items[0].ItemType != models.ShopItemTypeTraderBed {
+		t.Fatalf("List()[0] = %+v, want active trader bed", items[0])
+	}
+}
+
 func TestRedeemRejectsShopReward(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:rewards-shop-test?mode=memory&cache=shared"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),

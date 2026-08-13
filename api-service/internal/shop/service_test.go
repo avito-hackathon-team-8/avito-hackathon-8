@@ -105,7 +105,10 @@ func TestListCalculatesItemStatusesForCurrentUser(t *testing.T) {
 		t.Fatalf("create pet: %v", err)
 	}
 
-	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "fashionable-bowl"}); err != nil {
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "cyber-bowl"}); err != nil {
+		t.Fatalf("Purchase() error = %v", err)
+	}
+	if err := service.Purchase(context.Background(), user.ID, Purchase{ItemID: "accident-free-bed"}); err != nil {
 		t.Fatalf("Purchase() error = %v", err)
 	}
 
@@ -119,16 +122,30 @@ func TestListCalculatesItemStatusesForCurrentUser(t *testing.T) {
 	}
 
 	want := map[string]ItemStatus{
-		"fashionable-bowl":  ItemStatusActive,
-		"cyber-bowl":        ItemStatusAvailable,
+		"fashionable-bowl":  ItemStatusAvailable,
+		"cyber-bowl":        ItemStatusActive,
 		"helper-bowl":       ItemStatusLocked,
 		"trader-bed":        ItemStatusAvailable,
-		"accident-free-bed": ItemStatusAvailable,
+		"accident-free-bed": ItemStatusActive,
 		"pro-bed":           ItemStatusLocked,
 	}
 	for itemID, wantStatus := range want {
 		if statuses[itemID] != wantStatus {
 			t.Errorf("status of %s = %q, want %q", itemID, statuses[itemID], wantStatus)
+		}
+	}
+
+	wantOrder := []string{
+		"cyber-bowl",
+		"fashionable-bowl",
+		"helper-bowl",
+		"accident-free-bed",
+		"trader-bed",
+		"pro-bed",
+	}
+	for i, wantID := range wantOrder {
+		if items[i].ID != wantID {
+			t.Errorf("items[%d].ID = %q, want %q", i, items[i].ID, wantID)
 		}
 	}
 }

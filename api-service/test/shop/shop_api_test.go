@@ -172,9 +172,8 @@ func TestShopPurchaseExtendsAndReplacesActiveItem(t *testing.T) {
 	}
 
 	rewards := getRewards(t, cfg, token)
-	oldReward := findShopReward(t, rewards, "BOWL", "FASHIONABLE_BOWL")
-	if oldReward.Active || oldReward.Status != "EXPIRED" {
-		t.Fatalf("replaced reward = %+v, want expired", oldReward)
+	if _, exists := lookupShopReward(rewards, "BOWL", "FASHIONABLE_BOWL"); exists {
+		t.Fatalf("replaced fashionable bowl is still returned in %+v", rewards)
 	}
 	newReward := findShopReward(t, rewards, "BOWL", "CYBER_BOWL")
 	if !newReward.Active || newReward.Status != "ACTIVE" {
@@ -195,6 +194,12 @@ func TestShopAllowsBowlAndBedAtTheSameTime(t *testing.T) {
 	if findShopItem(t, catalog.Items, fashionableBowlID).Status != "ACTIVE" ||
 		findShopItem(t, catalog.Items, traderBedID).Status != "ACTIVE" {
 		t.Fatalf("catalog after independent purchases = %+v", catalog.Items)
+	}
+
+	rewards := getRewards(t, cfg, token)
+	bedReward := findShopReward(t, rewards, "BED", "TRADER_BED")
+	if !bedReward.Active || bedReward.Status != "ACTIVE" {
+		t.Fatalf("bed reward after purchase = %+v, want active", bedReward)
 	}
 }
 
@@ -370,18 +375,26 @@ func findShopItem(t *testing.T, items []shopItem, itemID string) shopItem {
 
 func findShopReward(t *testing.T, rewards rewardsResponse, category, itemType string) rewardItem {
 	t.Helper()
+	item, exists := lookupShopReward(rewards, category, itemType)
+	if exists {
+		return item
+	}
+	t.Fatalf("shop reward category=%q itemType=%q not found in %+v", category, itemType, rewards)
+	return rewardItem{}
+}
+
+func lookupShopReward(rewards rewardsResponse, category, itemType string) (rewardItem, bool) {
 	for _, group := range rewards.Groups {
 		if group.Category != category {
 			continue
 		}
 		for _, item := range group.Items {
 			if item.Source == "SHOP" && item.ItemType != nil && *item.ItemType == itemType {
-				return item
+				return item, true
 			}
 		}
 	}
-	t.Fatalf("shop reward category=%q itemType=%q not found in %+v", category, itemType, rewards)
-	return rewardItem{}
+	return rewardItem{}, false
 }
 
 func assertDurationNear(t *testing.T, got, want time.Duration) {

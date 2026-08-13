@@ -99,7 +99,7 @@ func (service *Service) List(ctx context.Context, userID uuid.UUID) ([]models.Re
 	var rewards []models.Reward
 
 	err := service.db.WithContext(ctx).
-		Where("user_id = ?", userID).
+		Where("user_id = ? AND redeemed_at IS NULL AND expires_at > ?", userID, service.now().UTC()).
 		Order("category ASC, created_at DESC").
 		Find(&rewards).Error
 
