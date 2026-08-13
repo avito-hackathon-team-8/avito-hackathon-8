@@ -77,14 +77,15 @@
 
     cursor: pointer;
 
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+
     .panel__closeText {
       line-height: 0.7;
     }
-  }
-
-  .panel__close:focus-visible {
-    outline: 2px solid var(--blue);
-    outline-offset: 2px;
   }
 
   .panel__content {
