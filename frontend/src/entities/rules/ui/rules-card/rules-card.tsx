@@ -9,9 +9,10 @@ const TITLE_CARD = 'Правила';
 
 type TRulesCardProps = {
   className?: string;
+  onStartTutorial?: () => void;
 };
 
-export const RulesCard = ({ className }: TRulesCardProps) => {
+export const RulesCard = ({ className, onStartTutorial }: TRulesCardProps) => {
   return (
     <BottomPanel
       title={TITLE_CARD}
@@ -31,8 +32,19 @@ export const RulesCard = ({ className }: TRulesCardProps) => {
           className={className}
         />
       )}
-    >
-      <RulesPanelContent rules={dataRules} />
-    </BottomPanel>
+      renderContent={(close) => (
+        <RulesPanelContent
+          rules={dataRules}
+          onStartTutorial={
+            onStartTutorial
+              ? () => {
+                  close();
+                  window.setTimeout(onStartTutorial, 0);
+                }
+              : undefined
+          }
+        />
+      )}
+    />
   );
 };

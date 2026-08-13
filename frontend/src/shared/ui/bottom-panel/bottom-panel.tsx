@@ -23,7 +23,8 @@ const FOCUSABLE_ELEMENTS_SELECTOR = [
 type BottomPanelProps = {
   title: ReactNode;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
+  renderContent?: (close: () => void) => ReactNode;
   renderTrigger: (open: () => void) => ReactNode;
   closeOnBackdrop?: boolean;
   disabled?: boolean;
@@ -35,6 +36,7 @@ export const BottomPanel = ({
   title,
   description,
   children,
+  renderContent,
   renderTrigger,
   closeOnBackdrop = true,
   disabled = false,
@@ -77,10 +79,6 @@ export const BottomPanel = ({
   }
 
   function handleClose() {
-    previouslyFocusedElementRef.current?.focus({
-      preventScroll: true,
-    });
-
     setIsOpen(false);
   }
 
@@ -272,7 +270,9 @@ export const BottomPanel = ({
                 </button>
               </header>
 
-              <div className={styles.panel__content}>{children}</div>
+              <div className={styles.panel__content}>
+                {renderContent ? renderContent(handleClose) : children}
+              </div>
             </section>
           </div>,
           portalRoot,

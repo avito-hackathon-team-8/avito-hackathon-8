@@ -1,4 +1,10 @@
 .panel {
+  .panel__tutorialButton {
+    margin-bottom: 12px;
+
+    font: var(--font-p2-semiBold);
+  }
+
   .panel__bodyParagraphs {
     display: flex;
     flex-direction: column;
