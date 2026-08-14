@@ -88,8 +88,9 @@
   .appShell__overlayRoot,
   .appShell__modalRoot {
     position: fixed;
+    top: 0;
+    bottom: auto;
 
-    height: 100vh;
-    height: 100lvh;
+    height: 100dvh;
   }
 }
